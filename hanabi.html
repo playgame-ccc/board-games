@@ -1,0 +1,1597 @@
+<!-- HANABI v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🎆 花火 HANABI</title>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --surface: #161b2a;
+  --surface2: #1f2535;
+  --surface3: #2f364a;
+  --text: #f0f0f5;
+  --muted: #8a96a8;
+  --red: #ff2d4a;
+  --green: #2dff8a;
+  --blue: #3af0ff;
+  --amber: #ffb020;
+  --hanabi-pink: #ff6b9d;
+  --hanabi-purple: #b15bff;
+  --c-red: #ff5757;
+  --c-blue: #4a9eff;
+  --c-yellow: #ffd54f;
+  --c-green: #5fd97a;
+  --c-white: #f0f0f5;
+  --c-rainbow: linear-gradient(135deg, #ff5757, #ffd54f, #5fd97a, #4a9eff, #b15bff);
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  --mono: "SF Mono", Menlo, Monaco, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  overscroll-behavior: none;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app { max-width: 480px; margin: 0 auto; padding: 14px; min-height: 100vh; display: flex; flex-direction: column; gap: 10px; }
+.screen { display: none; flex-direction: column; gap: 10px; }
+.screen.active { display: flex; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
+h1 { font-size: 1.8rem; text-align: center; }
+h2 { font-size: 1.3rem; text-align: center; }
+h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 18px; border-radius: 10px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
+  transition: all 0.15s; user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-pink { background: var(--hanabi-pink); color: white; border-color: var(--hanabi-pink); }
+.btn-purple { background: var(--hanabi-purple); color: white; border-color: var(--hanabi-purple); }
+.btn-red { background: var(--red); color: white; border-color: var(--red); }
+.btn-blue { background: var(--blue); color: #000; border-color: var(--blue); }
+.btn-green { background: var(--green); color: #000; border-color: var(--green); }
+.btn-amber { background: var(--amber); color: #000; border-color: var(--amber); }
+.btn-ghost { background: transparent; }
+.btn-small { padding: 6px 12px; font-size: 0.78rem; }
+
+.input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--surface3); background: var(--surface);
+  color: var(--text); font-size: 1rem; font-family: var(--sans);
+}
+.input:focus { outline: none; border-color: var(--hanabi-pink); }
+.code-input { text-align: center; font-family: var(--mono); font-size: 1.4rem; letter-spacing: 0.3em; }
+
+.row { display: flex; gap: 8px; }
+.divider { height: 1px; background: var(--surface3); margin: 4px 0; }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 14px; }
+.status-txt { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); text-align: center; min-height: 18px; }
+.error { font-family: var(--mono); font-size: 0.85rem; color: var(--red); text-align: center; min-height: 18px; }
+
+.code-box { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 12px; text-align: center; }
+.code-box .label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 2px; }
+.code-box .code { font-family: var(--mono); font-size: 2rem; letter-spacing: 0.3em; color: var(--hanabi-pink); margin-top: 4px; }
+.copy-btn { background: var(--surface2); padding: 8px; border-radius: 8px; border: 1px solid var(--surface3); color: var(--muted); font-size: 0.78rem; cursor: pointer; }
+
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-row { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+.player-row.is-me { border-left: 3px solid var(--hanabi-pink); }
+.player-name { font-weight: 600; flex: 1; }
+
+/* ── 設定行 ── */
+.setting-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface2); border: 1px solid var(--surface3); border-radius: 10px;
+}
+.setting-row label { flex: 1; font-size: 0.9rem; }
+.setting-row .toggle-group { display: flex; gap: 4px; }
+.setting-row .toggle-btn {
+  padding: 6px 14px; border-radius: 6px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--muted); cursor: pointer; font-size: 0.85rem;
+}
+.setting-row .toggle-btn.active {
+  background: var(--hanabi-pink); color: white; border-color: var(--hanabi-pink);
+}
+
+/* ── カード ── */
+.card {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 54px; height: 76px;
+  border-radius: 8px;
+  font-family: var(--mono); font-weight: 900; font-size: 1.6rem;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+  user-select: none;
+}
+.card.c-red { background: linear-gradient(135deg, #ff5757, #c0202e); }
+.card.c-blue { background: linear-gradient(135deg, #4a9eff, #1e5fbb); }
+.card.c-yellow { background: linear-gradient(135deg, #ffd54f, #c89812); color: #2a2a2a; text-shadow: 0 1px 2px rgba(255,255,255,0.3); }
+.card.c-green { background: linear-gradient(135deg, #5fd97a, #2a9544); }
+.card.c-white { background: linear-gradient(135deg, #f0f0f5, #bababa); color: #2a2a2a; text-shadow: 0 1px 2px rgba(255,255,255,0.3); }
+.card.c-rainbow { background: linear-gradient(135deg, #ff5757 0%, #ffd54f 25%, #5fd97a 50%, #4a9eff 75%, #b15bff 100%); }
+
+.card.back {
+  background: linear-gradient(135deg, var(--hanabi-purple), #5a2a8a);
+  color: rgba(255,255,255,0.5);
+  font-size: 1.4rem;
+}
+
+/* ヒントを受けたカード(自分用): 色が判明したカード */
+.card.hint-color-known {
+  /* 色は確定済み、数字未確定 → 色背景に "?" */
+}
+.card.hint-both-known {
+  /* 色も数字も判明 */
+}
+
+.card.small {
+  width: 40px; height: 56px;
+  font-size: 1.2rem;
+}
+
+/* ヒント表示 */
+.card-hints {
+  position: absolute;
+  bottom: -16px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 2px;
+  font-size: 0.6rem; font-family: var(--mono);
+  background: rgba(0,0,0,0.7);
+  border-radius: 4px;
+  padding: 1px 4px;
+  white-space: nowrap;
+  color: white;
+}
+
+/* ── 手札表示 ── */
+.hand-area {
+  background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px;
+  padding: 14px 8px 22px 8px;
+  margin-top: 4px;
+}
+.hand-area.is-me { border-left: 3px solid var(--hanabi-pink); }
+.hand-area.current-turn { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
+.hand-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.85rem; margin-bottom: 10px;
+  padding: 0 4px;
+}
+.hand-name { font-weight: 700; flex: 1; }
+.hand-status {
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--muted);
+}
+.turn-indicator {
+  background: var(--green); color: #000;
+  padding: 2px 8px; border-radius: 8px;
+  font-size: 0.7rem; font-weight: 700;
+  font-family: var(--mono);
+}
+.hand-cards {
+  display: flex; gap: 8px; justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── 場札（花火） ── */
+.fireworks-area {
+  background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px;
+  padding: 12px;
+}
+.fireworks-row {
+  display: flex; gap: 8px; justify-content: center;
+  margin-top: 8px;
+}
+.firework-slot {
+  width: 50px; height: 70px;
+  border-radius: 8px;
+  border: 2px dashed var(--surface3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); color: var(--muted); font-size: 1.4rem;
+}
+
+/* ── トークン表示 ── */
+.tokens-bar {
+  display: flex; justify-content: space-around; gap: 10px;
+  background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px;
+  padding: 10px 14px;
+}
+.token-display {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.token-label {
+  font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+  letter-spacing: 1px;
+}
+.token-icons {
+  display: flex; gap: 2px;
+}
+.token-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+}
+.token-dot.hint-active { background: var(--blue); box-shadow: 0 0 4px var(--blue); }
+.token-dot.hint-used { background: var(--surface3); }
+.token-dot.miss-active { background: var(--red); box-shadow: 0 0 4px var(--red); }
+.token-dot.miss-empty { background: var(--surface3); border: 1px solid var(--surface3); }
+
+/* ── アクションパネル ── */
+.action-panel {
+  background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px;
+  padding: 12px;
+}
+.action-buttons {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+.action-tab {
+  padding: 8px 10px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--surface3);
+  color: var(--text); cursor: pointer; font-size: 0.85rem;
+  font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.action-tab.active {
+  background: var(--hanabi-pink); border-color: var(--hanabi-pink); color: white;
+}
+.action-tab .ic { font-size: 1.2rem; }
+
+.sub-action {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* カード選択（出す・捨てる用） */
+.card-selector {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  justify-content: center;
+  margin: 10px 0;
+}
+.card-selector .card {
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.card-selector .card:active { transform: scale(0.95); }
+.card-selector .card.selected {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px var(--green), 0 4px 12px rgba(0,0,0,0.4);
+  transform: translateY(-4px);
+}
+
+/* ヒント選択 */
+.hint-selector {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.hint-target-list {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.hint-target {
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--surface3);
+  cursor: pointer; font-size: 0.85rem;
+}
+.hint-target.selected {
+  background: var(--hanabi-pink); color: white; border-color: var(--hanabi-pink);
+}
+
+.hint-options {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  justify-content: center;
+}
+.hint-color {
+  width: 38px; height: 38px; border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--surface3);
+}
+.hint-color.c-red { background: #ff5757; }
+.hint-color.c-blue { background: #4a9eff; }
+.hint-color.c-yellow { background: #ffd54f; }
+.hint-color.c-green { background: #5fd97a; }
+.hint-color.c-white { background: #f0f0f5; }
+.hint-color.c-rainbow { background: var(--c-rainbow); }
+.hint-color.selected { border-color: var(--hanabi-pink); transform: scale(1.1); }
+
+.hint-num {
+  width: 38px; height: 38px; border-radius: 8px;
+  background: var(--surface2); border: 2px solid var(--surface3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-weight: 700; font-size: 1.2rem;
+  color: var(--text); cursor: pointer;
+}
+.hint-num.selected { background: var(--hanabi-pink); color: white; border-color: var(--hanabi-pink); }
+
+/* ── ゲームログ ── */
+.game-log { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px; max-height: 110px; overflow-y: auto; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.game-log div { padding: 2px 0; border-bottom: 1px dashed var(--surface3); line-height: 1.4; }
+.game-log div:last-child { border-bottom: none; color: var(--text); }
+
+/* ── FB modal ── */
+.fb-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+.fb-modal-inner { background: var(--surface); border-radius: 14px; padding: 22px; max-width: 360px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* ── 結果 ── */
+.result-emoji { font-size: 4rem; text-align: center; }
+.result-title { font-size: 1.6rem; text-align: center; font-weight: 700; }
+.result-score {
+  font-size: 3rem; text-align: center; font-weight: 900;
+  color: var(--hanabi-pink); margin: 8px 0;
+}
+.rank-badge {
+  display: inline-block;
+  padding: 6px 14px; border-radius: 20px;
+  font-weight: 700; margin: 4px 0;
+}
+</style>
+</head>
+<body>
+
+<!-- FB MODAL -->
+<div id="fb-modal" class="fb-modal" style="display:none;">
+  <div class="fb-modal-inner">
+    <h2 style="font-size:1.1rem; text-align:left;">🔑 Firebase URL</h2>
+    <p style="font-size:0.8rem; color:var(--muted);">マルチプレイには Firebase Realtime Database が必要です。</p>
+    <input class="input" id="fb-url" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com">
+    <button class="btn btn-pink" onclick="saveFbConfig()">設定して始める</button>
+    <button class="btn btn-ghost" onclick="g('fb-modal').style.display='none'">あとで</button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ===== LOBBY ===== -->
+  <div id="screen-lobby" class="screen active">
+    <h1>🎆 花火 HANABI</h1>
+    <p style="text-align:center; font-family:var(--mono); font-size:0.78rem; color:var(--muted); letter-spacing:2px;">協力型カードゲーム</p>
+
+    <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-pink" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+      <div class="divider"></div>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+    </div>
+
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+
+    <div class="panel" style="margin-top:8px;">
+      <h3 style="margin-bottom:10px;">ゲームルール</h3>
+      <p style="font-size:0.82rem; color:var(--muted); line-height:1.7;">
+        2〜5人の協力ゲーム。<br>
+        各色1〜5の数字カードを<strong style="color:var(--hanabi-pink);">小さい順</strong>に場に並べる。<br>
+        重要: 自分の手札は<strong style="color:var(--amber);">見えません</strong>。他人の手札は見えます。<br>
+        手番でできるアクション: ① ヒント / ② プレイ / ③ 捨てる<br>
+        ミス3回でゲーム終了。全色5まで完成で完全勝利（25点）。
+      </p>
+    </div>
+
+    <a href="index.html" style="text-decoration:none; margin-top:10px;">
+      <button class="btn btn-ghost" style="width:100%;">← ホームに戻る</button>
+    </a>
+  </div>
+
+  <!-- ===== WAITING ===== -->
+  <div id="screen-waiting" class="screen">
+    <h2>待機ロビー</h2>
+    <div class="code-box">
+      <div class="label">ルームコード</div>
+      <div class="code" id="disp-code">----</div>
+    </div>
+    <button class="copy-btn" onclick="copyCode()">📋 コードをコピー</button>
+    <div class="divider"></div>
+
+    <!-- ホストのみ設定可能 -->
+    <div id="host-settings" style="display:none;">
+      <h3 style="margin-bottom:8px;">ゲーム設定（ホストのみ）</h3>
+      <div class="setting-row">
+        <label>色の数</label>
+        <div class="toggle-group">
+          <button id="opt-color-5" class="toggle-btn active" onclick="setColorMode(5)">5色</button>
+          <button id="opt-color-6" class="toggle-btn" onclick="setColorMode(6)">6色(難)</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="text-transform:none; font-family:var(--sans); letter-spacing:0;">参加者</h3>
+      <span id="p-count" style="font-family:var(--mono); font-size:0.85rem; color:var(--muted);">1人</span>
+    </div>
+    <div id="wait-list" class="player-list"></div>
+    <div id="wait-status" class="status-txt"></div>
+    <button id="btn-start" class="btn btn-green" onclick="startGame()" disabled>▶ ゲームを開始する</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- ===== PLAYING ===== -->
+  <div id="screen-playing" class="screen" style="gap:8px;">
+
+    <!-- トークン & 場札 -->
+    <div class="tokens-bar">
+      <div class="token-display">
+        <span class="token-label">💡 ヒント</span>
+        <div id="hint-tokens" class="token-icons"></div>
+      </div>
+      <div class="token-display">
+        <span class="token-label">💥 ミス</span>
+        <div id="miss-tokens" class="token-icons"></div>
+      </div>
+      <div class="token-display">
+        <span class="token-label">🃏 山札</span>
+        <div id="deck-count" style="font-family:var(--mono); font-weight:700; font-size:1rem;">--</div>
+      </div>
+    </div>
+
+    <!-- 花火（場札）-->
+    <div class="fireworks-area">
+      <div style="font-size:0.78rem; color:var(--muted); font-family:var(--mono); letter-spacing:1px;">🎆 場の花火</div>
+      <div id="fireworks-row" class="fireworks-row"></div>
+    </div>
+
+    <!-- 自分の手札（裏向き）-->
+    <div id="my-hand-section"></div>
+
+    <!-- 他人の手札 -->
+    <div id="others-hands"></div>
+
+    <!-- アクションパネル（自分のターンのみ） -->
+    <div id="action-panel" class="action-panel" style="display:none;">
+      <div style="font-size:0.85rem; font-weight:700; margin-bottom:8px; color:var(--green);">あなたのターン</div>
+      <div class="action-buttons">
+        <button id="tab-hint" class="action-tab" onclick="selectActionTab('hint')">
+          <span class="ic">💡</span>
+          <span>ヒント</span>
+        </button>
+        <button id="tab-play" class="action-tab" onclick="selectActionTab('play')">
+          <span class="ic">🎆</span>
+          <span>プレイ</span>
+        </button>
+        <button id="tab-discard" class="action-tab" onclick="selectActionTab('discard')">
+          <span class="ic">🗑️</span>
+          <span>捨てる</span>
+        </button>
+      </div>
+      <div id="sub-action-area" class="sub-action"></div>
+    </div>
+
+    <!-- 捨て札 -->
+    <div class="panel" style="padding:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:0.78rem; color:var(--muted); font-family:var(--mono); letter-spacing:1px;">🗑️ 捨て札</span>
+        <button class="btn-small btn" onclick="toggleDiscard()" style="padding:4px 10px;">表示/非表示</button>
+      </div>
+      <div id="discard-area" style="display:none; max-height:180px; overflow-y:auto;"></div>
+    </div>
+
+    <!-- ログ -->
+    <div id="game-log" class="game-log"></div>
+
+    <button class="btn btn-ghost" onclick="if(confirm('ゲームを抜けますか？'))leaveRoom()">退出</button>
+  </div>
+
+  <!-- ===== RESULT ===== -->
+  <div id="screen-result" class="screen">
+    <div class="result-emoji" id="result-emoji">🎆</div>
+    <div class="result-title" id="result-title">ゲーム終了</div>
+    <div class="result-score" id="result-score">0</div>
+    <p style="text-align:center; color:var(--muted); font-size:0.85rem;">点</p>
+    <div style="text-align:center;">
+      <span id="result-rank" class="rank-badge">---</span>
+    </div>
+    <p id="result-sub" class="status-txt"></p>
+
+    <div class="divider"></div>
+    <h3 style="text-align:center;">最終的な花火</h3>
+    <div id="result-fireworks" class="fireworks-row"></div>
+
+    <button class="btn btn-pink" onclick="restartGame()">🔄 もう一度遊ぶ</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ戻る</button>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const COLORS_5 = ['red', 'blue', 'yellow', 'green', 'white'];
+const COLORS_6 = ['red', 'blue', 'yellow', 'green', 'white', 'rainbow'];
+const COLOR_NAMES = {red:'赤', blue:'青', yellow:'黄', green:'緑', white:'白', rainbow:'虹'};
+const NUMBER_COUNTS = {1:3, 2:2, 3:2, 4:2, 5:1}; // 各色での枚数
+
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+function saveFbConfig() {
+  const url = g('fb-url').value.trim().replace(/\/$/,'');
+  if(!url) return;
+  fbUrl = url; localStorage.setItem(FB_KEY, url); g('fb-modal').style.display='none';
+}
+async function checkFbConfig() {
+  if(!fbUrl) { showFbModal(); return false; }
+  try {
+    const r = await fetch(`${fbUrl}/.json?shallow=true`, {method:'GET'});
+    if(!r.ok && r.status !== 404) { setErr('Firebase接続エラー'); return false; }
+  } catch(e) { setErr('Firebase接続失敗'); return false; }
+  return true;
+}
+function showFbModal() { g('fb-modal').style.display='flex'; }
+
+// FB primitives
+let fbRoom = '', fbPollTimer = null, fbLastBcastTs = 0, fbLastPrvTs = 0, fbLastActTs = {};
+async function fbPut(sub, data) { if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)}); } catch(e){} }
+async function fbGet(sub) { if(!fbRoom) return null; try { const r = await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`); if(!r.ok) return null; return await r.json(); } catch(e) { return null; } }
+async function fbDel(sub) { if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){} }
+function fbListen() {
+  if(fbPollTimer) clearInterval(fbPollTimer);
+  fbLastBcastTs = 0; fbLastPrvTs = 0; fbLastActTs = {};
+  fbPollTimer = setInterval(fbPoll, 500);
+}
+function fbClose() { if(fbPollTimer) clearInterval(fbPollTimer); fbPollTimer = null; fbRoom = ''; }
+async function fbPoll() {
+  if(!fbRoom) return;
+  const bc = await fbGet('broadcast');
+  if(bc && bc.ts > fbLastBcastTs) {
+    fbLastBcastTs = bc.ts;
+    if(!isHost && bc.msg) handleBroadcast(bc.msg);
+  }
+  const prv = await fbGet(`private/${myId}`);
+  if(prv && prv.ts > fbLastPrvTs) {
+    fbLastPrvTs = prv.ts;
+    if(prv.msg) handlePrivate(prv.msg);
+  }
+  if(isHost) {
+    const acts = await fbGet('action');
+    if(acts) {
+      for(const pid in acts) {
+        const a = acts[pid];
+        if(a && a.ts > (fbLastActTs[pid]||0)) {
+          fbLastActTs[pid] = a.ts;
+          if(a.msg) onMsg(a.msg, pid);
+        }
+      }
+    }
+  }
+}
+function fbBroadcast(msg) { fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg) { fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg) { fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '';
+let isHost = false, roomCode = '';
+let fs = null, gs = null;
+let myHandCards = null; // 自分の手札（中身は他のプレイヤーが見える）
+let colorMode = 5; // ホスト設定: 5 or 6
+let currentAction = null; // 'hint' | 'play' | 'discard'
+let actionState = {}; // 選択中の状態
+
+// ============================================================
+// UTILS
+// ============================================================
+function g(id) { return document.getElementById(id); }
+function mk(tag, cls) { const e = document.createElement(tag); if(cls) e.className = cls; return e; }
+function show(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-'+name); if(el) el.classList.add('active');
+}
+function setErr(msg) { const e = g('lobby-error'); if(e) e.textContent = msg || ''; }
+function setSt(msg) { const s = g('lobby-status'); if(s) s.textContent = msg || ''; }
+function genId() { return 'p_' + Math.random().toString(36).slice(2,10); }
+function shuffle(a) { const x=a.slice(); for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];} return x; }
+function copyCode() { navigator.clipboard?.writeText(g('disp-code').textContent); }
+
+// ============================================================
+// ROOM
+// ============================================================
+async function createRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  myName = name; isHost = true;
+  const code = Array.from({length:4}, () => Math.floor(Math.random()*10)).join('');
+  roomCode = code; fbRoom = 'HN-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'hanabi', ts:Date.now()});
+    fs = initFs([{id:myId, name:myName}]);
+    gs = pubFs(fs);
+    fbListen();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    g('host-settings').style.display = '';
+    show('waiting'); refreshWait(); bcast();
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
+}
+
+async function joinRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)) { setErr('4桁の数字'); return; }
+  myName = name; isHost = false; roomCode = code;
+  fbRoom = 'HN-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta) { setErr('ルームが見つかりません'); setSt(''); return; }
+    if(meta.game !== 'hanabi') { setErr('ゲーム種別が違います'); setSt(''); return; }
+    fbListen();
+    fbSendToHost({type:'join', name:myName, id:myId});
+    setSt('接続しました...');
+    show('waiting');
+    g('disp-code').textContent = code;
+    g('host-settings').style.display = 'none';
+    g('btn-start').style.display = 'none';
+    let retries = 0;
+    const rj = setInterval(()=>{
+      if(!fbRoom || retries >= 5) { clearInterval(rj); return; }
+      if(gs?.players?.find(p=>p.id===myId)) { clearInterval(rj); return; }
+      fbSendToHost({type:'join', name:myName, id:myId});
+      retries++;
+    }, 2000);
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); }
+}
+
+function leaveRoom() {
+  fbClose(); fs=null; gs=null; isHost=false;
+  myHandCards = null;
+  show('lobby');
+}
+
+function setColorMode(n) {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  colorMode = n;
+  fs.colorMode = n;
+  g('opt-color-5').classList.toggle('active', n === 5);
+  g('opt-color-6').classList.toggle('active', n === 6);
+  bcast();
+}
+
+// ============================================================
+// HOST MESSAGE HANDLER
+// ============================================================
+function onMsg(d, senderPid) {
+  if(!d) return;
+  if(!fs) return;
+  switch(d.type) {
+    case 'join':
+      if(fs.phase !== 'waiting') { fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
+      if(fs.players.length >= 5) { fbSendTo(d.id, {type:'error', msg:'満員（最大5人）'}); return; }
+      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; }
+      fs.players.push({id:d.id, name:d.name, hand:[]});
+      bcast(); break;
+    case 'action':
+      handleAction(senderPid, d);
+      break;
+    case 'rematch':
+      handleRematchReq(senderPid);
+      break;
+  }
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+function initFs(players) {
+  return {
+    phase: 'waiting',
+    players: players.map(p => ({id:p.id, name:p.name, hand:[]})),
+    deck: [],
+    fireworks: {}, // {red: 3, blue: 0, ...}
+    discard: [], // 捨て札
+    hintTokens: 8,
+    maxHintTokens: 8,
+    missTokens: 0,
+    maxMissTokens: 3,
+    currentTurn: 0,
+    colorMode: 5,
+    finalTurnsLeft: -1, // 山札枯渇後の残りターン数 (-1=まだ)
+    log: [],
+    winner: null, // 'clear' | 'fail' | 'finish'
+    nextCardId: 0,
+  };
+}
+
+function pubFs(f) {
+  // 自分の手札は他人から「見える状態」で送るが、自分の画面では中身を隠す
+  return {
+    phase: f.phase,
+    players: f.players.map(p => ({
+      id: p.id, name: p.name,
+      // hand の中身は public で送る（各自の画面で「自分のもの」は隠して表示）
+      hand: p.hand.map(c => ({
+        cardId: c.cardId,
+        color: c.color,
+        number: c.number,
+        hintsColor: c.hintsColor || [], // ヒント受けた色
+        hintsNum: c.hintsNum || [],     // ヒント受けた数字
+      })),
+    })),
+    fireworks: {...f.fireworks},
+    discard: f.discard.slice(),
+    hintTokens: f.hintTokens,
+    maxHintTokens: f.maxHintTokens,
+    missTokens: f.missTokens,
+    maxMissTokens: f.maxMissTokens,
+    currentTurn: f.currentTurn,
+    colorMode: f.colorMode,
+    deckCount: f.deck.length,
+    finalTurnsLeft: f.finalTurnsLeft,
+    log: f.log.slice(-30),
+    winner: f.winner,
+  };
+}
+
+function bcast() {
+  gs = pubFs(fs);
+  fbBroadcast({type:'gs', s:gs});
+  onGsUpdate(gs);
+}
+
+// ============================================================
+// START GAME
+// ============================================================
+function startGame() {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  const n = fs.players.length;
+  if(n < 2 || n > 5) return;
+  const startBtn = g('btn-start');
+  if(startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳ 開始中...'; }
+
+  // 色設定確定
+  fs.colorMode = colorMode;
+  const colors = colorMode === 6 ? COLORS_6 : COLORS_5;
+
+  // 山札構築
+  const deck = [];
+  let cardId = 0;
+  for(const color of colors) {
+    for(const num of [1,2,3,4,5]) {
+      // 虹色は各数字1枚のみ（6色モードの難しさ）
+      const count = (color === 'rainbow') ? 1 : NUMBER_COUNTS[num];
+      for(let i=0;i<count;i++) {
+        deck.push({cardId: cardId++, color, number: num});
+      }
+    }
+  }
+  fs.deck = shuffle(deck);
+  fs.nextCardId = cardId;
+
+  // 場札初期化
+  fs.fireworks = {};
+  for(const color of colors) fs.fireworks[color] = 0;
+  fs.discard = [];
+
+  // 手札枚数
+  const handSize = (n <= 3) ? 5 : 4;
+  fs.players.forEach(p => {
+    p.hand = [];
+    for(let i=0;i<handSize;i++) {
+      if(fs.deck.length > 0) p.hand.push(fs.deck.pop());
+    }
+  });
+
+  fs.hintTokens = fs.maxHintTokens;
+  fs.missTokens = 0;
+  fs.currentTurn = 0;
+  fs.finalTurnsLeft = -1;
+  fs.log = [];
+  fs.log.push('🎆 ゲーム開始！(' + colorMode + '色モード)');
+  fs.log.push('▶ 最初のターン: ' + fs.players[0].name);
+  fs.phase = 'playing';
+  fs.winner = null;
+
+  bcast();
+}
+
+// ============================================================
+// ACTION HANDLER
+// ============================================================
+function handleAction(actorId, d) {
+  if(!fs || fs.phase !== 'playing') return;
+  const actor = fs.players.find(p => p.id === actorId);
+  if(!actor) return;
+  const currentPlayer = fs.players[fs.currentTurn];
+  if(!currentPlayer || currentPlayer.id !== actorId) return; // ターン違い
+
+  if(d.action === 'hint') {
+    handleHint(actorId, d.targetId, d.hintType, d.hintValue);
+  } else if(d.action === 'play') {
+    handlePlay(actorId, d.cardIdx);
+  } else if(d.action === 'discard') {
+    handleDiscard(actorId, d.cardIdx);
+  }
+}
+
+function handleHint(actorId, targetId, hintType, hintValue) {
+  if(fs.hintTokens <= 0) return;
+  if(actorId === targetId) return;
+  const target = fs.players.find(p => p.id === targetId);
+  const actor = fs.players.find(p => p.id === actorId);
+  if(!target || !actor) return;
+
+  // ヒント対象のカードがあるかチェック
+  let hitIndices = [];
+  if(hintType === 'color') {
+    // 虹色は全色のヒントに該当する（6色モードのスペシャル）
+    target.hand.forEach((c, idx) => {
+      if(c.color === hintValue || c.color === 'rainbow') {
+        hitIndices.push(idx);
+      }
+    });
+  } else if(hintType === 'number') {
+    target.hand.forEach((c, idx) => {
+      if(c.number === hintValue) hitIndices.push(idx);
+    });
+  } else return;
+
+  if(hitIndices.length === 0) {
+    // 該当0枚のヒントは無効（ルール違反だが、UI で防ぐ）
+    return;
+  }
+
+  // ヒント情報をカードに付与
+  target.hand.forEach((c, idx) => {
+    if(!c.hintsColor) c.hintsColor = [];
+    if(!c.hintsNum) c.hintsNum = [];
+    if(hintType === 'color') {
+      if(hitIndices.includes(idx)) {
+        if(!c.hintsColor.includes(hintValue)) c.hintsColor.push(hintValue);
+      } else {
+        // 該当しない: 否定情報も記録
+        if(!c.hintsColor.includes('!'+hintValue)) c.hintsColor.push('!'+hintValue);
+      }
+    } else {
+      if(hitIndices.includes(idx)) {
+        if(!c.hintsNum.includes(hintValue)) c.hintsNum.push(hintValue);
+      } else {
+        if(!c.hintsNum.includes('!'+hintValue)) c.hintsNum.push('!'+hintValue);
+      }
+    }
+  });
+
+  fs.hintTokens -= 1;
+  const hintLabel = hintType === 'color' ? COLOR_NAMES[hintValue] : hintValue;
+  const posLabel = hitIndices.map(i => (i+1) + '番目').join('・');
+  fs.log.push('💡 ' + actor.name + ' → ' + target.name + ': 「' + hintLabel + '」(' + posLabel + ')');
+
+  advanceTurn();
+}
+
+function handlePlay(actorId, cardIdx) {
+  const actor = fs.players.find(p => p.id === actorId);
+  if(!actor) return;
+  if(cardIdx < 0 || cardIdx >= actor.hand.length) return;
+
+  const card = actor.hand[cardIdx];
+  const currentVal = fs.fireworks[card.color] || 0;
+
+  // 正しいプレイ？
+  if(card.number === currentVal + 1) {
+    fs.fireworks[card.color] = card.number;
+    fs.log.push('🎆 ' + actor.name + ' が ' + COLOR_NAMES[card.color] + 'の' + card.number + ' を打ち上げ成功！');
+    // 5で完成→ヒントトークン+1
+    if(card.number === 5 && fs.hintTokens < fs.maxHintTokens) {
+      fs.hintTokens += 1;
+      fs.log.push('  ✨ ' + COLOR_NAMES[card.color] + '完成！ヒントトークン+1');
+    }
+  } else {
+    fs.missTokens += 1;
+    fs.discard.push(card);
+    fs.log.push('💥 ' + actor.name + ' が ' + COLOR_NAMES[card.color] + 'の' + card.number + ' をプレイ失敗（ミス' + fs.missTokens + '/3）');
+    if(fs.missTokens >= fs.maxMissTokens) {
+      // ゲーム終了
+      actor.hand.splice(cardIdx, 1);
+      drawCard(actor);
+      fs.phase = 'result';
+      fs.winner = 'fail';
+      fs.log.push('💀 ミス3回。ゲーム終了');
+      bcast();
+      return;
+    }
+  }
+
+  // 手札から削除
+  actor.hand.splice(cardIdx, 1);
+  drawCard(actor);
+
+  // 全色5まで完成？
+  const colors = fs.colorMode === 6 ? COLORS_6 : COLORS_5;
+  if(colors.every(c => fs.fireworks[c] === 5)) {
+    fs.phase = 'result';
+    fs.winner = 'clear';
+    fs.log.push('🎉 完全勝利！25点獲得！');
+    bcast();
+    return;
+  }
+
+  advanceTurn();
+}
+
+function handleDiscard(actorId, cardIdx) {
+  const actor = fs.players.find(p => p.id === actorId);
+  if(!actor) return;
+  if(cardIdx < 0 || cardIdx >= actor.hand.length) return;
+  // ヒントトークン満タンでは捨てられない（原作ルール）
+  if(fs.hintTokens >= fs.maxHintTokens) {
+    fs.log.push('⚠️ ヒントトークン満タンのため捨てられません');
+    bcast();
+    return;
+  }
+  const card = actor.hand[cardIdx];
+  fs.discard.push(card);
+  fs.hintTokens = Math.min(fs.maxHintTokens, fs.hintTokens + 1);
+  fs.log.push('🗑️ ' + actor.name + ' が ' + COLOR_NAMES[card.color] + 'の' + card.number + ' を捨てた（ヒント+1）');
+
+  actor.hand.splice(cardIdx, 1);
+  drawCard(actor);
+
+  advanceTurn();
+}
+
+function drawCard(actor) {
+  if(fs.deck.length > 0) {
+    actor.hand.push(fs.deck.pop());
+    // 山札が0になった瞬間に最終ターン開始
+    if(fs.deck.length === 0 && fs.finalTurnsLeft === -1) {
+      fs.finalTurnsLeft = fs.players.length;
+      fs.log.push('📭 山札が尽きました。最後のターンが始まります（あと' + fs.finalTurnsLeft + 'ターン）');
+    }
+  } else if(fs.finalTurnsLeft === -1) {
+    // 山札が最初から0だった場合（特殊）
+    fs.finalTurnsLeft = fs.players.length;
+  }
+}
+
+function advanceTurn() {
+  // 最終ターンカウント
+  if(fs.finalTurnsLeft > 0) {
+    fs.finalTurnsLeft -= 1;
+    if(fs.finalTurnsLeft <= 0) {
+      // ゲーム終了（得点計算）
+      fs.phase = 'result';
+      fs.winner = 'finish';
+      const colors = fs.colorMode === 6 ? COLORS_6 : COLORS_5;
+      const score = colors.reduce((s,c) => s + (fs.fireworks[c]||0), 0);
+      fs.log.push('🏁 ゲーム終了。最終スコア: ' + score + '点');
+      bcast();
+      return;
+    }
+  }
+  // 次のターンへ
+  fs.currentTurn = (fs.currentTurn + 1) % fs.players.length;
+  const next = fs.players[fs.currentTurn];
+  fs.log.push('▶ 次のターン: ' + next.name);
+  bcast();
+}
+
+// ============================================================
+// REMATCH
+// ============================================================
+function restartGame() {
+  if(isHost) {
+    fs.phase = 'waiting';
+    fs.players.forEach(p => { p.hand = []; });
+    fs.deck = []; fs.fireworks = {}; fs.discard = [];
+    fs.hintTokens = fs.maxHintTokens; fs.missTokens = 0;
+    fs.currentTurn = 0; fs.finalTurnsLeft = -1;
+    fs.log = []; fs.winner = null;
+    bcast();
+    show('waiting');
+    refreshWait();
+  } else {
+    fbSendToHost({type:'rematch'});
+  }
+}
+function handleRematchReq(senderPid) {
+  if(!fs) return;
+  fs.phase = 'waiting';
+  fs.players.forEach(p => { p.hand = []; });
+  fs.deck = []; fs.fireworks = {}; fs.discard = [];
+  fs.hintTokens = fs.maxHintTokens; fs.missTokens = 0;
+  fs.currentTurn = 0; fs.finalTurnsLeft = -1;
+  fs.log = []; fs.winner = null;
+  bcast();
+}
+
+// ============================================================
+// CLIENT HANDLERS
+// ============================================================
+function handleBroadcast(msg) {
+  if(msg.type === 'gs') {
+    gs = msg.s;
+    onGsUpdate(gs);
+  }
+}
+function handlePrivate(msg) {
+  if(msg.type === 'error') {
+    setErr(msg.msg);
+  }
+}
+
+function onGsUpdate(s) {
+  if(!s) return;
+  if(s.phase === 'waiting') { show('waiting'); refreshWait(); }
+  else if(s.phase === 'playing') {
+    if(!g('screen-playing').classList.contains('active')) show('playing');
+    renderPlaying();
+  }
+  else if(s.phase === 'result') {
+    showResult();
+  }
+}
+
+// ============================================================
+// WAITING
+// ============================================================
+function refreshWait() {
+  if(!gs) return;
+  g('p-count').textContent = gs.players.length + '人';
+  const list = g('wait-list');
+  list.innerHTML = '';
+  gs.players.forEach(p => {
+    const row = mk('div', 'player-row' + (p.id===myId?' is-me':''));
+    const nameSpan = mk('span', 'player-name');
+    nameSpan.textContent = (p.id===myId?'👤 ':'👥 ') + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
+    row.appendChild(nameSpan);
+    list.appendChild(row);
+  });
+  // 色モード表示同期
+  if(gs.colorMode !== undefined) {
+    g('opt-color-5').classList.toggle('active', gs.colorMode === 5);
+    g('opt-color-6').classList.toggle('active', gs.colorMode === 6);
+  }
+  if(isHost) {
+    const btn = g('btn-start');
+    btn.style.display = '';
+    btn.disabled = !(gs.players.length >= 2 && gs.players.length <= 5);
+    btn.textContent = '▶ ゲームを開始する';
+    g('wait-status').textContent = gs.players.length < 2 ? 'あと1人以上必要です（2〜5人）' :
+      gs.players.length > 5 ? '満員（最大5人）' : '開始できます！';
+  } else {
+    g('btn-start').style.display = 'none';
+    g('wait-status').textContent = 'ホストの開始を待っています...';
+  }
+}
+
+// ============================================================
+// PLAYING RENDER
+// ============================================================
+function renderPlaying() {
+  if(!gs) return;
+  renderTokens();
+  renderFireworks();
+  renderHands();
+  renderDiscard();
+  renderActionPanel();
+  renderLog();
+}
+
+function renderTokens() {
+  // ヒントトークン
+  const hintEl = g('hint-tokens');
+  hintEl.innerHTML = '';
+  for(let i=0;i<gs.maxHintTokens;i++) {
+    const d = mk('div', 'token-dot ' + (i < gs.hintTokens ? 'hint-active' : 'hint-used'));
+    hintEl.appendChild(d);
+  }
+  // ミストークン
+  const missEl = g('miss-tokens');
+  missEl.innerHTML = '';
+  for(let i=0;i<gs.maxMissTokens;i++) {
+    const d = mk('div', 'token-dot ' + (i < gs.missTokens ? 'miss-active' : 'miss-empty'));
+    missEl.appendChild(d);
+  }
+  // 山札
+  let deckTxt = String(gs.deckCount);
+  if(gs.finalTurnsLeft > 0) deckTxt += ' / ⏳' + gs.finalTurnsLeft;
+  g('deck-count').textContent = deckTxt;
+}
+
+function renderFireworks() {
+  const colors = gs.colorMode === 6 ? COLORS_6 : COLORS_5;
+  const row = g('fireworks-row');
+  row.innerHTML = '';
+  colors.forEach(color => {
+    const val = gs.fireworks[color] || 0;
+    if(val === 0) {
+      const slot = mk('div', 'firework-slot');
+      slot.style.borderColor = `var(--c-${color})`;
+      slot.textContent = '・';
+      row.appendChild(slot);
+    } else {
+      const card = mk('div', 'card c-' + color);
+      card.style.width = '50px';
+      card.style.height = '70px';
+      card.style.fontSize = '1.4rem';
+      card.textContent = val;
+      row.appendChild(card);
+    }
+  });
+}
+
+function renderHands() {
+  const me = gs.players.find(p => p.id === myId);
+  const myIdx = gs.players.findIndex(p => p.id === myId);
+
+  // 自分の手札
+  const mySection = g('my-hand-section');
+  mySection.innerHTML = '';
+  if(me) {
+    const area = mk('div', 'hand-area is-me' + (gs.currentTurn === myIdx ? ' current-turn' : ''));
+    const header = mk('div', 'hand-header');
+    const nameSpan = mk('span', 'hand-name');
+    nameSpan.textContent = '👤 自分の手札（自分には見えません）';
+    header.appendChild(nameSpan);
+    if(gs.currentTurn === myIdx) {
+      const turnSpan = mk('span', 'turn-indicator');
+      turnSpan.textContent = 'あなたの番';
+      header.appendChild(turnSpan);
+    }
+    area.appendChild(header);
+    const cards = mk('div', 'hand-cards');
+    me.hand.forEach((c, idx) => {
+      const card = renderMyCardElement(c, idx, {});
+      cards.appendChild(card);
+    });
+    area.appendChild(cards);
+    mySection.appendChild(area);
+  }
+
+  // 他人の手札
+  const othersSection = g('others-hands');
+  othersSection.innerHTML = '';
+  gs.players.forEach((p, idx) => {
+    if(p.id === myId) return;
+    const area = mk('div', 'hand-area' + (gs.currentTurn === idx ? ' current-turn' : ''));
+    const header = mk('div', 'hand-header');
+    const nameSpan = mk('span', 'hand-name');
+    nameSpan.textContent = '👥 ' + p.name;
+    header.appendChild(nameSpan);
+    if(gs.currentTurn === idx) {
+      const turnSpan = mk('span', 'turn-indicator');
+      turnSpan.textContent = 'プレイ中';
+      header.appendChild(turnSpan);
+    }
+    area.appendChild(header);
+    const cards = mk('div', 'hand-cards');
+    p.hand.forEach((c, cidx) => {
+      const card = mk('div', 'card c-' + c.color);
+      card.textContent = c.number;
+      // ヒント情報
+      const hintInfo = describeHints(c);
+      if(hintInfo) {
+        const hintBox = mk('div', 'card-hints');
+        hintBox.textContent = hintInfo;
+        card.appendChild(hintBox);
+      }
+      // 位置番号
+      const pos = mk('div');
+      pos.style.cssText = 'position:absolute; top:2px; left:4px; font-size:0.65rem; color:rgba(255,255,255,0.7);';
+      pos.textContent = (cidx+1);
+      card.appendChild(pos);
+      cards.appendChild(card);
+    });
+    area.appendChild(cards);
+    othersSection.appendChild(area);
+  });
+}
+
+function describeHints(c) {
+  const parts = [];
+  if(c.hintsColor && c.hintsColor.length) {
+    const positives = c.hintsColor.filter(h => !h.startsWith('!'));
+    if(positives.length) {
+      parts.push(positives.map(h => COLOR_NAMES[h]||h).join('・'));
+    }
+  }
+  if(c.hintsNum && c.hintsNum.length) {
+    const positives = c.hintsNum.filter(h => !String(h).startsWith('!'));
+    if(positives.length) {
+      parts.push(positives.join('・'));
+    }
+  }
+  return parts.join(' ');
+}
+
+// 自分のカード（裏向き）にヒント情報を反映して表示するヘルパー
+// 色のヒントを受けたらカードの色背景を変える
+// 数字のヒントを受けたら中央に数字を表示
+// 否定情報（!赤、!3 など）も小さく表示
+function renderMyCardElement(c, idx, opts) {
+  opts = opts || {};
+  // 確定した色（正のヒント）
+  const knownColors = (c.hintsColor || []).filter(h => !h.startsWith('!'));
+  const knownColor = knownColors[0] || null;
+  // 確定した数字（正のヒント）
+  const knownNums = (c.hintsNum || []).filter(h => !String(h).startsWith('!'));
+  const knownNum = knownNums[0] || null;
+  // 否定情報
+  const negColors = (c.hintsColor || []).filter(h => h.startsWith('!')).map(h => h.slice(1));
+  const negNums = (c.hintsNum || []).filter(h => String(h).startsWith('!')).map(h => Number(String(h).slice(1)));
+
+  // 背景色：色ヒントを受けていれば該当色、未確定なら裏面
+  let cardClass = 'card';
+  if(knownColor) {
+    cardClass += ' c-' + knownColor;
+  } else {
+    cardClass += ' back';
+  }
+  if(opts.selected) cardClass += ' selected';
+  const card = mk('div', cardClass);
+
+  // 中央の表示テキスト決定
+  // - 色も数字も判明 → 数字を表示（色はカード背景でわかる）
+  // - 色だけ判明 → "?" を薄く（数字は未確定）
+  // - 数字だけ判明 → 数字を表示
+  // - どちらも未確定 → "?"
+  let mainText = '';
+  let mainOpacity = 1;
+  if(knownNum) {
+    mainText = String(knownNum);
+  } else if(knownColor) {
+    mainText = '?';
+    mainOpacity = 0.5;
+  } else {
+    mainText = '?';
+    mainOpacity = 0.5;
+  }
+  // 中央のテキスト要素
+  const mainSpan = mk('span');
+  mainSpan.style.cssText = 'opacity:' + mainOpacity + '; pointer-events:none;';
+  mainSpan.textContent = mainText;
+  card.appendChild(mainSpan);
+
+  // 位置番号（左上）
+  const pos = mk('div');
+  pos.style.cssText = 'position:absolute; top:2px; left:4px; font-size:0.65rem; color:rgba(255,255,255,0.7); pointer-events:none; font-weight:normal;';
+  pos.textContent = (idx+1);
+  card.appendChild(pos);
+
+  // 否定情報を右下に小さく表示
+  if(negColors.length > 0 || negNums.length > 0) {
+    const negBox = mk('div');
+    negBox.style.cssText = 'position:absolute; bottom:2px; right:4px; font-size:0.55rem; line-height:1.1; color:rgba(255,255,255,0.7); text-align:right; pointer-events:none; max-width:34px; font-weight:normal; font-family:var(--sans);';
+    const parts = [];
+    if(negColors.length) parts.push('×' + negColors.map(co => COLOR_NAMES[co]).join(''));
+    if(negNums.length) parts.push('×' + negNums.join(''));
+    negBox.textContent = parts.join(' ');
+    card.appendChild(negBox);
+  }
+
+  return card;
+}
+
+function renderActionPanel() {
+  const myIdx = gs.players.findIndex(p => p.id === myId);
+  const isMyTurn = (gs.currentTurn === myIdx);
+  const panel = g('action-panel');
+  if(!isMyTurn) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+
+  // タブの選択状態
+  ['hint', 'play', 'discard'].forEach(a => {
+    g('tab-'+a).classList.toggle('active', currentAction === a);
+  });
+
+  // sub-action 表示
+  const sub = g('sub-action-area');
+  sub.innerHTML = '';
+  if(currentAction === 'hint') {
+    renderHintUI(sub);
+  } else if(currentAction === 'play') {
+    renderPlayUI(sub);
+  } else if(currentAction === 'discard') {
+    renderDiscardUI(sub);
+  } else {
+    sub.innerHTML = '<div style="text-align:center; color:var(--muted); padding:6px;">上のボタンから行動を選んでください</div>';
+  }
+}
+
+function selectActionTab(action) {
+  currentAction = action;
+  actionState = {};
+  renderActionPanel();
+}
+
+function renderHintUI(container) {
+  if(gs.hintTokens <= 0) {
+    container.innerHTML = '<div style="color:var(--red); text-align:center;">ヒントトークンがありません</div>';
+    return;
+  }
+  // ターゲット選択
+  const targetLabel = mk('div'); targetLabel.style.cssText = 'font-size:0.78rem; color:var(--muted); margin-bottom:4px;';
+  targetLabel.textContent = '1. ヒントを送る相手を選択';
+  container.appendChild(targetLabel);
+  const targetList = mk('div', 'hint-target-list');
+  gs.players.forEach(p => {
+    if(p.id === myId) return;
+    const item = mk('div', 'hint-target' + (actionState.targetId === p.id ? ' selected' : ''));
+    item.textContent = '👥 ' + p.name;
+    item.onclick = () => { actionState.targetId = p.id; actionState.hintValue = null; renderActionPanel(); };
+    targetList.appendChild(item);
+  });
+  container.appendChild(targetList);
+
+  if(!actionState.targetId) return;
+
+  // 色 or 数字
+  const target = gs.players.find(p => p.id === actionState.targetId);
+  if(!target) return;
+
+  const typeLabel = mk('div'); typeLabel.style.cssText = 'font-size:0.78rem; color:var(--muted); margin-top:10px; margin-bottom:4px;';
+  typeLabel.textContent = '2. 色 または 数字 を選択（該当0枚は無効）';
+  container.appendChild(typeLabel);
+
+  // 利用可能な色
+  const colors = gs.colorMode === 6 ? COLORS_6 : COLORS_5;
+  const targetColorsAll = new Set();
+  target.hand.forEach(c => {
+    if(c.color === 'rainbow') {
+      // 虹色は全色のヒントで反応するが、ヒント自体は虹以外を選ぶ
+      colors.forEach(col => { if(col !== 'rainbow') targetColorsAll.add(col); });
+    } else {
+      targetColorsAll.add(c.color);
+    }
+  });
+  const colorRow = mk('div', 'hint-options');
+  colors.forEach(color => {
+    if(color === 'rainbow') return; // 虹色は直接ヒント不可
+    const swatch = mk('div', 'hint-color c-' + color + (actionState.hintType === 'color' && actionState.hintValue === color ? ' selected' : ''));
+    swatch.title = COLOR_NAMES[color];
+    if(!targetColorsAll.has(color)) {
+      swatch.style.opacity = '0.3';
+      swatch.style.cursor = 'not-allowed';
+    } else {
+      swatch.onclick = () => {
+        actionState.hintType = 'color'; actionState.hintValue = color;
+        renderActionPanel();
+      };
+    }
+    colorRow.appendChild(swatch);
+  });
+  container.appendChild(colorRow);
+
+  const targetNumsAll = new Set(target.hand.map(c => c.number));
+  const numRow = mk('div', 'hint-options'); numRow.style.marginTop = '8px';
+  [1,2,3,4,5].forEach(num => {
+    const btn = mk('div', 'hint-num' + (actionState.hintType === 'number' && actionState.hintValue === num ? ' selected' : ''));
+    btn.textContent = num;
+    if(!targetNumsAll.has(num)) {
+      btn.style.opacity = '0.3';
+      btn.style.cursor = 'not-allowed';
+    } else {
+      btn.onclick = () => {
+        actionState.hintType = 'number'; actionState.hintValue = num;
+        renderActionPanel();
+      };
+    }
+    numRow.appendChild(btn);
+  });
+  container.appendChild(numRow);
+
+  if(actionState.hintType && actionState.hintValue !== null) {
+    const sendBtn = mk('button', 'btn btn-pink');
+    sendBtn.style.cssText = 'width:100%; margin-top:10px;';
+    const valLabel = actionState.hintType === 'color' ? COLOR_NAMES[actionState.hintValue] : actionState.hintValue;
+    sendBtn.textContent = `💡 ${target.name} に「${valLabel}」を伝える`;
+    sendBtn.onclick = () => sendHint(actionState.targetId, actionState.hintType, actionState.hintValue);
+    container.appendChild(sendBtn);
+  }
+}
+
+function renderPlayUI(container) {
+  const me = gs.players.find(p => p.id === myId);
+  if(!me) return;
+  const label = mk('div'); label.style.cssText = 'font-size:0.78rem; color:var(--muted); margin-bottom:6px;';
+  label.textContent = 'プレイするカードを選択（自分の手札の位置）';
+  container.appendChild(label);
+  const sel = mk('div', 'card-selector');
+  me.hand.forEach((c, idx) => {
+    const card = renderMyCardElement(c, idx, {selected: actionState.cardIdx === idx});
+    card.onclick = () => { actionState.cardIdx = idx; renderActionPanel(); };
+    sel.appendChild(card);
+  });
+  container.appendChild(sel);
+  if(actionState.cardIdx !== undefined) {
+    const btn = mk('button', 'btn btn-green');
+    btn.style.cssText = 'width:100%; margin-top:8px;';
+    btn.textContent = `🎆 ${actionState.cardIdx + 1}番目をプレイ`;
+    btn.onclick = () => sendPlay(actionState.cardIdx);
+    container.appendChild(btn);
+  }
+}
+
+function renderDiscardUI(container) {
+  const me = gs.players.find(p => p.id === myId);
+  if(!me) return;
+  if(gs.hintTokens >= gs.maxHintTokens) {
+    container.innerHTML = '<div style="color:var(--red); text-align:center;">ヒントトークンが満タンなので捨てられません</div>';
+    return;
+  }
+  const label = mk('div'); label.style.cssText = 'font-size:0.78rem; color:var(--muted); margin-bottom:6px;';
+  label.textContent = '捨てるカードを選択（自分の手札の位置）';
+  container.appendChild(label);
+  const sel = mk('div', 'card-selector');
+  me.hand.forEach((c, idx) => {
+    const card = renderMyCardElement(c, idx, {selected: actionState.cardIdx === idx});
+    card.onclick = () => { actionState.cardIdx = idx; renderActionPanel(); };
+    sel.appendChild(card);
+  });
+  container.appendChild(sel);
+  if(actionState.cardIdx !== undefined) {
+    const btn = mk('button', 'btn btn-amber');
+    btn.style.cssText = 'width:100%; margin-top:8px;';
+    btn.textContent = `🗑️ ${actionState.cardIdx + 1}番目を捨てる`;
+    btn.onclick = () => sendDiscard(actionState.cardIdx);
+    container.appendChild(btn);
+  }
+}
+
+function renderDiscard() {
+  const area = g('discard-area');
+  if(area.style.display === 'none') return;
+  area.innerHTML = '';
+  const wrap = mk('div');
+  wrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+  // 色ごとにグループ化
+  const colors = gs.colorMode === 6 ? COLORS_6 : COLORS_5;
+  colors.forEach(color => {
+    const cards = gs.discard.filter(c => c.color === color);
+    if(cards.length === 0) return;
+    cards.sort((a,b) => a.number - b.number);
+    cards.forEach(c => {
+      const card = mk('div', 'card c-' + color + ' small');
+      card.textContent = c.number;
+      wrap.appendChild(card);
+    });
+  });
+  area.appendChild(wrap);
+}
+
+function toggleDiscard() {
+  const area = g('discard-area');
+  area.style.display = area.style.display === 'none' ? '' : 'none';
+  if(area.style.display !== 'none') renderDiscard();
+}
+
+function renderLog() {
+  const logEl = g('game-log');
+  logEl.innerHTML = '';
+  (gs.log||[]).forEach(line => {
+    const d = mk('div'); d.textContent = line; logEl.appendChild(d);
+  });
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ============================================================
+// ACTION SENDERS
+// ============================================================
+let isSendingAction = false;
+function sendHint(targetId, hintType, hintValue) {
+  if(isSendingAction) return;
+  isSendingAction = true;
+  const msg = {action:'hint', targetId, hintType, hintValue};
+  if(isHost) handleAction(myId, msg);
+  else fbSendToHost({type:'action', ...msg});
+  currentAction = null; actionState = {};
+  setTimeout(() => { isSendingAction = false; }, 800);
+}
+function sendPlay(cardIdx) {
+  if(isSendingAction) return;
+  if(!confirm('このカードをプレイしますか？\n（間違っているとミス+1）')) return;
+  isSendingAction = true;
+  const msg = {action:'play', cardIdx};
+  if(isHost) handleAction(myId, msg);
+  else fbSendToHost({type:'action', ...msg});
+  currentAction = null; actionState = {};
+  setTimeout(() => { isSendingAction = false; }, 800);
+}
+function sendDiscard(cardIdx) {
+  if(isSendingAction) return;
+  if(!confirm('このカードを捨てますか？')) return;
+  isSendingAction = true;
+  const msg = {action:'discard', cardIdx};
+  if(isHost) handleAction(myId, msg);
+  else fbSendToHost({type:'action', ...msg});
+  currentAction = null; actionState = {};
+  setTimeout(() => { isSendingAction = false; }, 800);
+}
+
+// ============================================================
+// RESULT
+// ============================================================
+function showResult() {
+  show('result');
+  if(!gs) return;
+  const colors = gs.colorMode === 6 ? COLORS_6 : COLORS_5;
+  const score = colors.reduce((s,c) => s + (gs.fireworks[c]||0), 0);
+  g('result-score').textContent = score;
+  // ランク
+  let rank = '', rankColor = '';
+  if(gs.winner === 'clear') { rank = '👑 完全勝利！'; rankColor = '#ffd54f'; }
+  else if(gs.winner === 'fail') { rank = '💥 全滅'; rankColor = '#ff5757'; }
+  else {
+    if(score >= 25) { rank = 'S - 伝説の花火師'; rankColor = '#ffd54f'; }
+    else if(score >= 20) { rank = 'A - 一流の花火師'; rankColor = '#5fd97a'; }
+    else if(score >= 15) { rank = 'B - 良い花火'; rankColor = '#4a9eff'; }
+    else if(score >= 10) { rank = 'C - 平凡な花火'; rankColor = '#b15bff'; }
+    else if(score >= 5) { rank = 'D - 残念な花火'; rankColor = '#ffb020'; }
+    else { rank = 'F - 大失敗'; rankColor = '#ff5757'; }
+  }
+  const rankEl = g('result-rank');
+  rankEl.textContent = rank;
+  rankEl.style.background = rankColor;
+  rankEl.style.color = rank.startsWith('B') || rank.startsWith('A') || rank.startsWith('S') ? '#000' : 'white';
+
+  if(gs.winner === 'clear') {
+    g('result-emoji').textContent = '🎆';
+    g('result-title').textContent = '完全勝利！';
+    g('result-sub').textContent = '全色5まで完成！';
+  } else if(gs.winner === 'fail') {
+    g('result-emoji').textContent = '💥';
+    g('result-title').textContent = 'ゲームオーバー';
+    g('result-sub').textContent = 'ミス3回で終了';
+  } else {
+    g('result-emoji').textContent = '🎆';
+    g('result-title').textContent = 'ゲーム終了';
+    g('result-sub').textContent = '山札が尽きました';
+  }
+
+  // 最終花火
+  const fwRow = g('result-fireworks');
+  fwRow.innerHTML = '';
+  colors.forEach(color => {
+    const val = gs.fireworks[color] || 0;
+    if(val === 0) {
+      const slot = mk('div', 'firework-slot');
+      slot.style.borderColor = `var(--c-${color})`;
+      slot.textContent = '・';
+      fwRow.appendChild(slot);
+    } else {
+      const card = mk('div', 'card c-' + color);
+      card.style.width = '50px'; card.style.height = '70px'; card.style.fontSize = '1.4rem';
+      card.textContent = val;
+      fwRow.appendChild(card);
+    }
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {});
+</script>
+</body>
+</html>

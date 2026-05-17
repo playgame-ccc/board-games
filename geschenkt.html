@@ -1,0 +1,964 @@
+<!-- GESCHENKT v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🎁 ゲシェンク</title>
+<style>
+:root {
+  --bg: #0a1015;
+  --surface: #18202a;
+  --surface2: #232d3a;
+  --surface3: #38404f;
+  --text: #f0f0f5;
+  --muted: #8a96a6;
+  --red: #ff2d4a;
+  --green: #2dff8a;
+  --blue: #4fc3f7;
+  --amber: #ffb020;
+  --gold: #ffd54f;
+  --gs-teal: #26a69a;
+  --gs-teal-dim: rgba(38,166,154,0.15);
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  --mono: "SF Mono", Menlo, Monaco, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  overscroll-behavior: none;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app { max-width: 480px; margin: 0 auto; padding: 14px; min-height: 100vh; display: flex; flex-direction: column; gap: 10px; }
+.screen { display: none; flex-direction: column; gap: 10px; }
+.screen.active { display: flex; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
+h1 { font-size: 1.8rem; text-align: center; }
+h2 { font-size: 1.3rem; text-align: center; }
+h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 18px; border-radius: 10px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
+  transition: all 0.15s; user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-teal { background: var(--gs-teal); color: white; border-color: var(--gs-teal); }
+.btn-red { background: var(--red); color: white; border-color: var(--red); }
+.btn-blue { background: var(--blue); color: #000; border-color: var(--blue); }
+.btn-green { background: var(--green); color: #000; border-color: var(--green); }
+.btn-amber { background: var(--amber); color: #000; border-color: var(--amber); }
+.btn-ghost { background: transparent; }
+
+.input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--surface3); background: var(--surface);
+  color: var(--text); font-size: 1rem;
+}
+.input:focus { outline: none; border-color: var(--gs-teal); }
+.code-input { text-align: center; font-family: var(--mono); font-size: 1.4rem; letter-spacing: 0.3em; }
+
+.row { display: flex; gap: 8px; }
+.divider { height: 1px; background: var(--surface3); margin: 4px 0; }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 14px; }
+.status-txt { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); text-align: center; min-height: 18px; }
+.error { font-family: var(--mono); font-size: 0.85rem; color: var(--red); text-align: center; min-height: 18px; }
+
+.code-box { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 12px; text-align: center; }
+.code-box .label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 2px; }
+.code-box .code { font-family: var(--mono); font-size: 2rem; letter-spacing: 0.3em; color: var(--gs-teal); margin-top: 4px; }
+.copy-btn { background: var(--surface2); padding: 8px; border-radius: 8px; border: 1px solid var(--surface3); color: var(--muted); font-size: 0.78rem; cursor: pointer; }
+
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-row { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+.player-row.is-me { border-left: 3px solid var(--gs-teal); }
+.player-row.cur-turn { border-color: var(--amber); background: rgba(255,176,32,0.06); }
+.player-name { font-weight: 600; flex: 1; }
+
+/* ── 場のカード（大） ── */
+.field-area { background: linear-gradient(135deg, var(--gs-teal-dim), rgba(38,166,154,0.05)); border: 2px solid var(--gs-teal); border-radius: 14px; padding: 16px; text-align: center; }
+.field-label { font-size: 0.78rem; color: var(--muted); font-family: var(--mono); letter-spacing: 2px; margin-bottom: 6px; }
+.field-card {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 110px; height: 150px;
+  border-radius: 14px; border: 2px solid var(--gs-teal);
+  background: linear-gradient(135deg, #fff, #f0f0f5);
+  color: #1a1a26;
+  font-family: var(--mono); font-weight: 900; font-size: 3.2rem;
+  box-shadow: 0 8px 24px rgba(38,166,154,0.3);
+  margin: 4px;
+}
+.field-chips {
+  margin-top: 10px;
+  font-family: var(--mono); font-size: 1.1rem; color: var(--gold);
+  background: rgba(255,213,79,0.1); border: 1px solid var(--gold);
+  border-radius: 8px; padding: 6px 12px; display: inline-block;
+}
+.field-empty {
+  width: 110px; height: 150px;
+  border: 2px dashed var(--surface3);
+  border-radius: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--surface3); font-size: 0.85rem;
+  margin: 4px;
+}
+.deck-info {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+  margin-top: 8px;
+}
+
+/* ── 自分のカード ── */
+.my-card {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 56px;
+  border-radius: 8px; border: 1px solid var(--surface3);
+  background: var(--surface2);
+  font-family: var(--mono); font-weight: 700; font-size: 1rem;
+  flex-shrink: 0;
+}
+.my-card.linked-left { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.my-card.linked-right { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: 0; }
+.my-card.run-min { background: linear-gradient(135deg, rgba(45,255,138,0.2), var(--surface2)); border-color: var(--green); color: var(--green); }
+.my-card.run-other { background: var(--surface); color: var(--muted); }
+.cards-area { display: flex; gap: 4px; flex-wrap: wrap; padding: 8px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; }
+
+/* ── アクションボタン ── */
+.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.action-btn { padding: 18px; border-radius: 12px; border: 2px solid var(--surface3); background: var(--surface); cursor: pointer; text-align: center; transition: all 0.15s; }
+.action-btn:active { transform: scale(0.96); }
+.action-btn-icon { font-size: 1.8rem; margin-bottom: 4px; }
+.action-btn-title { font-weight: 700; font-size: 1rem; margin-bottom: 3px; }
+.action-btn-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
+.action-btn.pass { border-color: var(--amber); }
+.action-btn.pass .action-btn-title { color: var(--amber); }
+.action-btn.take { border-color: var(--gs-teal); }
+.action-btn.take .action-btn-title { color: var(--gs-teal); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 全プレイヤー状態 ── */
+.player-mini {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 8px; padding: 8px 12px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.85rem;
+}
+.player-mini.cur { border-color: var(--amber); background: rgba(255,176,32,0.08); }
+.player-mini.is-me { border-left: 3px solid var(--gs-teal); }
+.player-mini-name { flex: 1; font-weight: 600; }
+.player-mini-chips { color: var(--gold); font-family: var(--mono); font-size: 0.85rem; }
+.player-mini-cards-count { color: var(--muted); font-family: var(--mono); font-size: 0.75rem; }
+
+/* ── 結果 ── */
+.result-emoji { font-size: 4rem; text-align: center; }
+.result-title { font-size: 1.6rem; text-align: center; font-weight: 700; }
+.result-row { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+.result-row.winner { border-color: var(--gold); background: linear-gradient(135deg, rgba(255,213,79,0.15), rgba(255,213,79,0.05)); }
+.result-score { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; }
+.result-detail { font-size: 0.78rem; color: var(--muted); font-family: var(--mono); }
+
+/* ── ゲームログ ── */
+.game-log { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px; max-height: 100px; overflow-y: auto; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.game-log div { padding: 2px 0; border-bottom: 1px dashed var(--surface3); }
+.game-log div:last-child { border-bottom: none; color: var(--text); }
+
+/* ── FB modal ── */
+.fb-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+.fb-modal-inner { background: var(--surface); border-radius: 14px; padding: 22px; max-width: 360px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- FB MODAL -->
+<div id="fb-modal" class="fb-modal" style="display:none;">
+  <div class="fb-modal-inner">
+    <h2 style="font-size:1.1rem; text-align:left;">🔑 Firebase URL</h2>
+    <p style="font-size:0.8rem; color:var(--muted);">マルチプレイには Firebase Realtime Database が必要です。</p>
+    <input class="input" id="fb-url" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com">
+    <button class="btn btn-teal" onclick="saveFbConfig()">設定して始める</button>
+    <button class="btn btn-ghost" onclick="g('fb-modal').style.display='none'">あとで</button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ===== LOBBY ===== -->
+  <div id="screen-lobby" class="screen active">
+    <h1>🎁 ゲシェンク</h1>
+    <p style="text-align:center; font-family:var(--mono); font-size:0.78rem; color:var(--muted); letter-spacing:2px;">No Thanks! / シンプル戦略ゲーム</p>
+
+    <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-teal" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+      <div class="divider"></div>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+      <button class="btn btn-blue" onclick="showSoloLobby()">🤖 ひとりで遊ぶ（CPU対戦）</button>
+    </div>
+
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+
+    <div class="panel" style="margin-top:8px;">
+      <h3 style="margin-bottom:10px;">ゲームルール</h3>
+      <p style="font-size:0.82rem; color:var(--muted); line-height:1.7;">
+        3〜7人。33枚（3〜35）から9枚除外して24枚で進行。<br>
+        手番では「<strong style="color:var(--amber);">パス</strong>（チップを1枚乗せて回す）」か「<strong style="color:var(--gs-teal);">取る</strong>（カードとチップ全部）」を選ぶ。<br>
+        カードは減点、<strong style="color:var(--green);">連番</strong>は最小値のみ減点、チップ1枚=1点加点。<br>
+        最も減点の少ない人が勝利。
+      </p>
+    </div>
+
+    <a href="index.html" style="text-decoration:none; margin-top:10px;">
+      <button class="btn btn-ghost" style="width:100%;">← ホームに戻る</button>
+    </a>
+  </div>
+
+  <!-- ===== SOLO LOBBY ===== -->
+  <div id="screen-solo" class="screen">
+    <h2>🤖 CPU対戦の設定</h2>
+    <input class="input" id="solo-name" type="text" placeholder="あなたの名前" maxlength="12" value="あなた">
+    <div class="panel">
+      <h3 style="margin-bottom:8px;">CPU人数</h3>
+      <div class="row" style="justify-content:center; flex-wrap:wrap;">
+        <button class="btn solo-cpu-btn" onclick="setSoloCount(2)" id="solo-c2">2人</button>
+        <button class="btn solo-cpu-btn" onclick="setSoloCount(3)" id="solo-c3">3人</button>
+        <button class="btn solo-cpu-btn" onclick="setSoloCount(4)" id="solo-c4">4人</button>
+        <button class="btn solo-cpu-btn" onclick="setSoloCount(5)" id="solo-c5">5人</button>
+        <button class="btn solo-cpu-btn" onclick="setSoloCount(6)" id="solo-c6">6人</button>
+      </div>
+      <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-top:8px;">合計3〜7人で遊びます</p>
+    </div>
+    <div id="solo-error" class="error"></div>
+    <button class="btn btn-teal" onclick="startSoloGame()">▶ ゲーム開始</button>
+    <button class="btn btn-ghost" onclick="show('lobby')">← 戻る</button>
+  </div>
+
+  <!-- ===== WAITING ===== -->
+  <div id="screen-waiting" class="screen">
+    <h2>待機ロビー</h2>
+    <div class="code-box">
+      <div class="label">ルームコード</div>
+      <div class="code" id="disp-code">----</div>
+    </div>
+    <button class="copy-btn" onclick="copyCode()">📋 コードをコピー</button>
+    <div class="divider"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="text-transform:none; font-family:var(--sans); letter-spacing:0;">参加者</h3>
+      <span id="p-count" style="font-family:var(--mono); font-size:0.85rem; color:var(--muted);">1人</span>
+    </div>
+    <div id="wait-list" class="player-list"></div>
+    <div id="wait-status" class="status-txt"></div>
+    <button id="btn-start" class="btn btn-green" onclick="startGame()" disabled>▶ ゲームを開始する</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- ===== PLAYING ===== -->
+  <div id="screen-playing" class="screen" style="gap:8px;">
+    <!-- 全プレイヤー -->
+    <div id="all-players" style="display:flex; flex-direction:column; gap:4px;"></div>
+
+    <!-- 場のカード -->
+    <div class="field-area">
+      <div class="field-label">場のカード</div>
+      <div id="field-display"></div>
+      <div id="deck-info" class="deck-info"></div>
+    </div>
+
+    <!-- アクション -->
+    <div id="action-area"></div>
+
+    <!-- 自分のカード -->
+    <div>
+      <div style="font-size:0.78rem; color:var(--muted); margin-bottom:4px; font-family:var(--mono); letter-spacing:1px;">📇 あなたのカード（緑=連番の最小値=減点対象）</div>
+      <div id="my-cards" class="cards-area"></div>
+    </div>
+
+    <div id="my-score" style="text-align:center; padding:8px; background:var(--surface); border-radius:8px; font-family:var(--mono); font-size:0.85rem;"></div>
+
+    <!-- ログ -->
+    <div id="game-log" class="game-log"></div>
+
+    <button class="btn btn-ghost" onclick="if(confirm('ゲームを抜けますか？'))leaveRoom()">退出</button>
+  </div>
+
+  <!-- ===== RESULT ===== -->
+  <div id="screen-result" class="screen">
+    <div class="result-emoji" id="result-emoji">🎉</div>
+    <div class="result-title" id="result-title">勝者: ...</div>
+    <p class="status-txt" id="result-sub"></p>
+    <div class="divider"></div>
+    <h3 style="text-align:center;">最終結果</h3>
+    <div id="result-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+    <button class="btn btn-teal" onclick="restartGame()">🔄 もう一度遊ぶ</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ戻る</button>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+function saveFbConfig() {
+  const url = g('fb-url').value.trim().replace(/\/$/,'');
+  if(!url) return;
+  fbUrl = url; localStorage.setItem(FB_KEY, url); g('fb-modal').style.display='none';
+}
+async function checkFbConfig() {
+  if(!fbUrl) { showFbModal(); return false; }
+  try {
+    const r = await fetch(`${fbUrl}/.json?shallow=true`, {method:'GET'});
+    if(!r.ok && r.status !== 404) { setErr('Firebase接続エラー'); return false; }
+  } catch(e) { setErr('Firebase接続失敗'); return false; }
+  return true;
+}
+function showFbModal() { g('fb-modal').style.display='flex'; }
+
+// FB primitives
+let fbRoom = '', fbPollTimer = null, fbLastBcastTs = 0, fbLastPrvTs = 0, fbLastActTs = {};
+async function fbPut(sub, data) { if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)}); } catch(e){} }
+async function fbGet(sub) { if(!fbRoom) return null; try { const r = await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`); if(!r.ok) return null; return await r.json(); } catch(e) { return null; } }
+async function fbDel(sub) { if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){} }
+function fbListen() {
+  if(fbPollTimer) clearInterval(fbPollTimer);
+  fbLastBcastTs = 0; fbLastPrvTs = 0; fbLastActTs = {};
+  fbPollTimer = setInterval(fbPoll, 500);
+}
+function fbClose() { if(fbPollTimer) clearInterval(fbPollTimer); fbPollTimer = null; fbRoom = ''; }
+async function fbPoll() {
+  if(!fbRoom) return;
+  const bc = await fbGet('broadcast');
+  if(bc && bc.ts > fbLastBcastTs) {
+    fbLastBcastTs = bc.ts;
+    if(!isHost && bc.msg) handleBroadcast(bc.msg);
+  }
+  const prv = await fbGet(`private/${myId}`);
+  if(prv && prv.ts > fbLastPrvTs) {
+    fbLastPrvTs = prv.ts;
+    if(prv.msg) handlePrivate(prv.msg);
+  }
+  if(isHost) {
+    const acts = await fbGet('action');
+    if(acts) {
+      for(const pid in acts) {
+        const a = acts[pid];
+        if(a && a.ts > (fbLastActTs[pid]||0)) {
+          fbLastActTs[pid] = a.ts;
+          if(a.msg) onMsg(a.msg, pid);
+        }
+      }
+    }
+  }
+}
+function fbBroadcast(msg) { fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg) { fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg) { fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '';
+let isHost = false, isSolo = false, roomCode = '';
+let fs = null, gs = null;
+let myCards = []; // 自分の取ったカード（数字配列）
+let myChips = 0; // 自分のチップ数
+let soloCount = 3;
+let cpuAITimer = null;
+
+// ============================================================
+// UTILS
+// ============================================================
+function g(id) { return document.getElementById(id); }
+function mk(tag, cls) { const e = document.createElement(tag); if(cls) e.className = cls; return e; }
+function show(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-'+name); if(el) el.classList.add('active');
+}
+function setErr(msg) { const e = g('lobby-error'); if(e) e.textContent = msg || ''; }
+function setSt(msg) { const s = g('lobby-status'); if(s) s.textContent = msg || ''; }
+function genId() { return 'p_' + Math.random().toString(36).slice(2,10); }
+function shuffle(a) { const x=a.slice(); for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];} return x; }
+function copyCode() { navigator.clipboard?.writeText(g('disp-code').textContent); }
+
+// ============================================================
+// ROOM
+// ============================================================
+async function createRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  myName = name; isHost = true; isSolo = false;
+  const code = Array.from({length:4}, () => Math.floor(Math.random()*10)).join('');
+  roomCode = code; fbRoom = 'GS-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'geschenkt', ts:Date.now()});
+    fs = initFs([{id:myId, name:myName}]);
+    gs = pubFs(fs);
+    fbListen();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    show('waiting'); refreshWait(); bcast();
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
+}
+
+async function joinRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)) { setErr('4桁の数字'); return; }
+  myName = name; isHost = false; isSolo = false; roomCode = code;
+  fbRoom = 'GS-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta) { setErr('ルームが見つかりません'); setSt(''); return; }
+    if(meta.game !== 'geschenkt') { setErr('ゲーム種別が違います'); setSt(''); return; }
+    fbListen();
+    fbSendToHost({type:'join', name:myName, id:myId});
+    setSt('接続しました...');
+    show('waiting');
+    g('disp-code').textContent = code;
+    g('btn-start').style.display = 'none';
+    let retries = 0;
+    const rj = setInterval(()=>{
+      if(!fbRoom || retries >= 5) { clearInterval(rj); return; }
+      if(gs?.players?.find(p=>p.id===myId)) { clearInterval(rj); return; }
+      fbSendToHost({type:'join', name:myName, id:myId});
+      retries++;
+    }, 2000);
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); }
+}
+
+function leaveRoom() {
+  fbClose(); fs=null; gs=null; isHost=false; isSolo=false;
+  myCards = []; myChips = 0;
+  if(cpuAITimer) { clearTimeout(cpuAITimer); cpuAITimer = null; }
+  show('lobby');
+}
+
+// ============================================================
+// HOST MESSAGE HANDLER
+// ============================================================
+function onMsg(d, senderPid) {
+  if(!d) return;
+  if(!fs) return;
+  switch(d.type) {
+    case 'join':
+      if(fs.phase !== 'waiting') { fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
+      if(fs.players.length >= 7) { fbSendTo(d.id, {type:'error', msg:'満員（最大7人）'}); return; }
+      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; }
+      fs.players.push({id:d.id, name:d.name, cards:[], chips:0});
+      bcast(); break;
+    case 'action':
+      handleAction(senderPid, d.action);
+      break;
+    case 'rematch':
+      handleRematchReq(senderPid);
+      break;
+  }
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+function initFs(players) {
+  return {
+    phase: 'waiting',
+    players: players.map(p => ({id:p.id, name:p.name, cards:[], chips:0})),
+    deck: [],          // 山札（カード数字の配列）
+    fieldCard: null,   // 場のカード
+    fieldChips: 0,     // 場のチップ
+    cur: 0,
+    log: [],
+    winner: null,
+  };
+}
+
+function pubFs(f) {
+  return {
+    phase: f.phase,
+    players: f.players.map(p => ({id:p.id, name:p.name, cards:p.cards.slice(), chips:p.chips})),
+    deck: [],          // デッキは公開しない（残り枚数だけ）
+    deckCount: f.deck.length,
+    fieldCard: f.fieldCard,
+    fieldChips: f.fieldChips,
+    cur: f.cur,
+    log: f.log.slice(-20),
+    winner: f.winner,
+    finalScores: f.finalScores || null,
+  };
+}
+
+function bcast() {
+  gs = pubFs(fs);
+  fbBroadcast({type:'gs', s:gs});
+  // 自分の情報も更新
+  const me = fs.players.find(p=>p.id===myId);
+  if(me) { myCards = me.cards.slice(); myChips = me.chips; }
+  onGsUpdate(gs);
+}
+
+// ============================================================
+// GAME START
+// ============================================================
+function startGame() {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  const n = fs.players.length;
+  if(n < 3 || n > 7) return;
+  const startBtn = g('btn-start');
+  if(startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳ 開始中...'; }
+
+  // 33枚から9枚除外して24枚
+  const all = [];
+  for(let i=3;i<=35;i++) all.push(i);
+  const shuffled = shuffle(all);
+  fs.deck = shuffled.slice(0, 24); // 残り9枚は除外
+
+  // チップ配布
+  const chipsByCount = {3:11, 4:11, 5:11, 6:9, 7:7};
+  const chips = chipsByCount[n];
+  fs.players.forEach(p => { p.cards = []; p.chips = chips; });
+
+  fs.phase = 'playing';
+  fs.fieldCard = fs.deck.pop();
+  fs.fieldChips = 0;
+  fs.cur = Math.floor(Math.random() * n);
+  fs.log = [];
+  fs.log.push('🎲 ゲーム開始！スタート: ' + fs.players[fs.cur].name);
+  fs.log.push('📌 場のカード: ' + fs.fieldCard);
+
+  bcast();
+  if(isSolo) scheduleCpu();
+}
+
+// ============================================================
+// ACTION HANDLER
+// ============================================================
+function handleAction(actorId, action) {
+  if(!fs || fs.phase !== 'playing') return;
+  const actorIdx = fs.players.findIndex(p => p.id === actorId);
+  if(actorIdx !== fs.cur) return;
+  const actor = fs.players[actorIdx];
+
+  if(action === 'pass') {
+    if(actor.chips <= 0) return; // チップなければパス不可
+    actor.chips -= 1;
+    fs.fieldChips += 1;
+    fs.log.push('🙅 ' + actor.name + ' がパス（チップを置く）');
+    // 次プレイヤーへ
+    fs.cur = (fs.cur + 1) % fs.players.length;
+    bcast();
+    if(isSolo) scheduleCpu();
+    return;
+  }
+
+  if(action === 'take') {
+    // カードとチップを引き取る
+    actor.cards.push(fs.fieldCard);
+    actor.cards.sort((a,b)=>a-b);
+    actor.chips += fs.fieldChips;
+    const cardTaken = fs.fieldCard;
+    const chipsTaken = fs.fieldChips;
+    fs.log.push('🎁 ' + actor.name + ' が ' + cardTaken + ' を取得（チップ+' + chipsTaken + '）');
+    fs.fieldChips = 0;
+    // 次のカードをめくる
+    if(fs.deck.length > 0) {
+      fs.fieldCard = fs.deck.pop();
+      fs.log.push('📌 次の場のカード: ' + fs.fieldCard);
+      // 取ったプレイヤーがそのまま次の手番
+      bcast();
+      if(isSolo) scheduleCpu();
+    } else {
+      // ゲーム終了
+      fs.fieldCard = null;
+      fs.phase = 'result';
+      computeScores();
+      bcast();
+    }
+    return;
+  }
+}
+
+// ============================================================
+// SCORE COMPUTATION
+// ============================================================
+function computeScore(cards, chips) {
+  if(!cards || cards.length === 0) return -chips;
+  const sorted = cards.slice().sort((a,b)=>a-b);
+  let penalty = 0;
+  let i = 0;
+  while(i < sorted.length) {
+    // 連続するカードの最小値だけ計上
+    penalty += sorted[i];
+    let j = i + 1;
+    while(j < sorted.length && sorted[j] === sorted[j-1] + 1) j++;
+    i = j;
+  }
+  return penalty - chips;
+}
+
+function computeScores() {
+  const scores = fs.players.map(p => ({
+    id: p.id, name: p.name,
+    cards: p.cards.slice().sort((a,b)=>a-b),
+    chips: p.chips,
+    cardPenalty: computeScore(p.cards, p.chips) + p.chips, // カード減点のみ
+    score: computeScore(p.cards, p.chips)
+  }));
+  scores.sort((a,b) => a.score - b.score);
+  fs.finalScores = scores;
+  fs.winner = scores[0].id;
+  fs.log.push('🏆 ' + scores[0].name + ' の勝利！（' + scores[0].score + '点）');
+}
+
+// ============================================================
+// CLIENT MESSAGE HANDLERS
+// ============================================================
+function handleBroadcast(msg) {
+  if(msg.type === 'gs') {
+    gs = msg.s;
+    // 自分の情報抽出
+    const me = gs.players.find(p => p.id === myId);
+    if(me) { myCards = me.cards.slice(); myChips = me.chips; }
+    onGsUpdate(gs);
+  }
+}
+function handlePrivate(msg) {
+  if(msg.type === 'error') { setErr(msg.msg); }
+}
+
+function onGsUpdate(s) {
+  if(!s) return;
+  if(s.phase === 'waiting') { show('waiting'); refreshWait(); }
+  else if(s.phase === 'playing') {
+    if(!g('screen-playing').classList.contains('active')) show('playing');
+    renderPlaying();
+  }
+  else if(s.phase === 'result') {
+    showResult();
+  }
+}
+
+// ============================================================
+// WAITING
+// ============================================================
+function refreshWait() {
+  if(!gs) return;
+  g('p-count').textContent = gs.players.length + '人';
+  const list = g('wait-list');
+  list.innerHTML = '';
+  gs.players.forEach(p => {
+    const row = mk('div', 'player-row' + (p.id===myId?' is-me':''));
+    row.innerHTML = '<span class="player-name">' + (p.id===myId?'👤 ':'👥 ') + p.name + (p.id===gs.players[0].id?' (ホスト)':'') + '</span>';
+    list.appendChild(row);
+  });
+  if(isHost) {
+    const btn = g('btn-start');
+    btn.style.display = '';
+    btn.disabled = !(gs.players.length >= 3 && gs.players.length <= 7);
+    g('wait-status').textContent = gs.players.length < 3 ? 'あと'+(3-gs.players.length)+'人必要です（3〜7人）' :
+      gs.players.length > 7 ? '満員（最大7人）' : '開始できます！';
+  } else {
+    g('btn-start').style.display = 'none';
+    g('wait-status').textContent = 'ホストの開始を待っています...';
+  }
+}
+
+// ============================================================
+// PLAYING RENDER
+// ============================================================
+function renderPlaying() {
+  if(!gs) return;
+  // 全プレイヤー
+  const ap = g('all-players'); ap.innerHTML = '';
+  gs.players.forEach((p, idx) => {
+    const isMe = p.id === myId;
+    const isCur = idx === gs.cur;
+    const row = mk('div', 'player-mini' + (isMe?' is-me':'') + (isCur?' cur':''));
+    row.innerHTML = `<span class="player-mini-name">${isMe?'👤':'👥'} ${p.name}${isCur?' ⭐':''}</span>
+      <span class="player-mini-chips">🪙 ${p.chips}</span>
+      <span class="player-mini-cards-count">📇 ${p.cards.length}枚</span>`;
+    ap.appendChild(row);
+  });
+
+  // 場のカード
+  const fd = g('field-display'); fd.innerHTML = '';
+  if(gs.fieldCard !== null) {
+    const card = mk('div', 'field-card');
+    card.textContent = gs.fieldCard;
+    fd.appendChild(card);
+    if(gs.fieldChips > 0) {
+      const chip = mk('div', 'field-chips');
+      chip.textContent = '🪙 +' + gs.fieldChips;
+      fd.appendChild(chip);
+    }
+  } else {
+    const e = mk('div', 'field-empty');
+    e.textContent = 'カードなし';
+    fd.appendChild(e);
+  }
+  g('deck-info').textContent = '山札残り: ' + gs.deckCount + ' 枚';
+
+  // アクション
+  renderAction();
+
+  // 自分のカード（連番表示）
+  renderMyCards();
+
+  // 自分の現在の得点
+  const score = computeScore(myCards, myChips);
+  g('my-score').innerHTML = `🪙 チップ: <strong style="color:var(--gold);">${myChips}</strong> / カード減点: <strong style="color:var(--red);">${computeScore(myCards, 0)}</strong> / 現在の得点: <strong style="color:${score<0?'var(--green)':'var(--red)'};">${score >= 0 ? '+' + score : score}</strong>`;
+
+  // ログ
+  const logEl = g('game-log');
+  logEl.innerHTML = '';
+  (gs.log||[]).forEach(line => {
+    const d = mk('div'); d.textContent = line; logEl.appendChild(d);
+  });
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function renderMyCards() {
+  const wrap = g('my-cards'); wrap.innerHTML = '';
+  if(myCards.length === 0) {
+    wrap.innerHTML = '<span style="color:var(--muted); font-size:0.78rem;">まだカードはありません</span>';
+    return;
+  }
+  const sorted = myCards.slice().sort((a,b)=>a-b);
+  // 連番の最小値を判定
+  const runMinSet = new Set();
+  let i = 0;
+  while(i < sorted.length) {
+    runMinSet.add(sorted[i]);
+    let j = i + 1;
+    while(j < sorted.length && sorted[j] === sorted[j-1] + 1) j++;
+    i = j;
+  }
+  sorted.forEach((n, idx) => {
+    const isRunMin = runMinSet.has(n);
+    const isInRun = !isRunMin || (idx+1 < sorted.length && sorted[idx+1] === n+1) || (idx-1 >= 0 && sorted[idx-1] === n-1);
+    let cls = 'my-card';
+    if(isRunMin) cls += ' run-min';
+    else if(isInRun) cls += ' run-other';
+    const c = mk('div', cls);
+    c.textContent = n;
+    wrap.appendChild(c);
+  });
+}
+
+function renderAction() {
+  const area = g('action-area'); area.innerHTML = '';
+  if(!gs || gs.phase !== 'playing') return;
+  const myIdx = gs.players.findIndex(p => p.id === myId);
+  const isMyTurn = gs.cur === myIdx;
+  if(!isMyTurn) {
+    const wait = mk('div');
+    wait.style.cssText = 'padding:20px; text-align:center; color:var(--muted); font-family:var(--mono); font-size:0.9rem;';
+    wait.textContent = '⏳ ' + (gs.players[gs.cur]?.name || '?') + ' の手番です';
+    area.appendChild(wait);
+    return;
+  }
+
+  // 自分の手番
+  const card = gs.fieldCard;
+  const fieldChips = gs.fieldChips;
+  const me = gs.players[myIdx];
+
+  const grid = mk('div', 'action-grid');
+
+  // パス
+  const pass = mk('button', 'action-btn pass');
+  pass.innerHTML = `<div class="action-btn-icon">🙅</div>
+    <div class="action-btn-title">パス</div>
+    <div class="action-btn-desc">チップを1枚置く<br>(残り ${me.chips} 枚)</div>`;
+  if(me.chips <= 0) pass.disabled = true;
+  pass.onclick = () => {
+    pass.disabled = true; take.disabled = true;
+    pass.textContent = '⏳';
+    if(isHost) handleAction(myId, 'pass');
+    else fbSendToHost({type:'action', action:'pass'});
+  };
+
+  // 取る
+  const take = mk('button', 'action-btn take');
+  // 取得時の差分得点を計算
+  const newCards = [...myCards, card];
+  const newScore = computeScore(newCards, myChips + fieldChips);
+  const curScore = computeScore(myCards, myChips);
+  const diff = newScore - curScore;
+  const diffStr = diff >= 0 ? '+'+diff : ''+diff;
+  take.innerHTML = `<div class="action-btn-icon">🎁</div>
+    <div class="action-btn-title">取る</div>
+    <div class="action-btn-desc">${card} とチップ${fieldChips}個<br>得点変化: <strong>${diffStr}</strong></div>`;
+  take.onclick = () => {
+    if(!confirm('カード '+card+' とチップ'+fieldChips+'個を取りますか？\n得点変化: '+diffStr)) return;
+    pass.disabled = true; take.disabled = true;
+    take.textContent = '⏳';
+    if(isHost) handleAction(myId, 'take');
+    else fbSendToHost({type:'action', action:'take'});
+  };
+
+  grid.appendChild(pass);
+  grid.appendChild(take);
+  area.appendChild(grid);
+
+  // 注釈
+  if(me.chips <= 0) {
+    const note = mk('div');
+    note.style.cssText = 'text-align:center; margin-top:8px; padding:8px; background:rgba(255,176,32,0.1); border:1px solid var(--amber); border-radius:8px; font-size:0.8rem; color:var(--amber);';
+    note.textContent = '⚠️ チップがないのでパスできません。取るしかありません。';
+    area.appendChild(note);
+  }
+}
+
+// ============================================================
+// RESULT
+// ============================================================
+function showResult() {
+  show('result');
+  if(!gs || !gs.finalScores) return;
+  const scores = gs.finalScores;
+  const winnerP = scores[0];
+  const isWin = winnerP.id === myId;
+  g('result-emoji').textContent = isWin ? '🎉' : '🏆';
+  g('result-title').textContent = winnerP.name + ' の勝利！';
+  g('result-sub').textContent = winnerP.score + ' 点（最少減点）';
+
+  const list = g('result-list'); list.innerHTML = '';
+  scores.forEach((s, idx) => {
+    const row = mk('div', 'result-row' + (idx === 0 ? ' winner' : ''));
+    const cardsTxt = s.cards.length > 0 ? s.cards.join(',') : 'なし';
+    row.innerHTML = `<div style="font-family:var(--mono); width:30px;">${idx+1}位</div>
+      <div style="flex:1;">
+        <div class="player-name">${idx===0?'👑 ':''}${s.name}${s.id===myId?' (あなた)':''}</div>
+        <div class="result-detail">カード: ${cardsTxt} / チップ: ${s.chips}</div>
+      </div>
+      <div class="result-score" style="color:${s.score<=0?'var(--green)':'var(--red)'};">${s.score>0?'+':''}${s.score}</div>`;
+    list.appendChild(row);
+  });
+}
+
+function restartGame() {
+  if(isHost) {
+    fs.phase = 'waiting';
+    fs.players.forEach(p => { p.cards = []; p.chips = 0; });
+    fs.deck = []; fs.fieldCard = null; fs.fieldChips = 0;
+    fs.log = []; fs.winner = null; fs.finalScores = null;
+    bcast();
+    // ソロモードなら自動でゲーム再開始
+    if(isSolo) {
+      setTimeout(() => startGame(), 300);
+    }
+  } else {
+    fbSendToHost({type:'rematch'});
+  }
+}
+function handleRematchReq(senderPid) {
+  if(!fs) return;
+  fs.phase = 'waiting';
+  fs.players.forEach(p => { p.cards = []; p.chips = 0; });
+  fs.deck = []; fs.fieldCard = null; fs.fieldChips = 0;
+  fs.log = []; fs.winner = null; fs.finalScores = null;
+  bcast();
+}
+
+// ============================================================
+// SOLO MODE (CPU)
+// ============================================================
+function showSoloLobby() {
+  isSolo = true;
+  show('solo');
+  setSoloCount(3);
+}
+function setSoloCount(n) {
+  soloCount = n;
+  [2,3,4,5,6].forEach(c => {
+    const btn = g('solo-c'+c);
+    if(btn) btn.style.background = (c === n) ? 'var(--gs-teal)' : '';
+  });
+}
+function startSoloGame() {
+  const name = g('solo-name').value.trim() || 'あなた';
+  myName = name; isSolo = true; isHost = true;
+  myId = genId();
+  const cpuNames = ['ボット太郎','ボット花子','AI次郎','機械郎','CPU美咲','ロボ蔵'];
+  const players = [{id:myId, name:myName}];
+  for(let i=0;i<soloCount;i++) players.push({id:'cpu'+i, name:cpuNames[i]});
+  fs = initFs(players);
+  fbRoom = '';
+  show('playing');
+  startGame();
+}
+
+// CPU AI
+function scheduleCpu() {
+  if(!isSolo || !fs || fs.phase !== 'playing') return;
+  const curP = fs.players[fs.cur];
+  if(!curP || curP.id === myId) return;
+  if(cpuAITimer) clearTimeout(cpuAITimer);
+  cpuAITimer = setTimeout(runCpuTurn, 900);
+}
+function runCpuTurn() {
+  if(!fs || fs.phase !== 'playing') return;
+  const cpuP = fs.players[fs.cur];
+  if(!cpuP || cpuP.id === myId) return;
+  // 取った場合の得点変化
+  const card = fs.fieldCard;
+  const newCards = [...cpuP.cards, card];
+  const newScore = computeScore(newCards, cpuP.chips + fs.fieldChips);
+  const curScore = computeScore(cpuP.cards, cpuP.chips);
+  const diff = newScore - curScore;
+
+  // 戦略:
+  // - 連番で減点が変わらない（diff ≤ チップ分のマイナス）→ 取る
+  // - チップが0なら強制take
+  // - diff <= 0 (得点減少) → 必ず取る
+  // - diff > 0 でも、チップが少なくないなら パス
+  // - チップが少ない時はリスク取り
+  let action;
+  if(cpuP.chips <= 0) {
+    action = 'take';
+  } else if(diff <= 0) {
+    action = 'take'; // 取った方が得
+  } else if(diff <= 2) {
+    // ほぼ損しない → 取ってもよい（戦略的にチップ温存しないことも）
+    action = Math.random() < 0.5 ? 'take' : 'pass';
+  } else {
+    // 大きな減点 → パスが基本
+    // ただし他のプレイヤーが取る可能性が高い場合、チップを温存
+    action = 'pass';
+  }
+  handleAction(cpuP.id, action);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  // 初期画面はlobby
+});
+</script>
+</body>
+</html>
