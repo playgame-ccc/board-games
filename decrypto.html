@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>🔐 デクリプト</title>
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0e1428; --surface:#161b2f; --surface2:#1f2540;
+  --text:#e7ecf8; --muted:#8d96b3; --line:#2a3052;
+  --white-team:#5db5ff; --white-team-bg:rgba(93,181,255,0.12);
+  --black-team:#ff6b9d; --black-team-bg:rgba(255,107,157,0.12);
+  --accent:#ffb020; --green:#3dd68c; --red:#f04866;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;font-size:14px;}
+body{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 30%,#1a2245 0%,var(--bg) 60%);}
+.app{max-width:720px;margin:0 auto;}
+.screen{display:none;}
+.screen.active{display:block;}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px;}
+.card h2{font-size:1.1rem;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.card h3{font-size:0.95rem;margin-bottom:10px;color:var(--muted);}
+.btn{display:inline-block;padding:10px 16px;border:none;border-radius:10px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:transform 0.1s,filter 0.1s;color:#fff;background:var(--surface2);}
+.btn:hover{filter:brightness(1.15);}
+.btn:active{transform:scale(0.97);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-primary{background:linear-gradient(135deg,#5b8def 0%,#3a5fcf 100%);}
+.btn-amber{background:linear-gradient(135deg,var(--accent) 0%,#cc8810 100%);color:#1a1206;}
+.btn-green{background:linear-gradient(135deg,var(--green) 0%,#2da870 100%);}
+.btn-red{background:linear-gradient(135deg,var(--red) 0%,#b8364f 100%);}
+.btn-ghost{background:transparent;border:1px solid var(--line);}
+.btn-block{display:block;width:100%;}
+.btn-sm{padding:6px 10px;font-size:0.82rem;}
+.input{width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:0.95rem;outline:none;font-family:inherit;}
+.input:focus{border-color:#5b8def;}
+.input-row{display:flex;gap:8px;margin-bottom:10px;}
+.label{display:block;font-size:0.82rem;color:var(--muted);margin-bottom:5px;}
+.err{color:var(--red);font-size:0.82rem;margin-top:6px;min-height:1em;}
+.hint{padding:8px 12px;background:rgba(91,141,239,0.1);border-left:3px solid #5b8def;border-radius:6px;font-size:0.85rem;margin:8px 0;}
+.hint.wait{background:rgba(141,150,179,0.1);border-left-color:var(--muted);}
+.hint.my{background:rgba(255,176,32,0.12);border-left-color:var(--accent);}
+.hint.ok{background:rgba(61,214,140,0.12);border-left-color:var(--green);}
+.hint.ng{background:rgba(240,72,102,0.12);border-left-color:var(--red);}
+.row{display:flex;gap:8px;flex-wrap:wrap;}
+.center{text-align:center;}
+.muted{color:var(--muted);}
+.small{font-size:0.82rem;}
+.bold{font-weight:700;}
+.spacer{height:10px;}
+
+/* チームの色分け */
+.team-white{background:var(--white-team-bg);border:1px solid var(--white-team);}
+.team-black{background:var(--black-team-bg);border:1px solid var(--black-team);}
+.team-white-text{color:var(--white-team);}
+.team-black-text{color:var(--black-team);}
+.team-label{display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.78rem;font-weight:700;}
+.team-label.white{background:var(--white-team);color:#0a1830;}
+.team-label.black{background:var(--black-team);color:#2a0a1a;}
+
+/* キーワード表示 */
+.keywords-box{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0;}
+.kw-item{background:var(--surface2);padding:10px;border-radius:8px;display:flex;align-items:center;gap:8px;}
+.kw-num{font-size:1.4rem;font-weight:700;color:var(--accent);width:24px;}
+.kw-word{font-size:1rem;font-weight:600;flex:1;}
+
+/* コード表示 */
+.code-box{display:flex;justify-content:center;gap:14px;margin:14px 0;}
+.code-digit{width:60px;height:60px;background:linear-gradient(135deg,var(--accent) 0%,#cc8810 100%);color:#1a1206;font-size:2rem;font-weight:900;display:flex;align-items:center;justify-content:center;border-radius:12px;box-shadow:0 4px 12px rgba(255,176,32,0.3);}
+
+/* 推測UI */
+.guess-row{display:flex;gap:8px;margin:8px 0;align-items:center;}
+.guess-row .label{margin:0;min-width:50px;}
+.guess-num{display:flex;gap:5px;flex-wrap:wrap;}
+.guess-btn{width:38px;height:38px;background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.guess-btn.selected{background:var(--accent);color:#1a1206;border-color:var(--accent);}
+.guess-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* ヒント履歴 */
+.history-box{max-height:260px;overflow-y:auto;background:var(--bg2);border-radius:10px;padding:10px;}
+.history-round{margin-bottom:10px;padding:8px;background:var(--surface);border-radius:8px;font-size:0.85rem;}
+.history-round.team-w{border-left:3px solid var(--white-team);}
+.history-round.team-b{border-left:3px solid var(--black-team);}
+.history-line{margin:3px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+
+/* スコアバー */
+.score-bar{display:flex;justify-content:space-around;background:var(--surface2);padding:10px;border-radius:10px;margin-bottom:10px;gap:10px;}
+.score-team{text-align:center;flex:1;}
+.score-team .name{font-size:0.82rem;color:var(--muted);margin-bottom:4px;}
+.score-row{display:flex;align-items:center;gap:6px;justify-content:center;margin:3px 0;}
+.tokens{display:flex;gap:4px;}
+.token{width:18px;height:18px;border-radius:50%;background:var(--surface);border:1px solid var(--line);}
+.token.intercept{background:var(--green);}
+.token.fail{background:var(--red);}
+
+/* プレイヤーリスト */
+.player-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.player-list-single{display:flex;flex-direction:column;gap:6px;}
+.player-item{padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:0.9rem;display:flex;justify-content:space-between;align-items:center;}
+.player-item .role-tag{font-size:0.75rem;color:var(--muted);background:var(--bg2);padding:2px 6px;border-radius:6px;}
+.player-item.encoder{border:1px solid var(--accent);}
+.player-item.me{background:rgba(91,141,239,0.15);}
+
+/* ログ */
+.log-box{max-height:160px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;font-size:0.82rem;}
+.log-line{padding:3px 0;border-bottom:1px solid var(--line);}
+.log-line:last-child{border-bottom:none;}
+
+/* モーダル */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:100;padding:14px;}
+.modal-bg.show{display:flex;}
+.modal-box{background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%;border:1px solid var(--line);max-height:90vh;overflow-y:auto;}
+
+/* ヘッダー */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.header h1{font-size:1.3rem;}
+.round-info{font-size:0.85rem;color:var(--muted);}
+
+/* 部屋コード表示 */
+.code-display{font-size:2rem;font-weight:900;letter-spacing:0.1em;color:var(--accent);text-align:center;padding:14px;background:var(--surface2);border-radius:10px;margin:10px 0;}
+
+/* ヒント入力 */
+.hint-input-group{display:flex;gap:8px;align-items:center;margin:8px 0;}
+.hint-input-group .label{margin:0;min-width:80px;}
+.hint-input-group .kw-tag{font-size:0.82rem;background:var(--accent);color:#1a1206;padding:3px 8px;border-radius:6px;font-weight:700;}
+
+@media(max-width:480px){
+  .code-digit{width:48px;height:48px;font-size:1.5rem;}
+  .keywords-box{grid-template-columns:1fr;}
+  .player-list{grid-template-columns:1fr;}
+}
+
+/* ── Rematch panel ── */
+.rematch-panel { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+.rematch-status { font-family:var(--mono,monospace); font-size:0.85rem; color:var(--muted); }
+.rematch-voter-tag { font-family:var(--mono,monospace); font-size:0.78rem; padding:3px 10px; border-radius:12px; background:rgba(61,214,140,0.12); color:#3dd68c; border:1px solid rgba(61,214,140,0.3); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- パスワード画面 -->
+<div class="screen active" id="screen-password">
+  <div class="card center">
+    <h2>🔐 デクリプト</h2>
+    <p class="muted small">パスワードを入力してください</p>
+    <div class="spacer"></div>
+    <input type="password" id="pw-input" class="input" placeholder="パスワード" autocomplete="off">
+    <div class="spacer"></div>
+    <button class="btn btn-primary btn-block" onclick="checkPassword()">入室</button>
+    <div class="err" id="pw-error"></div>
+  </div>
+</div>
+
+<!-- ロビー画面 -->
+<div class="screen" id="screen-lobby">
+  <div class="header">
+    <h1>🔐 デクリプト</h1>
+  </div>
+  <div class="card">
+    <h2>👋 ようこそ</h2>
+    <label class="label">プレイヤー名</label>
+    <input type="text" id="in-name" class="input" maxlength="12" placeholder="名前を入力">
+    <div class="spacer"></div>
+    <button class="btn btn-primary btn-block" onclick="dcCreateRoom()">🆕 部屋を作る（ホスト）</button>
+    <div class="spacer"></div>
+    <label class="label">既存の部屋に参加</label>
+    <div class="input-row">
+      <input type="text" id="in-code" class="input" maxlength="4" placeholder="4桁コード" inputmode="numeric">
+      <button class="btn btn-amber" onclick="dcJoinRoom()">参加</button>
+    </div>
+    <div class="err" id="lobby-error"></div>
+    <div class="small muted" id="lobby-status"></div>
+    <button id="btn-reconnect" class="btn btn-ghost btn-block" onclick="reconnectToRoom()" style="display:none; border-color:var(--accent); color:var(--accent); margin-top:8px;">🔄 前のルームに戻る</button>
+  </div>
+  <div class="card">
+    <h3>🎯 ルール（簡易）</h3>
+    <ul class="small muted" style="padding-left:20px;line-height:1.7;">
+      <li>2チーム（白・黒）に分かれます。最少4人〜推奨6〜8人</li>
+      <li>各チームには秘密のキーワード4つ（番号1〜4）が配られます</li>
+      <li>毎ラウンド、エンコーダーが3桁のコード（例：4-2-1）に対応するヒントを出します</li>
+      <li>自チームはコードを当てる必要があり、相手チームは傍受を試みます</li>
+      <li>傍受2回成功で勝ち、失敗2回でその場で負け（8ラウンドで強制終了）</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 待機画面 -->
+<div class="screen" id="screen-waiting">
+  <div class="header">
+    <h1>🔐 デクリプト</h1>
+    <button class="btn btn-ghost btn-sm" onclick="dcBackToLobby()">退出</button>
+  </div>
+  <div class="card center">
+    <h3>部屋コード</h3>
+    <div class="code-display" id="disp-code">----</div>
+    <p class="small muted">この4桁を友達に伝えて参加してもらってください</p>
+  </div>
+  <div class="card">
+    <h2>👥 参加者 <span class="small muted" id="player-count"></span></h2>
+    <div id="waiting-players" class="player-list-single"></div>
+  </div>
+  <div class="card">
+    <h3>⚙️ チーム分け</h3>
+    <p class="small muted">自動で2チームに均等分けします（4人以上必要）。</p>
+    <div class="spacer"></div>
+    <div id="team-preview"></div>
+    <div class="spacer"></div>
+    <div id="host-controls" style="display:none;">
+      <button class="btn btn-ghost btn-block btn-sm" onclick="dcShuffleTeams()">🔀 チームをシャッフル</button>
+      <div class="spacer"></div>
+      <button class="btn btn-green btn-block" onclick="dcStartGame()" id="btn-start">▶ ゲーム開始</button>
+    </div>
+    <div id="wait-host-message" style="display:none;" class="hint wait">ホストの開始を待っています…</div>
+  </div>
+</div>
+
+<!-- ゲーム画面 -->
+<div class="screen" id="screen-game">
+  <div class="header">
+    <h1>🔐 デクリプト</h1>
+    <div class="round-info" id="round-info"></div>
+  </div>
+  
+  <!-- スコア -->
+  <div class="score-bar">
+    <div class="score-team">
+      <div class="name team-white-text">⚪ 白チーム</div>
+      <div class="score-row"><span class="small muted">傍受</span><div class="tokens" id="score-white-i"></div></div>
+      <div class="score-row"><span class="small muted">失敗</span><div class="tokens" id="score-white-f"></div></div>
+    </div>
+    <div class="score-team">
+      <div class="name team-black-text">⚫ 黒チーム</div>
+      <div class="score-row"><span class="small muted">傍受</span><div class="tokens" id="score-black-i"></div></div>
+      <div class="score-row"><span class="small muted">失敗</span><div class="tokens" id="score-black-f"></div></div>
+    </div>
+  </div>
+
+  <!-- 自分のキーワード -->
+  <div class="card" id="my-team-card">
+    <h2 id="my-team-title">あなたのチーム</h2>
+    <p class="small muted">これは秘密です。他チームには見せないでください。</p>
+    <div class="keywords-box" id="my-keywords"></div>
+    <div id="my-team-members" class="small muted"></div>
+  </div>
+
+  <!-- フェーズ表示エリア -->
+  <div id="phase-area"></div>
+
+  <!-- ヒント履歴 -->
+  <div class="card">
+    <h3>📜 ヒント履歴</h3>
+    <div class="history-box" id="hint-history"></div>
+  </div>
+
+  <!-- ログ -->
+  <div class="card">
+    <h3>📋 ログ</h3>
+    <div class="log-box" id="log-box"></div>
+  </div>
+
+  <button class="btn btn-ghost btn-sm btn-block" onclick="dcBackToLobby()" style="margin-top:14px;">退出</button>
+</div>
+
+<!-- 結果画面 -->
+<div class="screen" id="screen-result">
+  <div class="header">
+    <h1>🔐 デクリプト</h1>
+  </div>
+  <div class="card center" id="result-card">
+    <h2 id="result-title"></h2>
+    <p class="small muted" id="result-subtitle"></p>
+  </div>
+  <div class="card">
+    <h3>🔍 両チームのキーワード公開</h3>
+    <div id="result-keywords"></div>
+  </div>
+  <div class="card">
+    <h3>📊 最終スコア</h3>
+    <div id="result-score"></div>
+  </div>
+  <div id="rematch-panel" class="rematch-panel">
+    <div id="rematch-status" class="rematch-status"></div>
+    <div id="rematch-voters" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
+  </div>
+  <button id="btn-rematch" class="btn btn-primary btn-block" onclick="submitRematch()">🔄 もう一度遊ぶ（同じメンバーで再戦）</button>
+  <div class="spacer"></div>
+  <button class="btn btn-ghost btn-block" onclick="dcBackToLobby()">退出</button>
+</div>
+
+</div>
+
+<script>
+// ====================
+// 基盤関数
+// ====================
+function g(id){return document.getElementById(id);}
+function show(screenName){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=g('screen-'+screenName);
+  if(el) el.classList.add('active');
+}
+function mk(tag,cls,text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined) e.textContent=text;
+  return e;
+}
+function genId(){return Math.random().toString(36).slice(2,10);}
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// ====================
+// パスワード
+// ====================
+function checkPassword(){
+  const val=g('pw-input').value.trim().toLowerCase();
+  if(val==='ccc'){
+    g('pw-error').textContent='';
+    show('lobby');
+  } else {
+    g('pw-error').textContent='パスワードが違います';
+    g('pw-input').value='';
+  }
+}
+g('pw-input').addEventListener('keydown',e=>{if(e.key==='Enter')checkPassword();});
+g('in-name').addEventListener('keydown',e=>{
+  if(e.key==='Enter') g('in-code').focus();
+});
+g('in-code').addEventListener('keydown',e=>{
+  if(e.key==='Enter') dcJoinRoom();
+});
+
+// ====================
+// 状態
+// ====================
+let myId='', myName='', isHost=false, roomCode='', fbRoom='';
+let dcFs=null;      // ホストが持つフルゲーム状態
+let dcPub=null;     // 全員が見る公開状態
+let dcPrv=null;     // 自分専用の秘密情報
+let dcGuess=[null,null,null]; // 推測中の数字
+let dcInterceptGuess=[null,null,null];
+
+// ====================
+// Firebase通信
+// ====================
+const FB_URL='https://playgame-3e7ba-default-rtdb.firebaseio.com';
+let fbPollTimer=null;
+let fbLastTs={};
+
+function fbPath(sub){return `${FB_URL}/rooms/${fbRoom}/${sub}.json`;}
+
+async function fbPut(sub,val){
+  try{
+    const r=await fetch(fbPath(sub),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)});
+    if(!r.ok) console.warn('fbPut failed',sub,r.status);
+  }catch(e){console.warn('fbPut error',sub,e);}
+}
+async function fbGet(sub){
+  try{
+    const r=await fetch(fbPath(sub));
+    return r.ok?await r.json():null;
+  }catch(e){return null;}
+}
+async function fbDel(sub){
+  try{await fetch(fbPath(sub),{method:'DELETE'});}catch(e){}
+}
+
+async function fbBcast(data){
+  await fbPut('broadcast',{ts:Date.now(),data});
+}
+async function fbSendTo(pid,data){
+  await fbPut('prv/'+pid,{ts:Date.now(),data});
+}
+async function fbSendToHost(data){
+  if(!fbRoom) return;
+  // タイムスタンプ衝突防止（同時送信や高速連打への対策）
+  const key=Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  await fbPut('host_in/'+myId+'/'+key,data);
+}
+
+function fbStartPolling(){
+  fbStopPolling();
+  fbLastTs={};
+  fbPollTimer=setInterval(fbPoll,800);
+  fbPoll();
+}
+function fbStopPolling(){
+  if(fbPollTimer){clearInterval(fbPollTimer);fbPollTimer=null;}
+}
+async function fbPoll(){
+  // broadcast
+  const bc=await fbGet('broadcast');
+  if(bc&&bc.ts&&bc.ts!==fbLastTs.broadcast){
+    fbLastTs.broadcast=bc.ts;
+    onBroadcast(bc.data);
+  }
+  // private
+  const prv=await fbGet('prv/'+myId);
+  if(prv&&prv.ts&&prv.ts!==fbLastTs.prv){
+    fbLastTs.prv=prv.ts;
+    onPrivate(prv.data);
+  }
+  // ホストはクライアントからの入力を確認
+  if(isHost){
+    const hostIn=await fbGet('host_in');
+    if(hostIn){
+      for(const pid in hostIn){
+        for(const tsKey in hostIn[pid]){
+          const ts=parseInt(tsKey);
+          const key='hin_'+pid+'_'+tsKey;
+          if(!fbLastTs[key]){
+            fbLastTs[key]=ts;
+            onHostMsg(pid,hostIn[pid][tsKey]);
+            await fbDel('host_in/'+pid+'/'+tsKey);
+          }
+        }
+      }
+    }
+  }
+}
+
+// ====================
+// 部屋作成・参加
+// ====================
+async function dcCreateRoom(){
+  const name=g('in-name').value.trim();
+  if(!name){g('lobby-error').textContent='名前を入力してください';return;}
+  if(name.length>12){g('lobby-error').textContent='名前は12文字以内';return;}
+  g('lobby-error').textContent='';
+  myName=name;
+  myId=genId();
+  isHost=true;
+  roomCode=Math.floor(1000+Math.random()*9000).toString();
+  fbRoom='DC-'+roomCode;
+  
+  g('lobby-status').textContent='接続中…';
+  try{
+    await fbDel('');
+    dcFs={
+      phase:'waiting',
+      host:myId,
+      players:[{id:myId,name:myName,isHost:true}],
+      teams:{white:[],black:[]},
+      round:0,
+      scores:{white:{intercept:0,fail:0},black:{intercept:0,fail:0}},
+      keywords:{white:[],black:[]},
+      history:[],
+      log:['🆕 部屋を作成しました'],
+    };
+    dcAutoAssignTeams();
+    await dcBcast();
+    fbStartPolling();
+    g('lobby-status').textContent='';
+    g('disp-code').textContent=roomCode;
+    show('waiting');
+    dcRenderWaiting();
+    saveSession();
+  }catch(e){
+    g('lobby-error').textContent='接続失敗: '+e.message;
+    g('lobby-status').textContent='';
+    // 失敗したらmyId・fbRoomもクリア
+    myId='';myName='';isHost=false;roomCode='';fbRoom='';dcFs=null;
+  }
+}
+
+async function dcJoinRoom(){
+  const name=g('in-name').value.trim();
+  const code=g('in-code').value.trim();
+  if(!name){g('lobby-error').textContent='名前を入力してください';return;}
+  if(name.length>12){g('lobby-error').textContent='名前は12文字以内';return;}
+  if(!/^\d{4}$/.test(code)){g('lobby-error').textContent='4桁の数字を入力してください';return;}
+  g('lobby-error').textContent='';
+  myName=name;
+  myId=genId();
+  isHost=false;
+  roomCode=code;
+  fbRoom='DC-'+code;
+  
+  g('lobby-status').textContent='接続中…';
+  try{
+    // 部屋が存在するか確認
+    const bc=await fbGet('broadcast');
+    if(!bc){
+      g('lobby-error').textContent='その番号の部屋が見つかりません';
+      g('lobby-status').textContent='';
+      myId='';myName='';roomCode='';fbRoom='';
+      return;
+    }
+    await fbSendToHost({type:'join',name:myName,id:myId});
+    fbStartPolling();
+    g('lobby-status').textContent='';
+    g('disp-code').textContent=roomCode;
+    show('waiting');
+    saveSession();
+  }catch(e){
+    g('lobby-error').textContent='接続失敗: '+e.message;
+    g('lobby-status').textContent='';
+    myId='';myName='';roomCode='';fbRoom='';
+  }
+}
+
+function dcBackToLobby(){
+  // ゲストはホストに退出を通知（fire-and-forget）
+  if(!isHost && fbRoom) {
+    fbSendToHost({type:'leave',name:myName}).catch(()=>{});
+  }
+  fbStopPolling();
+  if(isHost) fbDel('');
+  try { clearSession(); } catch(e) {}
+  myId='';myName='';isHost=false;roomCode='';fbRoom='';
+  dcFs=null;dcPub=null;dcPrv=null;
+  dcGuess=[null,null,null];
+  dcInterceptGuess=[null,null,null];
+  dcHintInputs=['','',''];
+  dcLastSig=null;
+  show('lobby');
+  g('in-code').value='';
+}
+
+// ====================
+// ブロードキャスト構築
+// ====================
+async function dcBcast(){
+  if(!isHost||!dcFs) return;
+  const pub={
+    phase:dcFs.phase,
+    host:dcFs.host,
+    players:dcFs.players.map(p=>({id:p.id,name:p.name,isHost:p.isHost})),
+    teams:{
+      white:dcFs.teams.white.map(id=>{
+        const p=dcFs.players.find(x=>x.id===id);
+        return p?{id:p.id,name:p.name}:null;
+      }).filter(Boolean),
+      black:dcFs.teams.black.map(id=>{
+        const p=dcFs.players.find(x=>x.id===id);
+        return p?{id:p.id,name:p.name}:null;
+      }).filter(Boolean),
+    },
+    round:dcFs.round,
+    scores:dcFs.scores,
+    history:dcFs.history,
+    log:dcFs.log.slice(-30),
+  };
+  if(dcFs.phase==='hint'||dcFs.phase==='guess'||dcFs.phase==='reveal'){
+    pub.encoders=dcFs.encoders;
+    // ヒントは入力済みのものだけ公開（提出後）
+    pub.hintsSubmitted={
+      white:dcFs.hintsSubmitted&&dcFs.hintsSubmitted.white?true:false,
+      black:dcFs.hintsSubmitted&&dcFs.hintsSubmitted.black?true:false,
+    };
+    if(dcFs.phase==='guess'||dcFs.phase==='reveal'){
+      pub.currentHints={
+        white:dcFs.currentHints?dcFs.currentHints.white:null,
+        black:dcFs.currentHints?dcFs.currentHints.black:null,
+      };
+    }
+    if(dcFs.phase==='guess'){
+      pub.guessSubmitted={
+        white:dcFs.guessSubmitted&&dcFs.guessSubmitted.white?true:false,
+        black:dcFs.guessSubmitted&&dcFs.guessSubmitted.black?true:false,
+        whiteIntercept:dcFs.guessSubmitted&&dcFs.guessSubmitted.whiteIntercept?true:false,
+        blackIntercept:dcFs.guessSubmitted&&dcFs.guessSubmitted.blackIntercept?true:false,
+      };
+    }
+    if(dcFs.phase==='reveal'){
+      pub.revealData=dcFs.revealData;
+    }
+  }
+  if(dcFs.phase==='gameover'){
+    pub.winner=dcFs.winner;
+    pub.keywords=dcFs.keywords;
+    pub.rematchVoters=dcFs.rematchVoters||[];
+  }
+  await fbBcast(pub);
+}
+
+function onBroadcast(d){
+  dcPub=d;
+  // 画面遷移
+  if(d.phase==='waiting'){
+    if(!g('screen-waiting').classList.contains('active')) show('waiting');
+    dcRenderWaiting();
+  } else if(d.phase==='gameover'){
+    show('result');
+    dcRenderResult();
+    _renderRematchPanel(d.rematchVoters||[], d.players||[]);
+  } else {
+    if(!g('screen-game').classList.contains('active')) show('game');
+    dcRenderGame();
+  }
+}
+
+function onPrivate(d){
+  // 参加拒否通知
+  if(d&&d.rejected){
+    alert('参加できませんでした: '+(d.reason||'不明な理由'));
+    dcBackToLobby();
+    return;
+  }
+  dcPrv=d;
+  if(g('screen-game').classList.contains('active')){
+    dcRenderGame();
+  }
+}
+
+// ====================
+// ホストメッセージ処理
+// ====================
+async function onHostMsg(pid,msg){
+  if(!isHost||!dcFs) return;
+  if(msg.type==='join'){
+    // ゲーム中の途中参加は拒否（再参加も同様。新規IDの参加を防ぐ）
+    if(dcFs.phase!=='waiting'){
+      // 拒否通知を直接送る（拒否プレイヤーをロビーに戻す簡易実装）
+      await fbSendTo(pid,{team:null,rejected:true,reason:'ゲーム中のため参加できません'});
+      return;
+    }
+    if(!dcFs.players.find(p=>p.id===pid)){
+      dcFs.players.push({id:pid,name:msg.name,isHost:false});
+      dcFs.log.push(`👋 ${msg.name} が参加しました`);
+      dcAutoAssignTeams();
+      await dcBcast();
+    }
+  } else if(msg.type==='submitHint'){
+    await dcHostHandleHint(pid,msg.team,msg.hints);
+  } else if(msg.type==='submitGuess'){
+    await dcHostHandleGuess(pid,msg.team,msg.guess,msg.isIntercept);
+  } else if(msg.type==='leave'){
+    dcFs.players=dcFs.players.filter(p=>p.id!==pid);
+    dcFs.teams.white=dcFs.teams.white.filter(id=>id!==pid);
+    dcFs.teams.black=dcFs.teams.black.filter(id=>id!==pid);
+    dcFs.log.push(`👋 ${msg.name||'プレイヤー'} が退出しました`);
+    await dcBcast();
+  } else if(msg.type==='rematch'){
+    await _hostRematch(pid);
+  } else if(msg.type==='reconnect'){
+    await _hostReconnectDc(msg, pid);
+  }
+}
+
+// ====================
+// チーム分け（待機中）
+// ====================
+function dcAutoAssignTeams(){
+  if(!dcFs) return;
+  const total=dcFs.players.length;
+  // 既存チームに既に入っているプレイヤーは維持
+  const inTeam=new Set([...dcFs.teams.white,...dcFs.teams.black]);
+  const unassigned=dcFs.players.filter(p=>!inTeam.has(p.id));
+  for(const p of unassigned){
+    if(dcFs.teams.white.length<=dcFs.teams.black.length){
+      dcFs.teams.white.push(p.id);
+    } else {
+      dcFs.teams.black.push(p.id);
+    }
+  }
+  // チームから消えたプレイヤーをクリーンアップ
+  const validIds=new Set(dcFs.players.map(p=>p.id));
+  dcFs.teams.white=dcFs.teams.white.filter(id=>validIds.has(id));
+  dcFs.teams.black=dcFs.teams.black.filter(id=>validIds.has(id));
+}
+
+async function dcShuffleTeams(){
+  if(!isHost||!dcFs) return;
+  if(dcFs.phase!=='waiting') return; // 待機中のみ
+  const ids=shuffle(dcFs.players.map(p=>p.id));
+  dcFs.teams.white=[];
+  dcFs.teams.black=[];
+  ids.forEach((id,i)=>{
+    if(i%2===0) dcFs.teams.white.push(id);
+    else dcFs.teams.black.push(id);
+  });
+  await dcBcast();
+}
+
+// ====================
+// レンダリング: 待機
+// ====================
+function dcRenderWaiting(){
+  if(!dcPub){
+    g('player-count').textContent='';
+    g('waiting-players').innerHTML='<div class="small muted center">接続中…</div>';
+    g('team-preview').innerHTML='';
+    g('host-controls').style.display='none';
+    g('wait-host-message').style.display='block';
+    return;
+  }
+  const players=dcPub.players||[];
+  g('player-count').textContent=`(${players.length}人)`;
+  const wp=g('waiting-players');
+  wp.innerHTML='';
+  players.forEach(p=>{
+    const item=mk('div','player-item');
+    const nm=mk('span','',p.name);
+    if(p.id===myId) item.classList.add('me');
+    const tag=mk('span','role-tag',p.isHost?'ホスト':'参加者');
+    item.appendChild(nm);
+    item.appendChild(tag);
+    wp.appendChild(item);
+  });
+  
+  // チームプレビュー
+  const tp=g('team-preview');
+  tp.innerHTML='';
+  const whiteCard=mk('div','card team-white');
+  whiteCard.style.padding='10px';
+  whiteCard.appendChild(mk('div','small bold team-white-text','⚪ 白チーム'));
+  (dcPub.teams?.white||[]).forEach(p=>whiteCard.appendChild(mk('div','small',p.name)));
+  if(!dcPub.teams?.white?.length) whiteCard.appendChild(mk('div','small muted','（空）'));
+  const blackCard=mk('div','card team-black');
+  blackCard.style.padding='10px';
+  blackCard.appendChild(mk('div','small bold team-black-text','⚫ 黒チーム'));
+  (dcPub.teams?.black||[]).forEach(p=>blackCard.appendChild(mk('div','small',p.name)));
+  if(!dcPub.teams?.black?.length) blackCard.appendChild(mk('div','small muted','（空）'));
+  const row=mk('div','row');
+  whiteCard.style.flex='1';blackCard.style.flex='1';
+  row.appendChild(whiteCard);
+  row.appendChild(blackCard);
+  tp.appendChild(row);
+  
+  if(isHost){
+    g('host-controls').style.display='block';
+    g('wait-host-message').style.display='none';
+    const total=players.length;
+    const wc=dcPub.teams?.white?.length||0;
+    const bc=dcPub.teams?.black?.length||0;
+    const btn=g('btn-start');
+    if(total<4||wc<2||bc<2){
+      btn.disabled=true;
+      btn.textContent='▶ ゲーム開始（各チーム2人以上必要）';
+    } else {
+      btn.disabled=false;
+      btn.textContent='▶ ゲーム開始';
+    }
+  } else {
+    g('host-controls').style.display='none';
+    g('wait-host-message').style.display='block';
+  }
+}
+
+// ====================
+// ゲーム開始
+// ====================
+async function dcStartGame(){
+  if(!isHost||!dcFs) return;
+  if(dcFs.phase!=='waiting') return; // 連打防止
+  if(dcFs.teams.white.length<2||dcFs.teams.black.length<2) return;
+  
+  // フェーズを即座に切り替えて連打防止
+  dcFs.phase='hint';
+  
+  // キーワード4つずつ配布
+  const allWords=shuffle(DC_WORDS);
+  dcFs.keywords={
+    white:allWords.slice(0,4),
+    black:allWords.slice(4,8),
+  };
+  dcFs.round=1;
+  dcFs.history=[];
+  dcFs.scores={white:{intercept:0,fail:0},black:{intercept:0,fail:0}};
+  dcFs.encoderIdx={white:0,black:0};
+  dcFs.log.push(`▶ ゲーム開始！`);
+  
+  await dcStartRound();
+}
+
+async function dcStartRound(){
+  if(!isHost||!dcFs) return;
+  // エンコーダー選出（チーム内ローテーション）
+  const wEncoderId=dcFs.teams.white[dcFs.encoderIdx.white%dcFs.teams.white.length];
+  const bEncoderId=dcFs.teams.black[dcFs.encoderIdx.black%dcFs.teams.black.length];
+  dcFs.encoders={white:wEncoderId,black:bEncoderId};
+  // コード生成（1-4から重複なし3つ）
+  function randCode(){
+    const arr=shuffle([1,2,3,4]).slice(0,3);
+    return arr;
+  }
+  dcFs.codes={white:randCode(),black:randCode()};
+  dcFs.currentHints={white:null,black:null};
+  dcFs.hintsSubmitted={white:false,black:false};
+  dcFs.guessSubmitted={white:false,black:false,whiteIntercept:false,blackIntercept:false};
+  dcFs.guessData={white:null,black:null,whiteIntercept:null,blackIntercept:null};
+  dcFs.phase='hint';
+  dcFs.log.push(`🔔 ラウンド ${dcFs.round} 開始`);
+  
+  await dcBcast();
+  // 各プレイヤーに秘密情報を送信
+  await dcSendPrivates();
+}
+
+async function dcSendPrivates(){
+  if(!isHost||!dcFs) return;
+  for(const p of dcFs.players){
+    const team=dcFs.teams.white.includes(p.id)?'white':(dcFs.teams.black.includes(p.id)?'black':null);
+    if(!team) continue;
+    const prv={
+      team:team,
+      keywords:dcFs.keywords[team],
+      isEncoder:dcFs.encoders&&dcFs.encoders[team]===p.id,
+    };
+    if(prv.isEncoder){
+      prv.code=dcFs.codes[team];
+    }
+    await fbSendTo(p.id,prv);
+  }
+}
+
+// ====================
+// ヒント提出処理
+// ====================
+async function dcHostHandleHint(pid,team,hints){
+  if(!isHost||!dcFs) return;
+  if(dcFs.phase!=='hint') return;
+  if(dcFs.encoders[team]!==pid) return;
+  if(dcFs.hintsSubmitted[team]) return;
+  dcFs.currentHints[team]=hints;
+  dcFs.hintsSubmitted[team]=true;
+  const teamName=team==='white'?'白チーム':'黒チーム';
+  dcFs.log.push(`📝 ${teamName}のエンコーダーがヒントを提出`);
+  
+  // 両方提出済みなら推測フェーズへ
+  if(dcFs.hintsSubmitted.white&&dcFs.hintsSubmitted.black){
+    dcFs.phase='guess';
+    dcFs.log.push(`🤔 推測フェーズ開始`);
+  }
+  await dcBcast();
+}
+
+// ====================
+// 推測提出処理
+// ====================
+async function dcHostHandleGuess(pid,team,guess,isIntercept){
+  if(!isHost||!dcFs) return;
+  if(dcFs.phase!=='guess') return;
+  // エンコーダーは推測できない（自チームの推測の場合）
+  if(!isIntercept&&dcFs.encoders[team]===pid) return;
+  const key=isIntercept?team+'Intercept':team;
+  if(dcFs.guessSubmitted[key]) return;
+  dcFs.guessSubmitted[key]=true;
+  dcFs.guessData[key]=guess;
+  const teamName=team==='white'?'白':'黒';
+  const typeName=isIntercept?'傍受推測':'自チーム推測';
+  dcFs.log.push(`📥 ${teamName}チームの${typeName}を受領`);
+  
+  // 全部揃ったかチェック
+  // ラウンド1は傍受不可、それ以外は4つ揃う必要
+  const needed=['white','black'];
+  if(dcFs.round>=2){
+    needed.push('whiteIntercept','blackIntercept');
+  }
+  const allDone=needed.every(k=>dcFs.guessSubmitted[k]);
+  if(allDone){
+    await dcResolveRound();
+    return;
+  }
+  await dcBcast();
+}
+
+// ====================
+// ラウンド判定
+// ====================
+async function dcResolveRound(){
+  if(!isHost||!dcFs) return;
+  dcFs.phase='reveal';
+  
+  const wCode=dcFs.codes.white;
+  const bCode=dcFs.codes.black;
+  const wGuess=dcFs.guessData.white;
+  const bGuess=dcFs.guessData.black;
+  const wIntercept=dcFs.guessData.whiteIntercept; // 白が黒のコードを当てる
+  const bIntercept=dcFs.guessData.blackIntercept; // 黒が白のコードを当てる
+  
+  function eq(a,b){return a&&b&&a.length===3&&a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2];}
+  
+  // 結果判定
+  const wOwnCorrect=eq(wGuess,wCode); // 白が自分のコードを当てたか
+  const bOwnCorrect=eq(bGuess,bCode);
+  const wInterceptedB=dcFs.round>=2&&eq(wIntercept,bCode); // 白が黒のコードを傍受
+  const bInterceptedW=dcFs.round>=2&&eq(bIntercept,wCode);
+  
+  // 失敗トークン（自チームの不正解）
+  if(!wOwnCorrect){
+    dcFs.scores.white.fail++;
+    dcFs.log.push(`❌ 白チーム失敗（自コード ${wCode.join('-')} を当てられず）`);
+  } else {
+    dcFs.log.push(`✅ 白チーム正解（${wCode.join('-')}）`);
+  }
+  if(!bOwnCorrect){
+    dcFs.scores.black.fail++;
+    dcFs.log.push(`❌ 黒チーム失敗（自コード ${bCode.join('-')} を当てられず）`);
+  } else {
+    dcFs.log.push(`✅ 黒チーム正解（${bCode.join('-')}）`);
+  }
+  // 傍受トークン
+  if(wInterceptedB){
+    dcFs.scores.white.intercept++;
+    dcFs.log.push(`🎯 白チームが黒のコード ${bCode.join('-')} を傍受成功`);
+  }
+  if(bInterceptedW){
+    dcFs.scores.black.intercept++;
+    dcFs.log.push(`🎯 黒チームが白のコード ${wCode.join('-')} を傍受成功`);
+  }
+  
+  // 履歴に追加
+  dcFs.history.push({
+    round:dcFs.round,
+    white:{code:wCode,hints:dcFs.currentHints.white,ownGuess:wGuess,interceptGuess:wIntercept,encoderId:dcFs.encoders.white},
+    black:{code:bCode,hints:dcFs.currentHints.black,ownGuess:bGuess,interceptGuess:bIntercept,encoderId:dcFs.encoders.black},
+  });
+  
+  // 公開情報
+  dcFs.revealData={
+    white:{code:wCode,ownCorrect:wOwnCorrect,interceptedOther:wInterceptedB},
+    black:{code:bCode,ownCorrect:bOwnCorrect,interceptedOther:bInterceptedW},
+  };
+  
+  await dcBcast();
+  
+  // 勝敗判定
+  const winner=dcCheckWinner();
+  if(winner){
+    setTimeout(async()=>{
+      if(!dcFs) return; // ホスト退出時
+      dcFs.phase='gameover';
+      dcFs.winner=winner;
+      dcFs.rematchVoters=[];
+      dcFs.log.push(`🏁 ${winner==='draw'?'引き分け':(winner==='white'?'白チーム':'黒チーム')+'の勝利！'}`);
+      await dcBcast();
+    },8000); // 結果表示時間
+    return;
+  }
+  
+  // 次のラウンドへ
+  setTimeout(async()=>{
+    if(!dcFs) return; // ホスト退出時
+    if(dcFs.round>=8){
+      // 8ラウンド終了 → 強制終了、トークン数で判定
+      const w=dcFs.scores.white;
+      const b=dcFs.scores.black;
+      // 公式：傍受多い方 → 失敗少ない方 → 引き分け
+      let result='draw';
+      if(w.intercept!==b.intercept) result=w.intercept>b.intercept?'white':'black';
+      else if(w.fail!==b.fail) result=w.fail<b.fail?'white':'black';
+      dcFs.phase='gameover';
+      dcFs.winner=result;
+      dcFs.rematchVoters=[];
+      dcFs.log.push(`🏁 8ラウンド終了 - ${result==='draw'?'引き分け':(result==='white'?'白':'黒')+'チームの勝利'}`);
+      await dcBcast();
+      return;
+    }
+    dcFs.round++;
+    dcFs.encoderIdx.white++;
+    dcFs.encoderIdx.black++;
+    await dcStartRound();
+  },8000);
+}
+
+function dcCheckWinner(){
+  if(!dcFs) return null;
+  const w=dcFs.scores.white;
+  const b=dcFs.scores.black;
+  // 公式：失敗2回が優先（同時の場合は失敗のほうが優先）
+  const wLose=w.fail>=2;
+  const bLose=b.fail>=2;
+  const wWin=w.intercept>=2;
+  const bWin=b.intercept>=2;
+  // 両方同時に決着（失敗・傍受同時）の場合の処理
+  // 公式ルール：失敗2回で即敗北、傍受2回で即勝利。同時の場合は両方処理して引き分けまたは
+  // 実装ルール：両方が同時条件を満たした場合は「失敗が優先」（公式ではどちらか先に判定する）
+  if(wLose&&bLose) return 'draw';
+  if(wLose) return 'black';
+  if(bLose) return 'white';
+  if(wWin&&bWin) return 'draw'; // ありえないが念のため
+  if(wWin) return 'white';
+  if(bWin) return 'black';
+  return null;
+}
+
+// ====================
+// ゲーム画面レンダリング
+// ====================
+let dcLastSig=null; // 'round_phase' 形式。フェーズ・ラウンドが変わったらUI状態リセット
+let dcHintInputs=['','',''];
+
+function dcRenderGame(){
+  if(!dcPub) return;
+  // フェーズ・ラウンドが変わったらUI入力状態をリセット
+  const sig=(dcPub.round||0)+'_'+dcPub.phase;
+  if(sig!==dcLastSig){
+    dcGuess=[null,null,null];
+    dcInterceptGuess=[null,null,null];
+    dcHintInputs=['','',''];
+    dcLastSig=sig;
+  }
+  // ヘッダー
+  g('round-info').textContent=`ラウンド ${dcPub.round}/8`;
+  // スコア
+  dcRenderScore();
+  // 自分のキーワード
+  dcRenderMyTeam();
+  // フェーズエリア
+  dcRenderPhase();
+  // ヒント履歴
+  dcRenderHistory();
+  // ログ
+  dcRenderLog();
+}
+
+function dcRenderScore(){
+  const w=dcPub.scores?.white||{intercept:0,fail:0};
+  const b=dcPub.scores?.black||{intercept:0,fail:0};
+  function tokenHtml(count,full,cls){
+    let html='';
+    for(let i=0;i<full;i++){
+      html+=`<div class="token ${i<count?cls:''}"></div>`;
+    }
+    return html;
+  }
+  g('score-white-i').innerHTML=tokenHtml(w.intercept,2,'intercept');
+  g('score-white-f').innerHTML=tokenHtml(w.fail,2,'fail');
+  g('score-black-i').innerHTML=tokenHtml(b.intercept,2,'intercept');
+  g('score-black-f').innerHTML=tokenHtml(b.fail,2,'fail');
+}
+
+function dcRenderMyTeam(){
+  if(!dcPrv) return;
+  const team=dcPrv.team;
+  const kw=dcPrv.keywords||[];
+  const card=g('my-team-card');
+  card.className='card';
+  if(team==='white'){card.classList.add('team-white');g('my-team-title').innerHTML='⚪ 白チーム（あなた）';}
+  if(team==='black'){card.classList.add('team-black');g('my-team-title').innerHTML='⚫ 黒チーム（あなた）';}
+  const kwBox=g('my-keywords');
+  kwBox.innerHTML='';
+  kw.forEach((w,i)=>{
+    const item=mk('div','kw-item');
+    item.appendChild(mk('div','kw-num',(i+1)));
+    item.appendChild(mk('div','kw-word',w));
+    kwBox.appendChild(item);
+  });
+  // チームメンバー
+  const teamData=team==='white'?dcPub.teams?.white:dcPub.teams?.black;
+  const membersText=(teamData||[]).map(p=>{
+    const isEnc=dcPub.encoders&&dcPub.encoders[team]===p.id;
+    return p.name+(isEnc?' 🔑':'')+(p.id===myId?'（あなた）':'');
+  }).join(' / ');
+  g('my-team-members').textContent='メンバー: '+membersText;
+}
+
+function dcRenderPhase(){
+  const pa=g('phase-area');
+  pa.innerHTML='';
+  if(!dcPub) return;
+  if(!dcPrv){
+    pa.innerHTML='<div class="card"><div class="hint wait">⏳ ゲーム情報を取得中…</div></div>';
+    return;
+  }
+  const myTeam=dcPrv.team;
+  const otherTeam=myTeam==='white'?'black':'white';
+  const myEncoderId=dcPub.encoders&&dcPub.encoders[myTeam];
+  const iAmEncoder=myEncoderId===myId;
+  
+  if(dcPub.phase==='hint'){
+    // ヒント入力フェーズ
+    const myTeamSubmitted=dcPub.hintsSubmitted&&dcPub.hintsSubmitted[myTeam];
+    const otherTeamSubmitted=dcPub.hintsSubmitted&&dcPub.hintsSubmitted[otherTeam];
+    if(iAmEncoder && !myTeamSubmitted){
+      dcRenderHintInput(pa);
+    } else if(iAmEncoder && myTeamSubmitted){
+      // 既に提出済み → 待機表示
+      const card=mk('div','card');
+      card.appendChild(mk('h2','','🔑 あなたはエンコーダー'));
+      card.appendChild(mk('div','hint ok','✅ あなたはヒントを提出しました'));
+      const wmsg=mk('div','hint wait');
+      wmsg.textContent=otherTeamSubmitted?'もうすぐ推測フェーズへ…':'相手チームのエンコーダーがヒント入力中…';
+      card.appendChild(wmsg);
+      pa.appendChild(card);
+    } else {
+      const card=mk('div','card');
+      card.appendChild(mk('h2','','📝 ヒント入力中…'));
+      const encoderName=dcPub.players.find(p=>p.id===myEncoderId)?.name||'?';
+      const hint=mk('div','hint wait');
+      hint.textContent=myTeamSubmitted
+        ?`✅ あなたのチームのエンコーダー（${encoderName}）はヒント提出済み`
+        :`🔑 あなたのチームのエンコーダー（${encoderName}）がヒントを入力中…`;
+      card.appendChild(hint);
+      const otherEncoderName=dcPub.players.find(p=>p.id===dcPub.encoders?.[otherTeam])?.name||'?';
+      const hint2=mk('div','hint wait');
+      hint2.textContent=otherTeamSubmitted
+        ?`✅ 相手チームのエンコーダー（${otherEncoderName}）はヒント提出済み`
+        :`🔑 相手チームのエンコーダー（${otherEncoderName}）がヒントを入力中…`;
+      card.appendChild(hint2);
+      pa.appendChild(card);
+    }
+  } else if(dcPub.phase==='guess'){
+    dcRenderGuessPhase(pa);
+  } else if(dcPub.phase==='reveal'){
+    dcRenderRevealPhase(pa);
+  }
+}
+
+function dcRenderHintInput(pa){
+  const code=dcPrv.code||[1,2,3];
+  const kw=dcPrv.keywords||[];
+  const card=mk('div','card');
+  card.appendChild(mk('h2','','🔑 あなたはエンコーダー'));
+  const sub=mk('p','small muted','以下のコード順にヒントを入力してください。');
+  card.appendChild(sub);
+  // コード表示
+  const codeBox=mk('div','code-box');
+  code.forEach(n=>{
+    const d=mk('div','code-digit',n);
+    codeBox.appendChild(d);
+  });
+  card.appendChild(codeBox);
+  // ヒント3つ入力
+  const wrap=mk('div','');
+  code.forEach((n,i)=>{
+    const row=mk('div','hint-input-group');
+    const lbl=mk('div','label');
+    lbl.innerHTML=`<span class="kw-tag">ヒント${i+1} ⇒ ${n}: ${kw[n-1]||'?'}</span>`;
+    row.appendChild(lbl);
+    const inp=mk('input','input');
+    inp.type='text';
+    inp.id='hint-input-'+i;
+    inp.placeholder='ヒントを入力';
+    inp.maxLength=30;
+    inp.value=dcHintInputs[i]||''; // 既存入力を復元
+    inp.oninput=(e)=>{dcHintInputs[i]=e.target.value;}; // 入力毎に保存
+    row.appendChild(inp);
+    wrap.appendChild(row);
+  });
+  card.appendChild(wrap);
+  const btn=mk('button','btn btn-primary btn-block','📤 ヒント提出');
+  btn.onclick=async()=>{
+    const hints=[];
+    for(let i=0;i<3;i++){
+      const v=g('hint-input-'+i).value.trim();
+      if(!v){alert(`ヒント${i+1}が空です`);return;}
+      if(v.length>30){alert('ヒントは30文字以内');return;}
+      hints.push(v);
+    }
+    btn.disabled=true;
+    btn.textContent='送信中…';
+    if(isHost){
+      await dcHostHandleHint(myId,dcPrv.team,hints);
+    } else {
+      await fbSendToHost({type:'submitHint',team:dcPrv.team,hints});
+    }
+  };
+  card.appendChild(btn);
+  pa.appendChild(card);
+}
+
+function dcRenderGuessPhase(pa){
+  const myTeam=dcPrv.team;
+  const otherTeam=myTeam==='white'?'black':'white';
+  const myEncoderId=dcPub.encoders?.[myTeam];
+  const iAmEncoder=myEncoderId===myId;
+  const round=dcPub.round||1;
+  
+  // 自チームのヒント表示（エンコーダー以外）
+  const myHints=dcPub.currentHints?.[myTeam];
+  const otherHints=dcPub.currentHints?.[otherTeam];
+  
+  // 自チーム推測カード（エンコーダー以外）
+  const card1=mk('div','card');
+  card1.classList.add(myTeam==='white'?'team-white':'team-black');
+  card1.appendChild(mk('h2','','🤔 あなたのチームの推測'));
+  if(iAmEncoder){
+    card1.appendChild(mk('div','hint wait','あなたはエンコーダーです。チームメイトの推測を待っています。'));
+    // ヒント＆コード表示（エンコーダーは答えを知っている）
+    const codeP=mk('div','small');
+    codeP.innerHTML=`<b>あなたのコード: ${dcPrv.code?.join('-')||'?'}</b>`;
+    card1.appendChild(codeP);
+    if(myHints){
+      const hp=mk('div','small');
+      hp.innerHTML='ヒント: '+myHints.map(h=>`「${h}」`).join(' / ');
+      card1.appendChild(hp);
+    }
+  } else {
+    // ヒント表示
+    if(myHints){
+      const hp=mk('div','hint my');
+      hp.innerHTML='エンコーダーのヒント:<br>'+myHints.map((h,i)=>`<b>ヒント${i+1}:</b> ${h}`).join('<br>');
+      card1.appendChild(hp);
+    }
+    // 推測UI
+    if(dcPub.guessSubmitted?.[myTeam]){
+      card1.appendChild(mk('div','hint ok','✅ あなたのチームは推測を提出済み'));
+    } else {
+      card1.appendChild(dcMakeGuessUI('own',myTeam));
+    }
+  }
+  pa.appendChild(card1);
+  
+  // 相手チームの傍受（ラウンド2以降、エンコーダー以外）
+  if(round>=2&&!iAmEncoder){
+    const card2=mk('div','card');
+    card2.classList.add(otherTeam==='white'?'team-white':'team-black');
+    card2.appendChild(mk('h2','','🎯 相手チームの傍受'));
+    card2.appendChild(mk('p','small muted','相手チームのヒントから、相手のコード（3桁）を推測してください。'));
+    if(otherHints){
+      const hp=mk('div','hint');
+      hp.innerHTML='相手エンコーダーのヒント:<br>'+otherHints.map((h,i)=>`<b>ヒント${i+1}:</b> ${h}`).join('<br>');
+      card2.appendChild(hp);
+    }
+    if(dcPub.guessSubmitted?.[myTeam+'Intercept']){
+      card2.appendChild(mk('div','hint ok','✅ 傍受推測を提出済み'));
+    } else {
+      card2.appendChild(dcMakeGuessUI('intercept',myTeam));
+    }
+    pa.appendChild(card2);
+  } else if(round===1&&!iAmEncoder){
+    const card2=mk('div','card');
+    card2.appendChild(mk('h3','','🎯 傍受'));
+    card2.appendChild(mk('p','small muted','ラウンド1では傍受はできません（情報が少ないため公式ルール）。'));
+    if(otherHints){
+      const hp=mk('div','hint');
+      hp.innerHTML='参考: 相手チームのヒント:<br>'+otherHints.map((h,i)=>`<b>ヒント${i+1}:</b> ${h}`).join('<br>');
+      card2.appendChild(hp);
+    }
+    pa.appendChild(card2);
+  }
+  
+  // エンコーダー用：相手チームの傍受は表示しない（情報の対称性のため）
+  if(iAmEncoder&&round>=2){
+    const card2=mk('div','card');
+    card2.appendChild(mk('h3','','🎯 傍受'));
+    card2.appendChild(mk('p','small muted','チームメイトが相手の傍受を行っています…'));
+    pa.appendChild(card2);
+  }
+}
+
+function dcMakeGuessUI(type,team){
+  // type: 'own'(自チーム) or 'intercept'(傍受)
+  const wrap=mk('div','');
+  const state=type==='own'?dcGuess:dcInterceptGuess;
+  // 注意: state は再描画間で保持される（dcRenderGameでフェーズ変化時のみリセット）
+  
+  for(let pos=0;pos<3;pos++){
+    const row=mk('div','guess-row');
+    row.appendChild(mk('div','label',`ヒント${pos+1}の答え:`));
+    const numWrap=mk('div','guess-num');
+    for(let n=1;n<=4;n++){
+      const b=mk('button','guess-btn',n);
+      b.dataset.pos=pos;
+      b.dataset.num=n;
+      if(state[pos]===n) b.classList.add('selected'); // 既存選択を復元
+      b.onclick=()=>{
+        wrap.querySelectorAll(`[data-pos="${pos}"]`).forEach(x=>x.classList.remove('selected'));
+        b.classList.add('selected');
+        state[pos]=n;
+        validateGuess();
+      };
+      numWrap.appendChild(b);
+    }
+    row.appendChild(numWrap);
+    wrap.appendChild(row);
+  }
+  
+  const submitBtn=mk('button','btn btn-primary btn-block',type==='own'?'📤 自チーム推測を提出':'📤 傍受推測を提出');
+  submitBtn.disabled=true;
+  submitBtn.style.marginTop='10px';
+  wrap.appendChild(submitBtn);
+  
+  function validateGuess(){
+    // 3桁全部選択済み＆重複なし
+    const filled=state.every(v=>v!==null);
+    const unique=new Set(state).size===3;
+    submitBtn.disabled=!(filled&&unique);
+    if(filled&&!unique){
+      submitBtn.textContent='⚠️ 3桁は重複させずに選択してください';
+    } else {
+      submitBtn.textContent=type==='own'?'📤 自チーム推測を提出':'📤 傍受推測を提出';
+    }
+  }
+  
+  submitBtn.onclick=async()=>{
+    if(submitBtn.disabled) return;
+    submitBtn.disabled=true;
+    submitBtn.textContent='送信中…';
+    const guess=state.slice();
+    if(isHost){
+      await dcHostHandleGuess(myId,team,guess,type==='intercept');
+    } else {
+      await fbSendToHost({type:'submitGuess',team,guess,isIntercept:type==='intercept'});
+    }
+  };
+  
+  validateGuess(); // 既存stateからボタン状態を反映
+  return wrap;
+}
+
+function dcRenderRevealPhase(pa){
+  const card=mk('div','card');
+  card.appendChild(mk('h2','','🔓 ラウンド結果'));
+  const rd=dcPub.revealData;
+  if(!rd){
+    card.appendChild(mk('div','small muted','結果を計算中…'));
+    pa.appendChild(card);
+    return;
+  }
+  // 白チーム結果
+  const w=mk('div','card team-white');
+  w.style.padding='10px';
+  w.appendChild(mk('div','small bold team-white-text','⚪ 白チーム'));
+  const wCodeDiv=mk('div','small');
+  wCodeDiv.innerHTML='正解コード: <b>'+rd.white.code.join('-')+'</b>';
+  w.appendChild(wCodeDiv);
+  w.appendChild(mk('div','small',(rd.white.ownCorrect?'✅ 自チーム正解':'❌ 自チーム失敗')));
+  if(dcPub.round>=2){
+    w.appendChild(mk('div','small',(rd.white.interceptedOther?'🎯 黒チームの傍受成功！':'⚪ 黒チームの傍受失敗')));
+  }
+  // 黒チーム結果
+  const b=mk('div','card team-black');
+  b.style.padding='10px';
+  b.appendChild(mk('div','small bold team-black-text','⚫ 黒チーム'));
+  const bCodeDiv=mk('div','small');
+  bCodeDiv.innerHTML='正解コード: <b>'+rd.black.code.join('-')+'</b>';
+  b.appendChild(bCodeDiv);
+  b.appendChild(mk('div','small',(rd.black.ownCorrect?'✅ 自チーム正解':'❌ 自チーム失敗')));
+  if(dcPub.round>=2){
+    b.appendChild(mk('div','small',(rd.black.interceptedOther?'🎯 白チームの傍受成功！':'⚪ 白チームの傍受失敗')));
+  }
+  card.appendChild(w);
+  card.appendChild(mk('div','spacer'));
+  card.appendChild(b);
+  card.appendChild(mk('div','spacer'));
+  card.appendChild(mk('div','hint wait','次のラウンドへ自動で進みます…'));
+  pa.appendChild(card);
+}
+
+// 履歴表示を innerHTML で正しく構築するため、上の関数を修正版に置き換える必要がある
+// （quick fix: 既に textContent で b 要素はエスケープされている。後で修正）
+
+function dcRenderHistory(){
+  const box=g('hint-history');
+  box.innerHTML='';
+  const hist=dcPub.history||[];
+  if(hist.length===0){
+    box.innerHTML='<div class="small muted">まだヒントはありません</div>';
+    return;
+  }
+  // eq関数（推測とコードが一致するか）
+  function eq(a,b){return a&&b&&a.length===3&&a[0]===b[0]&&a[1]===b[1]&&a[2]===b[2];}
+  function nameOf(pid){const p=(dcPub.players||[]).find(x=>x.id===pid);return p?p.name:'?';}
+  // 逆順表示（新しいラウンドが上）
+  for(let i=hist.length-1;i>=0;i--){
+    const h=hist[i];
+    const r=mk('div','history-round');
+    const header=mk('div','small bold',`R${h.round}`);
+    r.appendChild(header);
+    // 白
+    const wOwn=eq(h.white.ownGuess,h.white.code);
+    const wInt=eq(h.white.interceptGuess,h.black.code); // 白が黒のコードを傍受
+    const wLine=mk('div','history-line');
+    wLine.classList.add('team-w');
+    wLine.appendChild(mk('span','team-label white','白'));
+    wLine.appendChild(mk('span','small',`🔑${nameOf(h.white.encoderId)}`));
+    wLine.appendChild(mk('span','small',h.white.hints?h.white.hints.map((x,j)=>`${j+1}:${x}`).join(' / '):'?'));
+    wLine.appendChild(mk('span','small bold',`→${h.white.code.join('-')}`));
+    wLine.appendChild(mk('span','small',`自:${wOwn?'✅':'❌'}`));
+    if(h.round>=2) wLine.appendChild(mk('span','small',`傍:${wInt?'🎯':'—'}`));
+    r.appendChild(wLine);
+    // 黒
+    const bOwn=eq(h.black.ownGuess,h.black.code);
+    const bInt=eq(h.black.interceptGuess,h.white.code);
+    const bLine=mk('div','history-line');
+    bLine.classList.add('team-b');
+    bLine.appendChild(mk('span','team-label black','黒'));
+    bLine.appendChild(mk('span','small',`🔑${nameOf(h.black.encoderId)}`));
+    bLine.appendChild(mk('span','small',h.black.hints?h.black.hints.map((x,j)=>`${j+1}:${x}`).join(' / '):'?'));
+    bLine.appendChild(mk('span','small bold',`→${h.black.code.join('-')}`));
+    bLine.appendChild(mk('span','small',`自:${bOwn?'✅':'❌'}`));
+    if(h.round>=2) bLine.appendChild(mk('span','small',`傍:${bInt?'🎯':'—'}`));
+    r.appendChild(bLine);
+    box.appendChild(r);
+  }
+}
+
+function dcRenderLog(){
+  const box=g('log-box');
+  box.innerHTML='';
+  const log=dcPub.log||[];
+  for(let i=log.length-1;i>=0;i--){
+    const line=mk('div','log-line',log[i]);
+    box.appendChild(line);
+  }
+}
+
+// ====================
+// 結果画面
+// ====================
+function dcRenderResult(){
+  if(!dcPub) return;
+  const winner=dcPub.winner;
+  const myTeam=dcPrv?.team;
+  let title='',sub='',cls='card center';
+  if(winner==='draw'){
+    title='🤝 引き分け';
+    sub='両チームのトークン数が同じでした';
+    cls+=' card';
+  } else if(winner===myTeam){
+    title='🎉 勝利！';
+    sub='あなたのチーム（'+(winner==='white'?'⚪ 白':'⚫ 黒')+'）の勝ち';
+    cls+=(winner==='white'?' team-white':' team-black');
+  } else {
+    title='💀 敗北';
+    sub='相手チーム（'+(winner==='white'?'⚪ 白':'⚫ 黒')+'）の勝ち';
+  }
+  g('result-card').className=cls;
+  g('result-title').textContent=title;
+  g('result-subtitle').textContent=sub;
+  // キーワード公開
+  const rk=g('result-keywords');
+  rk.innerHTML='';
+  if(dcPub.keywords){
+    ['white','black'].forEach(team=>{
+      const c=mk('div','card '+(team==='white'?'team-white':'team-black'));
+      c.style.padding='10px';
+      c.appendChild(mk('div','small bold',(team==='white'?'⚪ 白チーム':'⚫ 黒チーム')+'のキーワード'));
+      (dcPub.keywords[team]||[]).forEach((w,i)=>{
+        const item=mk('div','kw-item');
+        item.appendChild(mk('div','kw-num',(i+1)));
+        item.appendChild(mk('div','kw-word',w));
+        c.appendChild(item);
+      });
+      rk.appendChild(c);
+      rk.appendChild(mk('div','spacer'));
+    });
+  }
+  // スコア
+  const rs=g('result-score');
+  const w=dcPub.scores?.white||{intercept:0,fail:0};
+  const b=dcPub.scores?.black||{intercept:0,fail:0};
+  rs.innerHTML=`
+    <div class="player-item team-white">
+      <span><b class="team-white-text">⚪ 白チーム</b></span>
+      <span class="small">傍受 ${w.intercept} / 失敗 ${w.fail}</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="player-item team-black">
+      <span><b class="team-black-text">⚫ 黒チーム</b></span>
+      <span class="small">傍受 ${b.intercept} / 失敗 ${b.fail}</span>
+    </div>
+  `;
+}
+
+// ============================================================
+// REMATCH (voting)
+// ============================================================
+function _renderRematchPanel(voterIds, players) {
+  const st = g('rematch-status'), vl = g('rematch-voters');
+  if(!st || !vl) return;
+  const total = (players||[]).length;
+  const validIds = (voterIds||[]).filter(id => (players||[]).some(p => p.id === id));
+  st.textContent = `再戦希望: ${validIds.length} / ${total} 人`;
+  vl.innerHTML = '';
+  validIds.forEach(id => {
+    const p = (players||[]).find(pp => pp.id === id);
+    if(!p) return;
+    const t = document.createElement('span');
+    t.className = 'rematch-voter-tag';
+    t.textContent = '✅ ' + p.name;
+    vl.appendChild(t);
+  });
+  // ボタン状態の更新（自分が投票済みなら無効化）
+  const btn = g('btn-rematch');
+  if(btn) {
+    const myVoted = validIds.includes(myId);
+    if(myVoted) { btn.disabled = true; btn.textContent = '⏳ 他のプレイヤーを待っています...'; }
+    else { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
+  }
+}
+
+async function submitRematch() {
+  const btn = g('btn-rematch');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ 他のプレイヤーを待っています...'; }
+  if(isHost) {
+    await _hostRematch(myId);
+  } else {
+    await fbSendToHost({type:'rematch', id:myId, name:myName});
+  }
+}
+
+async function _hostRematch(pid) {
+  if(!isHost || !dcFs) return;
+  if(dcFs.phase !== 'gameover') return;
+  if(!dcFs.rematchVoters) dcFs.rematchVoters = [];
+  const player = dcFs.players.find(p => p.id === pid);
+  if(!player) return;
+  // 退出済みプレイヤーIDを除去
+  dcFs.rematchVoters = dcFs.rematchVoters.filter(id => dcFs.players.some(p => p.id === id));
+  if(dcFs.rematchVoters.includes(pid)) return;
+  dcFs.rematchVoters.push(pid);
+  if(dcFs.rematchVoters.length >= dcFs.players.length) {
+    await _actualRestart();
+  } else {
+    await dcBcast();
+  }
+}
+
+async function _actualRestart() {
+  if(!isHost || !dcFs) return;
+  dcFs.rematchVoters = [];
+  dcFs.phase='waiting';
+  dcFs.round=0;
+  dcFs.history=[];
+  dcFs.scores={white:{intercept:0,fail:0},black:{intercept:0,fail:0}};
+  dcFs.keywords={white:[],black:[]};
+  dcFs.encoders=null;
+  dcFs.codes=null;
+  dcFs.currentHints=null;
+  dcFs.hintsSubmitted={white:false,black:false};
+  dcFs.guessSubmitted={white:false,black:false,whiteIntercept:false,blackIntercept:false};
+  dcFs.guessData=null;
+  dcFs.revealData=null;
+  dcFs.winner=null;
+  dcFs.log.push('🔄 再戦準備中');
+  await dcBcast();
+}
+
+// 互換用エイリアス
+async function dcRematch(){ await submitRematch(); }
+
+// ====================
+// 単語リスト（プレースホルダー、後で5000語以上に置き換え）
+// ====================
+const DC_WORDS=[
+'1学期','2学期','3Dプリンター','3学期','ACアダプター','AD','AI','AR','ATM','Android','BBQ場','BC','BMX','CD','CM','CSS','C言語','DM','DNA','EV','FAX','GW','Go','HTML','IPO','Java','JavaScript','LED電球','Linux','MMA',
+'Mac','NGO','NHK','NPO','OS','PTA','Python','RPG','Ruby','Rust','SF','SNS','SQL','SUV','TRPG','Tシャツ','UAE','URL','VR','Vネック','Web','Webデザイナー','Windows','X線','eラーニング','iOS','pH','あいさつ','あおさ','あっち向いてホイ',
+'あやめ','あんまん','いかだ','いかだ船','いくら','いちご','いとこ','いりこ','うがい薬','うつ','うとうと','うどん','うどん屋','うまい','うるさい','うんざり','えのき','おいしい','おおぐま座','おかき','おかゆ','おから','おしっこ','おしべ','おしゃれ','おじ','おじいさん','おじぎ','おじや','おせち',
+'おたま','おちょこ','おでん','おにぎり','おはじき','おば','おばあさん','おへそ','おむつ','おもちゃ屋','おやつ','おろし金','お人形','お化け','お好み焼き','お守り','お年玉','お月見','お正月','お洒落','お盆','お盆休み','お笑い芸人','お絵かき','お絵描き帳','お花見','お茶','お葬式','お辞儀','お遍路',
+'お金','かかと','かきつばた','かくれんぼ','かっこいい','かばう','かぼす','かわいい','かんざし','かんな','がけ崩れ','がん','がんもどき','きれい','くしゃみ','ぐっすり','けが','けん玉','こぐま座','こけし','こしょう','こたつ','ことわざ','こと座','こどもの日','こま','こめかみ','こんにゃく','ごぼう','ごま油',
+'ご飯','さいたま','さくらんぼ','ささやく','さそり座','さつまいも','ししゅう','しめじ','しゃぶしゃぶ','しょっぱい','しらたき','じゃがいも','じゃんけん','じょうろ','すき焼き','すごろく','すじこ','すすき','すだち','すだれ','すみれ','すり傷','ずる賢い','せっけん','せんべい','そば屋','そば粉','そよ風','そら豆','そり',
+'たこ焼き','たそがれ','たらこ','たわし','だし','だるさ','だるまさんがころんだ','ちりとり','ちり取り','つぼみ','つま先','つむじ','つらら','つり輪','とうもろこし','とび職','どら焼き','どんぶり','なぞなぞ','なまり','なめこ','にんにく','ぬいぐるみ','ぬか漬け','ぬらりひょん','ぬるい','ねぎ','ねじ','ねずみ捕り','のこぎり',
+'のり','のろい','はがき','はくちょう座','はさみ','はんだごて','ばか','ばんそうこう','ひき逃げ','ひじき','ひな人形','ひな祭り','ひまわり','ひよこ豆','ひらがな','ひらめき','ひ弱','ふうせん','ふきん','ふくらはぎ','ふくれっ面','ふくれる','ふざけ','ふすま','ふせん','ぶち','ぶどう','へら','ほうき','ほうれん草',
+'まずい','まだら模様','まつげ','まな板','まぶしい','まぶた','みかん','みじめさ','みどりの日','みょうが','みりん','めしべ','めまい','めんこ','もずく','もち','もち米','もつ','ものさし','もみあげ','もみじ','もやし','もらう','もんじゃ焼き','やけど','やり投げ','ゆず','ゆず湯','ようかん','らせん',
+'りんご','ろうそく','わかめ','わさび','わし座','アイシャドウ','アイスクリーム','アイススケート','アイスホッケー','アイスランド','アイドル','アイボリー','アイライナー','アイルランド','アイロン','アイロン台','アクション','アクセサリー','アクセント','アコーディオン','アサリ','アザラシ','アシカ','アジア','アジサイ','アスパラ','アップルパイ','アップロード','アディスアベバ','アドベンチャー',
+'アナウンサー','アニメ','アニメキャラ','アパート','アフターサービス','アフリカ','アフリカ大陸','アブ','アブラムシ','アプリ','アホウドリ','アホロートル','アボカド','アムステルダム','アメジスト','アメダス','アメフト','アメリカ','アメリカンフットボール','アメリカ合衆国','アライグマ','アリの巣','アリーナ','アルカリ','アルゴリズム','アルゴン','アルジェリア','アルゼンチン','アルバイト','アルバム',
+'アルパカ','アルマジロ','アルミ','アルミニウム','アルミホイル','アレルギー','アレンジ','アワビ','アンティーク','アンテロープ','アンドロメダ座','アンドロメダ銀河','アンビエント','アーキテクト','アーケードゲーム','アーチェリー','イエス・キリスト','イエティ','イカ漁','イギリス','イクラ','イグアナ','イスラエル','イスラム教','イソギンチャク','イタチ','イタリア','イタリアン','イタリア語','イチゴ',
+'イチジク','イチョウ','イデア','イノシシ','イノシシ肉','イブニングドレス','イベント','イモリ','イヤリング','イライラ','イラク','イラスト','イラストレーター','イラン','イルカ','イルミネーション','インキュバス','インコ','インストラクター','インターネット','インテリアコーディネーター','インディゴ','インディーズ','イントネーション','インド','インドネシア','インド洋','インナー','インフルエンザ','インプ',
+'ウィンドウショッピング','ウィンドサーフィン','ウィーン','ウイスキー','ウイルス','ウェアウルフ','ウェイター','ウェイトレス','ウェディングドレス','ウォン','ウォンバット','ウォーキング','ウガンダ','ウクライナ','ウクレレ','ウニ','ウミウシ','ウミガメ','ウラン','ウルグアイ','ウルトラマン','ウンチ','ウーロン茶','エアコン','エアロビクス','エクアドル','エクレア','エコバッグ','エジプト','エスカレーター',
+'エステサロン','エスプレッソ','エチオピア','エチケット','エッセイ','エビ','エプロン','エホバの証人','エミュー','エメラルド','エリンギ','エルダードラゴン','エレクトロニカ','エレベーター','エンジニア','オウム','オウム貝','オオクワガタ','オオヤマネコ','オクラ','オシャレ','オセアニア','オセロ','オゾン層','オニキス','オパール','オフィス','オペラ','オペラハウス','オホーツク海',
+'オマーン','オムライス','オムレツ','オラウータン','オランダ','オリオン大星雲','オリオン座','オリジナル','オリンピック','オリーブ','オリーブオイル','オルガン','オレガノ','オレンジ','オロチ','オンラインゲーム','オンライン学習','オーガ','オーク','オーストラリア','オーストラリア大陸','オーストリア','オーディション','オートバイ','オーブン','オーブン皿','オープンカー','オーボエ','オーロラ','カイロ',
+'カエデ','カエル','カキ','カクテル','カシオペア座','カジノ','カジュアル','カスタマーサポート','カステラ','カステーラ','カスピ海','カタカナ','カタツムリ','カタール','カッター','カッターシャツ','カトリック','カナダ','カナブン','カナリア','カニ','カヌー','カバ','カバン','カフェ','カフェオレ','カフス','カブトムシ','カプセルホテル','カプチーノ',
+'カボチャ','カポエイラ','カマキリ','カメ','カメラ','カメレオン','カモシカ','カモノハシ','カモメ','カヤック','カラオケ','カラチ','カラフル','カリウム','カリフラワー','カリブ海諸国','カルシウム','カルタ','カルダモン','カルテット','カレンダー','カレー','カンガルー','カントリー','カンボジア','カーキ','カーゴパンツ','カーテン','カーディガン','カードケース',
+'カードゲーム','カードローン','カーペット','カーリング','ガスパチョ','ガス停止','ガス漏れ','ガゼル','ガソリン','ガソリンスタンド','ガビアル','ガブリエル','ガムテープ','ガレット','ガンマ線','ガーゴイル','ガーゼ','ガードマン','ガードレール','ガーナ','ガーネット','ガーベラ','ガーリー','キウイ','キックボクシング','キックボード','キッチンタイマー','キッチンペーパー','キツネザル','キマイラ',
+'キムチ','キャスター','キャッシュカード','キャップ','キャビア','キャビンアテンダント','キャベツ','キャミソール','キャメル','キャリーケース','キャンピングカー','キャンプ','キャンプ場','キュウリ','キューバ','キリスト教','キリン','キンモクセイ','キーウィ','キーホルダー','キーボード','ギター','ギフト','ギャング','ギリシャ','クアラルンプール','クイズ','クイックル','クウェート','クエーサー',
+'クジャク','クジラ','クチナシ','クッキングシート','クッキー','クマ','クマバチ','クミン','クモの巣','クライミング','クラウド','クラゲ','クラシック','クラス','クラス会','クラブ','クラリネット','クランベリー','クリスマス','クリスマスイブ','クリップ','クリニック','クリーム','クリーム色','クルアーン','クルージング','クルーネック','クレジットカード','クレヨン','クレープ',
+'クロアチア','クロスワード','クロックス','クローブ','クワガタ','クーペ','グライダー','グラス','グラフィックデザイナー','グリフィン','グリーンピース','グレー','グレープフルーツ','グーズベリー','ケチャップ','ケニア','ケラケラ','ケンタウロス','ケーキ','ケーキ屋','ケーブルカー','ゲストハウス','ゲリラ豪雨','ゲーム','コアラ','コウモリ','コオロギ','コガネムシ','ココア','コスモス',
+'コック服','コップ','コブシ','コミュニティ','コメディアン','コラム','コリアンダー','コロッケ','コロンビア','コンクール','コンサート','コンサート会場','コンソメ','コンディショナー','コントラバス','コンドーム','コンパス','コンビニ','コンピュータサイエンス','コンピューター','コーチ','コーディネート','コーディング','コート','コード','コーヒー','コーヒーカップ','コーヒーメーカー','コーラ','コーラン',
+'ゴキブリ','ゴキブリホイホイ','ゴシップ','ゴブリン','ゴミ収集車','ゴム跳び','ゴリラ','ゴルフ','ゴルファー','ゴルフ場','ゴンドラ','ゴールデンウィーク','ゴーレム','サイ','サイクリング','サイクロン','サイコロ','サイダー','サウジアラビア','サキュバス','サザエ','サスペンス','サスペンダー','サタン','サッカー','サッカー場','サッカー選手','サックス','サファイア','サファリパーク',
+'サフラン','サプライズ','サムライ','サヤインゲン','サヤエンドウ','サラマンダー','サルサ','サンクトペテルブルク','サンゴ','サンゴ礁','サンショウウオ','サンタクロース','サンダル','サンドイッチ','サンビーチ','サンフランシスコ','サンボ','サークル','サーバー','サービス','サービスエリア','サーフィン','サーフパンツ','サーモンピンク','ザクロ','ザル','ザワークラウト','シェフ','シェフコート','シカゴ',
+'シシトウ','シジミ','シソ','シタール','シダ','シチュー','シドニー','シナゴーグ','シナモン','シマウマ','シミュレーション','シミ抜き','シャチ','シャツ','シャトル','シャボン玉','シャンパン','シャンプー','シャーベット','シャーペン','シャーマン','シュノーケル','シュークリーム','シューティング','ショック','ショットガン','ショッピングセンター','ショーツ','ショートケーキ','ショートパンツ',
+'シラミ','シリア','シロアリ','シンガポール','シンクロ','シングル','シンセサイザー','シンプル','シーア派','シーク教','シーソー','シール','シール帳','ジェットコースター','ジェット機','ジグザグ','ジグソーパズル','ジップロック','ジビエ','ジム','ジムインストラクター','ジムトレーニング','ジャイナ教','ジャカランダ','ジャカルタ','ジャガー','ジャケット','ジャズ','ジャズダンス','ジャマイカ',
+'ジャングルジム','ジャンパー','ジャージ','ジャーナリスト','ジュウシマツ','ジュゴン','ジューサー','ジュース','ジョギング','ジョッキ','ジョロウグモ','ジョーク','ジンチョウゲ','ジーパン','ジーンズ','スイカ','スイス','スイミングキャップ','スウェットパンツ','スウェーデン','スカイツリー','スカート','スカーフ','スキャナー','スキャンダル','スキューバ','スキンダイビング','スキー','スキー場','スクーター',
+'スケルトン','スケート','スケートボード','スズメバチ','スタイル','スタジアム','スタンプ','スタートアップ','スチュワーデス','ステレオタイプ','ステーキ','ストッキング','ストップウォッチ','ストライダー','ストリート','ストリーミング','ストレス','ストレッチ','ストロベリー','ストーブ','ストール','スニーカー','スノーボード','スパイ','スパゲッティ','スピードスケート','スプリンクラー','スプーン','スペイン','スペイン語',
+'スポンジ','スポーツウェア','スポーツカー','スポーツ選手','スポーティ','スマホ','スマホゲーム','スムージー','スラックス','スリッパ','スリップ','スリランカ','スンニ派','スーダン','スーツ','スーツケース','スーパー','スーフィー','スープ','ズッキーニ','ズボン','セイウチ','セグウェイ','セダン','セミ','セミナー','セルビア','セレブ','セレモニー','セロハンテープ',
+'セロリ','センターライン','センター試験','セージ','セーター','ゼミ','ゼリー','ソウル','ソックス','ソファ','ソフトウェア','ソマリア','ソムリエ','ソリ','ソロ','ソース','ソーセージ','ゾウムシ','ゾンビ','タイ','タイツ','タイトスカート','タイマー','タイム','タイル','タイル職人','タオル','タキシード','タクシー','タクシー乗り場',
+'タクシー運転手','タコ漁','タッパー','タバスコ','タブレット','タブロイド','タブ譜','タルト','タルムード','タレント','タロット','タワシ','タワー','タンカー','タンクトップ','タンクローリー','タンゴ','タンザニア','タンス','タンポポ','タンポン','ターコイズ','タートルネック','ターメリック','ダイバー','ダイビング','ダイヤモンド','ダイヤ型','ダウン','ダウンロード',
+'ダチョウ','ダニ','ダンゴムシ','ダンサー','ダンジョン','ダンス','ダンスミュージック','ダンプカー','ダンボール','ダーツ','ダーツバー','チェコ','チェス','チェロ','チェンバロ','チノパン','チャイブ','チャッカマン','チャペル','チャーハン','チュニジア','チューバ','チューリップ','チョコレート','チョーク','チラシ','チリ','チンパンジー','チーク','チーズ',
+'チーズケーキ','チーター','ツリー','ツーリング','ティアラ','ティッシュ','ティラミス','ティーポット','テクノ','テスト','テナガザル','テニス','テニスコート','テニス選手','テレビ','テレビCM','テレビゲーム','テロ','テロリズム','テントウムシ','テンポ','テーブル','テープ','テーマ','テーマパーク','ディル','ディレクトリ','ディーゼル','デザイナー','デジカメ',
+'デッキブラシ','デッサン','デニム','デパート','デビットカード','デマ','デモ','デュオ','デリー','デンタルフロス','デンマーク','データセンター','データベース','デーモン','トイレ','トイレットペーパー','トウモロコシ','トカゲ','トナカイ','トパーズ','トマト','トラ','トラック','トラック運転手','トランクス','トランス','トランプ','トランペット','トランポリン','トリオ',
+'トリュフ','トリートメント','トルコ','トルネード','トレッキング','トレンド','トレー','トレーナー','トレーニングウェア','トレーラー','トロル','トロンボーン','トローリング','トンネル','トンボ','トースター','トースト','トートバッグ','トーラー','ドア','ドイツ','ドイツ語','ドキドキ','ドキュメンタリー','ドメイン','ドライバー','ドライブ','ドライヤー','ドラゴン','ドラム',
+'ドリル','ドル','ドレス','ドローン','ドワーフ','ドーナツ','ドーム','ナイジェリア','ナイトガウン','ナイトクラブ','ナイフ','ナイロビ','ナス','ナチュラル','ナット','ナツメグ','ナトリウム','ナナカマド','ナナフシ','ナプキン','ナマケモノ','ナマコ','ナンプレ','ニガウリ','ニコニコ','ニット帽','ニュージーランド','ニュース','ニューヨーク','ニューラルネットワーク',
+'ニラ','ネイビー','ネイルサロン','ネオン','ネクタイ','ネックレス','ネット広告','ネパール','ノコギリ','ノスタルジー','ノミ','ノルウェー','ノースリーブ','ノート','ノートPC','ハイエナ','ハイキング','ハイソックス','ハイネック','ハイヒール','ハイブリッド','ハイボール','ハイヤー','ハウス','ハエ','ハエタタキ','ハクモクレン','ハゲ','ハコガメ','ハサミ',
+'ハスカップ','ハチの巣','ハチドリ','ハッカー','ハット','ハト','ハナアブ','ハネムーン','ハノイ','ハマグリ','ハム','ハリケーン','ハリネズミ','ハロウィン','ハンカチ','ハンガリー','ハンガー','ハンドタオル','ハンドバッグ','ハンドボール','ハンバーガー','ハンバーグ','ハンマー','ハンマー投げ','ハート型','ハードボイルド','ハードル','ハーフパンツ','ハープ','ハープシコード',
+'ハーモニカ','ハーモニー','ハーレー','バイオリン','バイオレット','バイク','バクテリア','バケツ','バジル','バス','バスケットボール','バス停','バス運転手','バター','バッグ','バッジ','バッタ','バッファロー','バトル','バドミントン','バナナ','バニラ','ババ抜き','バラ','バリスタ','バルト海','バレエ','バレリーナ','バレーボール','バングラデシュ',
+'バンコク','バンジョー','バンド','バー','バースデー','バーチャルリアリティ','バーテンダー','バービー人形','バーベキュー','パイナップル','パイロット','パキスタン','パクチー','パジャマ','パス','パスケース','パスタ','パステル','パズル','パセリ','パソコン','パチンコ店','パック','パティシエ','パトカー','パトロールカー','パニック','パパイヤ','パブ','パプアニューギニア',
+'パプリカ','パプリカ粉','パラグアイ','パラリンピック','パリ','パルサー','パン','パンク','パンケーキ','パンダ','パンチ画鋲','パンツ','パントマイム','パンプス','パン屋','パン粉','パン職人','パーカー','パーティー','パート','ヒキガエル','ヒゲ','ヒップホップ','ヒトデ','ヒドラ','ヒナギク','ヒヒ','ヒョウ','ヒョウタン','ヒロイン',
+'ヒンドゥー教','ヒーター','ヒーロー','ヒーローもの','ビオラ','ビキニ','ビジネス','ビスケット','ビデオカメラ','ビデオゲーム','ビニール袋','ビビッド','ビリヤード','ビリヤード場','ビル','ビーチ','ビール','ビー玉','ピアス','ピアニスト','ピアノ','ピクニック','ピクルス','ピザ','ピッコロ','ピューマ','ピラティス','ピラミッド','ピンク','ピーマン',
+'ピーラー','ファイル','ファゴット','ファッションモデル','ファンク','ファンデーション','ファンド','フィギュアスケート','フィジー','フィットネスクラブ','フィリピン','フィンチ','フィンランド','フェアリー','フェス','フェスティバル','フェニックス','フェミニン','フェンネル','フォルダ','フォーク','フォーマル','フッ素','フライパン','フラミンゴ','フラメンコ','フランス','フランス語','フリーザーバッグ','フルート',
+'フレアスカート','フレンチ','ブイヤベース','ブラインド','ブラウス','ブラウニー','ブラウン','ブラジャー','ブラジル','ブラックジャック','ブラックベリー','ブラックホール','ブラック企業','ブランコ','ブランデー','ブルガリア','ブルース','ブルートレイン','ブルーベリー','ブレイクダンス','ブレザー','ブレスレット','ブログ','ブロック','ブロックチェーン','ブロッコリー','ブロンズ像','ブローチ','ブーツ','プライド',
+'プライベートビーチ','プラハ','プラレール','プランクトン','プリペイドカード','プリン','プリンター','プリント','プリーツスカート','プルトニウム','プレゼン','プレゼント','プレゼントする','プログラマー','プログラミング','プログラム','プロテスタント','プロペラ機','プール','ヘアスタイリスト','ヘチマ','ヘビ','ヘビメタ','ヘリウム','ヘリコプター','ヘルメット','ベイブレード','ベクトル','ベスト','ベッド',
+'ベトナム','ベネズエラ','ベビーカー','ベビーシッター','ベルギー','ベルト','ベルリン','ベレー帽','ベンチ','ベンチャー','ベーカリー','ベーコン','ベーゴマ','ベージュ','ベース','ペガサス','ペソ','ペット','ペパーミント','ペリカン','ペルー','ペンギン','ペンション','ペンダント','ペンチ','ペーパータオル','ホウキ','ホスピス','ホタテ','ホッケー',
+'ホッチキス','ホットケーキ','ホットドッグ','ホテル','ホヤ','ホラー','ホルモン','ホルン','ホワイトボード','ホワイト企業','ホース','ホームセンター','ホームルーム','ホール','ボウリング','ボウリング場','ボウル','ボクサー','ボクシング','ボサノバ','ボストン','ボストンバッグ','ボタン電池','ボディソープ','ボディボード','ボランティア','ボリビア','ボルシチ','ボルダリング','ボルト',
+'ボンド','ボーイッシュ','ボート','ボードゲーム','ボーナス','ボールペン','ポイント','ポスター','ポタージュ','ポップス','ポルトガル','ポロ','ポロシャツ','ポンチョ','ポンド','ポーカー','ポーション','ポーランド','マイアミ','マイクロバス','マウスピース','マウンテンバイク','マカロン','マグカップ','マグニチュード','マグネシウム','マグネット','マグロ漁','マスカラ','マスキュリン',
+'マスキングテープ','マスク','マゼンタ','マッサージ師','マッサージ店','マッシュルーム','マッチ','マット','マトリョーシカ','マドリード','マナティー','マナー','マニラ','マフィア','マフラー','マヨネーズ','マラソン','マリア','マリーナ','マレーシア','マンゴー','マンション','マンドリル','マンドリン','マーカー','マーガリン','マーケット','マーケティング','ミイラ','ミカエル',
+'ミキサー','ミサ','ミサイル','ミサイル攻撃','ミステリー','ミツバチ','ミトン','ミニカー','ミニスカート','ミニバン','ミネストローネ','ミネラル','ミミズ','ミャンマー','ミュージカル','ミュージシャン','ミルク','ミレニアム','ミント','ミーティング','ムハンマド','ムンバイ','ムース','ムール貝','メイク','メイクアップアーティスト','メイド','メガネケース','メガネザル','メキシコ',
+'メジャー','メタバース','メタル','メモ帳','メルボルン','メロディ','メロン','メール','モグラ','モスク','モスクワ','モダン','モップ','モデル','モノトーン','モノレール','モルモン教','モロッコ','モンスター','モーセ','モーニング','モーブ','モール','ヤギ','ヤク','ヤクザ','ヤシ','ヤドカリ','ヤマアラシ','ヤモリ',
+'ユダヤ教','ユニコーン','ユニセックス','ユニフォーム','ユリ','ユースホステル','ユーモア','ユーラシア大陸','ユーロ','ヨウ素','ヨガ','ヨガウェア','ヨガパンツ','ヨガ講師','ヨット','ヨットハーバー','ヨハネスブルグ','ヨルダン','ヨーグルト','ヨーヨー','ヨーロッパ','ライオン','ライター','ライチ','ライバル','ライフル','ライブ','ライブハウス','ライム','ラオス',
+'ラクダ','ラグビー','ラジウム','ラジオ','ラジオCM','ラジコン','ラスベガス','ラズベリー','ラッコ','ラップ','ラバ','ラファエル','ラベンダー','ランドセル','ランニング','ランニングシューズ','ラーメン','ラーメン屋','リカちゃん','リサイタル','リス','リズム','リゾット','リップ','リハビリ','リハビリ施設','リビア','リフト','リボン','リャマ',
+'リヤカー','リュック','リン','リンス','リンパ','リース','リーダー','ルアー','ルシファー','ルビー','ルピー','ルービックキューブ','ルーブル','ルーペ','ルーマニア','ルームウェア','ルームシューズ','ルール','ルーン文字','レアル','レインコート','レオタード','レギンス','レゲエ','レコード','レゴ','レジ係','レストラン','レスリング','レタス',
+'レトロ','レバノン','レポート','レモネード','レモン','レモン色','レリーフ','レンズ豆','レーザー','レーダー','ロイヤルブルー','ロウソク','ロケット','ロサンゼルス','ロシア','ロシア語','ロック','ロッククライミング','ロッジ','ロデオ','ロバ','ロボット','ロボットアニメ','ロボット工学','ロボット掃除機','ロマンス','ロングスカート','ロンドン','ロン毛','ローズ',
+'ローズマリー','ロードバイク','ローファー','ロープウェイ','ローマ','ローマ字','ローラースケート','ローン','ワイシャツ','ワイバーン','ワイパー','ワイン','ワインレッド','ワクワク','ワゴン','ワッハーブ派','ワッフル','ワニ','ワンピース','ワークライフバランス','ワールドカップ','ヴァンパイア','ヴィンテージ','一万円札','一分','一周忌','一年','一戸建て','一日','一時',
+'一時間','一月','一本釣り','一秒','一般','一般人','一般道','一軒家','一輪車','一週間','一騎打ち','七五三','七味','七回忌','七夕','七日','七月','七草粥','七面鳥','万博','万年筆','万引き','万能薬','丈夫','三つ葉','三十日','三味線','三回忌','三日','三日月',
+'三月','三権分立','三段跳び','三者面談','三脚','三角','三角定規','三角形','三角関数','三輪車','三重','上','上がる','上下左右','上告','上品','上場','上履き','上昇する','上流','上海','下','下がる','下品','下流','下着','下降する','下駄','不便','不健康',
+'不公平','不動明王','不動産','不動産屋','不合格','不安','不完全','不景気','不機嫌','不正','不死鳥','不満','不眠','不透明','与える','与党','世紀','丘','並木道','中世','中力粉','中古','中国','中国語','中央','中央アメリカ','中学校','中小企業','中性','中性子星',
+'中指','中断する','中東','中流','中秋の名月','中華料理店','中華鍋','中退','中間','中間試験','丸','丸一日','主任','主張','主旨','主神','主題','乗用車','乗馬','九州','九日','九月','乱層雲','乳液','乾燥機','予備校','予算','予言','争う','事件',
+'事実','事故','事故死','二十日','二千円札','二日','二月','二者面談','二胡','二階建てバス','五千円札','五日','五月','五月人形','五線譜','五角形','五重塔','亜鉛','亡霊','交換する','交番','交通事故','京都','京都御所','人力車','人参','人口','人工知能','人差し指','人形浄瑠璃',
+'人権','人間ドック','今夜','今年','今日','今月','今朝','今週','介護','介護士','仏','仏像','仏典','仏塔','仏教','仏閣','仏陀','仔熊','仔犬','仔狐','仔狼','仔羊','仔虎','仕事','仕事着','付箋','仙台','代数','令和','仮名書道',
+'仮想通貨','仮面ライダー','仲直りする','仲間','企業','伊勢神宮','休学','休日','会社','会社員','会話','会議','会釈','会長','伝統','伝説','低い','低気圧','住宅ローン','住民税','住職','佐賀','体操','体操着','体毛','体温計','体組成計','体育','体育の日','体育祭',
+'体育館','体育館シューズ','体質','体重計','余震','作り上げる','作る','作家','作曲','作曲家','作業療法士','作業着','作法','作詞','作詞家','例外','侍','価値','価値観','便利','便箋','係長','保健所','保存容器','保育園','保育士','保護者会','保険会社','信仰','信号',
+'信号機','信奉','信徒','信心','信念','信用組合','信用金庫','信者','信頼','修学旅行','修正テープ','修正液','修理する','修行','修道士','修道女','修道院','俳優','俳句','倉庫','個人','個人事業主','個別','個別指導','個性','倒れる','倒産','候補者','借りる','借金',
+'倦怠','倦怠感','倫理','倫理学','偏差値','偏見','停滞前線','停電','健康','健康保険','健康診断','偵察機','偽','偽り','偽物','偽造','傘','傷害','働き方改革','僧侶','儀式','儒教','優しい','優しさ','元','元号','元旦','元気','元素','兄',
+'兄弟','充実','充電','充電器','先月','先生','先輩','先週','光','兎','児童','児童公園','児童文学','兜','入り江','入る','入れ歯','入学','入学式','入江','入社式','入籍','入試','入道雲','全粒粉','八日','八月','八百屋','八角形','公務員',
+'公園','公家','公平','公正','公民','六日','六月','六角形','共同体','共和制','共通語','兵士','兵庫','内側','内戦','内装デザイナー','内閣','内面','円','円安','円柱','円盤投げ','円錐','円高','再開する','冒険','冒険者','冗談','写真家','写経',
+'冠水','冥王星','冬','冬の星座','冬休み','冬服','冬至','冷たい','冷凍庫','冷蔵庫','冷酷','凍えるような','凍傷','凝固','凧','凧揚げ','凹凸','出る','出エジプト記','出家','出張','出汁','出発する','出雲大社','刀','分割する','分子','分度器','分裂する','切なさ',
+'切り傷','切り取る','切り紙','切る','切手','刑事','刑務所','刑法','列島','列車','初冬','初夏','初春','初秋','初詣','判例','判断','判決','別荘','利口','利息','利根川','利率','利益','到着する','制服','制限','刺し網','刺繍','刺身',
+'削る','前','前線','剣','剣士','剣聖','剣豪','剣道','副担任','副操縦士','副議長','割り算','創世記','創造する','創造神','劇場','力士','加減乗除','加湿器','助ける','助教','助産師','労働','効果','効率的','効能','勇敢','勇気','勇者','動揺',
+'動物','動物園','動画','動脈','勝つ','勲章','包丁','包帯','包装紙','化け物','化学','化学工学','化粧品','化粧水','北','北アメリカ大陸','北九州','北京','北回帰線','北斗七星','北極','北極圏','北極海','北海道','区','区役所','区長','医学','医師','医療',
+'医者','十一月','十二月','十年','十日','十月','千円札','千年','千葉','午前','午後','半完成','半島','半年','半日','半月','半袖','半透明','卑しい','卑怯','卒寿','卒業','卒業式','卓球','卓袱台','南','南アフリカ','南アメリカ大陸','南北アメリカ','南十字星',
+'南回帰線','南極','南極圏','南極大陸','南極海','単一電池','単三電池','単二電池','単四電池','単語','博士','博物館','占い','占い師','占星術','卯月','危ない','危険','卵','卵型','厚揚げ','厚生労働省','厚生年金','原付','原因','原子','原子力','原罪','厳しい','厳冬',
+'厳島神社','厳格','去年','参考書','参議院','友情','友達','双六','双眼鏡','双葉','双頭龍','反対','反応','反抗','反撃する','反発','反論','収入','収益','収縮する','取り憑く','取引','取引する','取引所','受け取る','受験','口','口紅','古い','古代',
+'古希','古文','古木','古本屋','古民家','古道具','古龍','句読点','叫ぶ','召喚','可愛い','可視光線','台北','台湾','台風','台風進路','右','号外','司令官','司会者','司教','司法','司祭','各駅停車','合併','合唱','合奏','合格','合気道','同人誌',
+'同僚','同意','同窓会','同級生','名刀','名刺入れ','名古屋','名声','名言','名誉','吐き気','吐く','向日葵','君主制','吸う','吸血鬼','告別式','告発','告白','告解','告訴','呟く','周期表','呪い','呪文','味わう','味付け','味噌','味噌汁','味噌漬け',
+'味海苔','呼び出し','和太鼓','和服','和歌山','和菓子屋','和解する','咳','哀しみ','哀愁','哲学','唇','唐揚げ','唐辛子','唾液','商人','商業港','商法','商談','問い','問いかけ','問答','問題集','善','善悪','善行','喉','喉痛','喋る','喘息',
+'喜び','喜ぶ','喜寿','喧嘩する','喪服','喫茶店','営業','営業所','嗅ぐ','嘆く','嘘','嘘つき','噂','噛む','器官','噴水','噴火','噴火口','噴煙','囁く','四国','四日','四月','四角','回復薬','回想','回答','回顧','団子','困る',
+'困惑','困窮','囲碁','図工','図書館','図鑑','固定資産税','固定電話','国','国会','国会議事堂','国会議員','国体','国家','国民','国民健康保険','国民年金','国語','国道','土','土星','土曜日','土木工学','土石流','土砂崩れ','土踏まず','圧力鍋','在来線','地下鉄','地中海',
+'地味','地域','地学','地方言葉','地滑り','地獄','地球','地理','地理学','地縛霊','地蔵','地誌学','地質学','地震','坊主','埋葬','城','執事','基準','埼玉','堅信','堕天使','報道','報酬','塑像','塔','塗り絵','塗る','塗装工','塩',
+'塩分','塩水','塩湖','塩漬け','塩素','塩辛い','塾','増える','増加する','増資','墜落','壁','壊す','売る','売上','売上高','売却','売買','売買契約','壺','夏','夏の星座','夏休み','夏服','夏祭り','夏至','夕','夕ごはん','夕方','夕焼け',
+'夕空','夕食','外側','外務省','外国語','外見','多忙','多角形','夜','夜明け','夜空','夢','夢を見る','大きい','大マゼラン雲','大丈夫','大人','大人びた','大企業','大会','大分','大司教','大名','大地母神','大地震','大天使','大学','大学院','大富豪','大将',
+'大工','大悪魔','大日如来','大晦日','大木','大根','大正','大正琴','大気','大津波','大海原','大砲','大社','大福','大納言','大統領','大統領制','大聖堂','大胆','大腸','大腿骨','大臣','大臣官房','大蔵経','大衆','大衆小説','大西洋','大豆','大道芸','大邸宅',
+'大阪','大陸','大雨','大雨警報','大雪','大魔王','大麦','天ぷら','天ぷら粉','天井','天体','天使','天使長','天台宗','天国','天文学','天気予報','天狗','天王星','太い','太もも','太平洋','太極拳','太陽','太陽光','太陽系','太鼓','夫','失望','失業',
+'失業手当','奈良','契約','契約社員','奨学金','女優','女王','女神','好景気','如月','妄想','妖刀','妖怪','妖精','妖魔','妬み','妹','妻','姉','姉妹','始まる','始め','始める','始業式','姪','姫','娘','婚約','婚約者','婿',
+'媚薬','嫁','嫉妬','嫌悪','嫌気','嬉しさ','子','子どもっぽい','子供','子供っぽい','子牛','子猫','子豚','子馬','字','季刊誌','孤独','学ぶ','学問','学園','学園祭','学年','学期','学校','学校制服','学生','学童','学級','学習塾','学者',
+'学費','学部長','学長','学院','宇宙','宇宙ステーション','宇宙工学','宇宙旅行','宇宙服','宇宙船','宇宙飛行士','守る','守護天使','守護神','安らぎ','安全','安心','安楽死','完了する','完全','完成','完璧','宗教学','宗派','宗門','定置網','定規','定食屋','宝剣','宝物',
+'宝石','実','実習','実験','客室乗務員','客船','宣教師','室町時代','宮城','宮崎','宮殿','家','家庭教師','家庭科','家庭訪問','家政婦','家族','家電量販店','宿題','寂しさ','寂れる','寂寥','寄付する','寄生虫','密教','富士山','富山','富裕','富豪','寒冷前線',
+'寒波','寒流','寓話','寛大','寛容','寝る','寝台列車','寮','寺','対数','対流圏','対話','寿司','寿司屋','寿司職人','封筒','専制政治','専門学校','射撃','将棋','将軍','尊敬','小さい','小マゼラン雲','小人','小学校','小惑星','小指','小松菜','小腸',
+'小説','小説家','小豆','小銭','小銭入れ','小麦','小麦粉','少子化','就職','尺八','尻','局地予報','居合','居合道','居眠り運転','居酒屋','屈辱','屋台','屋根','属','層積雲','層雲','山','山の日','山口','山吹色','山小屋','山崩れ','山形','山梨',
+'山椒','山火事','山登り','山神','山羊','山葵','山車','岐阜','岡山','岩','岩手','岩礁','岬','島','島根','崖','嵐','川','川崎','川柳','巡洋艦','巡礼','巣','巣穴','工作','工具','工場','工学','左','左官',
+'巨人','巨大','巨木','巫女','差別','巻き網','巻尺','巻層雲','巻積雲','巻雲','市','市場','市役所','市民','市道','市長','布団','布巾','帆船','希望','帝政','師走','帯','帯留め','帯締め','帰る','帰依','帽子','干し椎茸','干し貝柱',
+'干ばつ','干潟','干潮','平凡','平原','平和','平均台','平安時代','平成','平日','平気','平等','平等院','平行棒','平静','平面','年','年越しそば','年金','幸せ','幸福','幹','幻想','幼い','幼児','幼稚園','幽霊','幾何','庁','広い',
+'広告','広場','広島','庇う','床','床屋','床暖房','床運動','底引き網','店員','座る','座敷童','座禅','庭','庭園','庭師','庶民','庶民的','廃品','廃墟','廊下','延焼','延長コード','建国記念日','建築家','建築工学','弁当','弁解','弁護','弁護士',
+'式典','弓','弓兵','弓道','引き分ける','引き波','引き算','引き網','引力','弟','弥生','弱い','強い','強力粉','強盗','当て逃げ','当選','彗星','彫像','彫刻','彫刻家','影','影踏み','影響','役所','彼女','彼氏','律法','後ろ','後悔',
+'後輩','従業員','御守り','復学','復活','微分','微小','微熱','微生物','微笑む','徳利','徳島','心理学','心臓','心臓病','心配','忍者','志','忘れる','忘却','忙しい','応答','念仏','怒り','怒る','怒鳴る','怖い','怖がり','思いやり','思い出',
+'思い出す','思う','思惟','思想','思慕','思索','思考','急病','急行','急須','性格','性質','怨霊','怪我','怪物','恋','恋人','恋愛小説','恐がり','恐れ','恐喝','恐怖','恒星','恥','息子','恵方巻','悩む','悪','悪夢','悪行',
+'悪魔','悲しみ','悲しむ','情報工学','情熱','惑星','惣菜','想い出','想う','想像','意味','意図','意志','意思','意義','意見','愚か','愛','愛媛','愛情','愛慕','愛知','感じる','慈しみ','慈悲','慈愛','慎重','慕情','慢心','慣例',
+'慣習','憎しみ','憎悪','憑依','憤り','憧れ','憲法','憲法記念日','成人式','成層圏','成果','成熟した','成績','戒め','戒律','戦い','戦う','戦争','戦国時代','戦士','戦神','戦艦','戦車','戦闘','戦闘機','戦隊もの','戦隊ヒーロー','戸建て','戸惑い','戻る',
+'所得税','扇風機','扉','手','手のひら','手の甲','手帳','手当','手榴弾','手段','手紙','手芸','手術','手袋','手首','才能','打ち合わせ','打ち身','技術','投げる','投げ釣り','投票','投票率','投薬','投資会社','投資家','投資銀行','折りたたみ傘','折り紙','抱負',
+'抹茶','押しピン','担任','拍','拍手','拘束','拘置所','拡大する','拳法','拳銃','持ち家','持つ','持家','指','指揮者','指数','指輪','挨拶','振動','振袖','捻挫','掃除機','授業','排泄物','掛け算','採点','採点ミス','採点基準','探検家','接客',
+'接着剤','接触事故','控訴','推測','推理小説','推論','掴む','描く','提携','握る','援助する','損失','携帯電話','摩天楼','撤退する','擦り傷','支出','支店','支社','改良する','攻撃する','放火','政党','政府','政治','政治学','政治経済','救う','救出','救急センター',
+'救急箱','救急車','救急隊員','救援','救済','教える','教会','教団','教壇','教室','教師','教授','教材','教派','教理','教皇','教科','教科書','教義','教育','教訓','教頭','教養','散る','散文','散歩','散策','敬老の日','数','数の子',
+'数学','数独','整体師','整備士','文','文化','文化人類学','文化祭','文字','文学','文房具店','文月','文楽','文殊菩薩','文章','文部科学省','斑点','料理人','断水','新しい','新体操','新品','新婚旅行','新幹線','新式','新月','新潟','新生児','新約聖書','新緑',
+'新聞','新鮮','方法','方程式','方言','施錠する','旅人','旅客機','旅立つ','旅行','旅館','旋律','旋風','日の入り','日の出','日傘','日光','日時計','日曜日','日本','日本刀','日本庭園','日本海','日本酒','日没','日焼け止め','日蓮宗','日記','日食','旧式',
+'旧約聖書','早い','早春','早朝','早期退職','旱魃','昆布','昇る','昇華','明るい','明太子','明後日','明日','明治','明治神宮','星光','星型','星座','星明かり','星空','映画','映画鑑賞','映画館','春','春の星座','春休み','春分','春分の日','春巻き','春服',
+'春菊','昨夜','昨日','昭和','昼','昼ごはん','昼食','時代','時代小説','時計','時間','晩ごはん','晩夏','晩春','晩秋','普段着','普賢菩薩','普通','暇','暖かい','暖流','暖炉','暗い','暗殺者','暗礁','暴力','暴動','暴行','暴走','暴露',
+'暴風','暴風警報','暴風雨','曇り空','曲線','書','書く','書店','書道','書道家','曹洞宗','最古','最新','最高裁判所','月','月光','月刊誌','月初','月曜日','月末','月見','月食','有名','朗読','望遠鏡','朝','朝ごはん','朝会','朝焼け','朝礼',
+'朝空','朝霧','朝顔','朝食','期待','期末試験','期間','期限','木像','木星','木曜日','木馬','木魚','未完成','未明','未来','本州','本店','本当','本棚','本物','本社','本葉','本質','本震','札','札幌','朱','机','杉',
+'杏','村','村長','杖','束縛','条例','来る','来年','来月','来週','東','東シナ海','東京','東大寺','東西南北','松','松茸','板前','板敷き','枕','林','林業','林間学校','果実','果敢','枝','枝豆','枯葉','染色体','染色剤',
+'柔らかい','柔軟剤','柔道','柱','柳','柿','栃木','栄光','栗','校外学習','校庭','校舎','校長','校門','株','株主','株価','株式','根','根っこ','格好いい','格言','格闘ゲーム','桃','桃の節句','桃色','桑','桜','桜並木','桜祭り',
+'桜色','桟橋','梅','梟','梨','棍棒','棒高跳び','棕櫚','棚','森','森林火災','椅子','植木屋','植物','植物園','椎茸','検事','検察','検査','椿','楓','楕円','楠','業務提携','極楽','楷書','楽','楽しい','楽しさ','楽しむ',
+'楽器店','楽曲','楽譜','概念','槍','槍兵','標準','標準語','標識','模擬試験','模試','模造品','権利','横断歩道','横浜','横転','横領','樫','樹齢','樺','橋','機敏','機械学習','機械工学','機転','機長','機関士','機関誌','機関銃','檜',
+'歌','歌う','歌手','歌曲','歌舞伎','歌詞','正しい','正午','正常','正教会','正方形','正直','正社員','正義','正邪','武士','武将','武道','歩く','歩道','歩道橋','歯','歯ブラシ','歯痛','歯磨き粉','歯科','歯科医','歯間ブラシ','歴史','死海',
+'死神','死霊','殉教','殉教者','残忍','残業','残業代','残酷','段ボール','段落','殺し屋','殺人','殺虫剤','母','母の日','母親','毒薬','毛布','民主主義','民主政治','民俗学','民宿','民法','民話','民謡','気圧','気圧計','気温','気球','気象学',
+'気象庁','気象注意報','気象衛星','気象観測','気象警報','気質','水','水不足','水力','水墨画','水害','水彩画','水族館','水星','水晶','水晶玉','水曜日','水泳','水準器','水無月','水球','水着','水素','水色','水銀','水龍','氷','氷山','氷河','氷龍',
+'永久凍土','永続','永遠','氾濫','汗','汚い','汚れた','江戸時代','池','決意','決断','決算','決闘','汽水','沈む','沖縄','沖釣り','河童','油','油揚げ','油漏れ','油絵','治療','沼','法事','法人税','法令','法学','法律','法杖',
+'法案','法華経','法要','法話','泡立て器','波','泣く','泥','泥棒','注射','洋画','洗剤','洗濯のり','洗濯ばさみ','洗濯カゴ','洗濯機','洗濯洗剤','洗礼','洗練','洞窟','津波','洪水','派手','派遣','派遣社員','流れ星','流星','流氷','流行','流言',
+'浄化水','浄土宗','浄土真宗','浅い','浅海','浅草寺','浜辺','浪人','浪曲','浮き彫り','浮く','浮上する','浮遊霊','浴衣','海','海の日','海パン','海中','海原','海女','海女漁','海岸','海岸線','海峡','海嶺','海底','海水','海水浴','海水浴場','海流',
+'海溝','海溝型地震','海王星','海神','海老','海辺','海面','浸水','涅槃','消しゴム','消費税','消防士','消防署','消防車','涙','涙ぐむ','涙型','涼しい','淡い','淡水','深い','深夜','深層学習','深海','深紅','深緑','清い','清掃車','清水寺','清潔',
+'清純','渇水','渋い','渋滞','渓流釣り','減る','減少する','渡す','渦巻','温い','温暖前線','温暖化','温泉','港','港湾','湖','湯のみ','湾','湿度','満天の星','満月','満潮','満足','満開','準惑星','溶岩流','溶解','滋賀','滑り台','滑る',
+'滝','漁師','漁港','漁船','漂白剤','漏えい','漏水','演劇','演壇','演奏','演奏会','演奏家','演歌','演習','漢字','漢文','漫才','漫才師','漫画','漫画家','潜水艦','潮','濁った','濃い','火','火事','火傷','火元','火力','火山',
+'火山噴火','火山灰','火星','火曜日','火災','火災事故','火砕流','火竜','火葬','火龍','灯台','灰','灰色','炊飯器','炎','炒飯','炭素','炭酸水','点数','点滴','為替','為替レート','烏','烏賊','無名','無垢','無感動','無気力','無邪気','無関心',
+'焦り','焼きそば','焼き海苔','焼き物','焼売','焼肉','焼肉屋','焼酎','焼鳥','煙','煮干し','熊本','熱','熱い','熱波','燃料','燃焼','燕','爆弾','爆撃機','爆発','爪','父','父の日','父母の日','父親','片栗粉','牛','牛乳','牛肉',
+'牛蒡','牛車','牛骨','牡丹','牧場','牧場主','牧師','牧草','物件','物差し','物干し竿','物流センター','物理','物理学','特例','特別','特急','特殊','特集','犬','犯罪','狂言','狐','狡猾','独唱','独奏','独楽','独裁','狭い','狸',
+'狼','狼男','猛暑','猟師','猫','猿','獣医','玄米','玄関','玉ねぎ','玉杓子','王','王冠','王女','王子','王政','現代','現在','現実','現金','球','球場','球面','理学療法士','理容師','理念','理想','理由','理科','琥珀',
+'琴','琵琶湖','環境省','環礁','甘い','生け花','生命科学','生姜','生徒','生涯学習','生物','生物学','生理学','生理用品','産毛','甥','用務員','用心深い','田舎','甲冑','甲子園','町','町内会','町長','画家','画用紙','界','留年','留袖','異世界',
+'異例','異常','異常気象','異次元','異議','畳','疑問','疑念','疲労','病弱','病死','病気','病理学','病院','痰','癌','癖','発展','発明する','発火','発熱','発芽','発見する','発電','発電所','登山','白','白寿','白毛','白米',
+'白色矮星','白菜','白衣','白金','白髪','白鳥','白龍','百人一首','百年','百科事典','百貨店','皇后','皇帝','皐月','皮肉','皮膚','皿','盆踊り','監督','目','目標','目玉焼き','目的','目覚まし時計','目覚める','直す','直下型地震','直感','直方体','直線',
+'直観','相撲','相続税','盾','省','省庁','眉','眉毛','看板','看護師','看護師服','県','県庁','県知事','県道','真っ暗','真っ白','真っ赤','真っ青','真っ黄色','真っ黒','真ん中','真偽','真冬','真剣','真夏','真夜中','真実','真昼','真水',
+'真珠','真理','真相','真言宗','真面目','眠る','眠気','着こなし','着付け','着物','睦月','瞑想','瞬間','瞳','矢','知る','知事','知名度','知恵の輪','知育玩具','知識','短い','短冊','短期','短歌','短編','短距離走','短髪','石','石像',
+'石川','石鹸','砂','砂場','砂嵐','砂時計','砂洲','砂浜','砂漠','砂糖','研修','研究','研究所','研究者','砲','砲丸投げ','砲撃','破壊する','破産','硫黄','硬い','硬貨','確信','確率','磁力','磁器','磯釣り','礼','礼儀','礼拝',
+'礼拝堂','礼服','礼装','社交ダンス','社会','社会保険','社会学','社員','社説','社長','祈り','祈祷','祖母','祖父','祝日','神','神々','神主','神事','神剣','神奈川','神官','神宮','神弓','神戸','神殿','神無月','神父','神社','神経',
+'神経科学','神託','神話','神輿','神道','神酒','神龍','祠','祭り','祭典','禅宗','福井','福岡','福島','福祉','福音書','福音派','秋','秋の星座','秋分','秋分の日','秋服','秋田','科','科学','科学者','税金','種','種まき','種子',
+'稲','稲妻','積み木','積乱雲','積分','空','空手','空母','空気清浄機','空港','空爆','空色','突然変異','突然死','突起','突風','窃盗','窒素','窓','立つ','立候補','立冬','立憲君主制','立方体','立春','立法','立秋','竜巻','童話','端',
+'端午の節句','競う','競争する','競技場','競歩','競泳','競泳水着','競馬','竹','笑う','笙','笛','笹','笹飾り','筆','筋トレ','筋肉','筋肉痛','答え','算数','箱','箸','箸置き','節分','篆書','篠笛','簡単','米','米寿','米粉',
+'粗暴','粗野','粘土','精神医学','糖尿病','糠漬け','系統','紀元前','紀元後','紀行文','紅','紅海','紅白','紅白歌合戦','紅茶','紅葉','紅葉狩り','紋付','紋付き袴','紋付袴','納豆','純文学','純真','純粋','紙','紙幣','紙粘土','紙芝居','紙袋','紛争',
+'素敵','素潜り','素質','素養','紫','紫外線','紫紺','紫陽花','細い','細胞','細菌','紺','終える','終わり','終わる','終了','終業式','終点','終礼','組織','絆創膏','経典','経営者','経済学','経済産業省','経緯','経費','経過','結婚','結婚式',
+'結婚披露宴','結婚指輪','結晶','結末','結束する','結果','結界','結納','結論','給与','給料','給油','給食','給食室','絨毯','統一する','統計','絵の具','絵本','絵画','絵筆','絶望','続く','綱','網漁','綺麗','緊張','緋色','総合格闘技','緑',
+'緑茶','緑葉','緑豆','線路','線香','編み物','編む','編入','編曲','編集者','縁日','縄取り','縄張り','縄跳び','縞模様','縫う','縮小する','繁栄','繁盛','織る','缶蹴り','罪','罪悪','罪悪感','羊','羊羹','羊肉','美','美しい','美しさ',
+'美容師','美容液','美容院','美徳','美術','美術鑑賞','美術館','群','群れ','群衆','群青','群馬','羨望','義兄','義務','義務教育','義姉','義母','義父','習字','習慣','翡翠','翻訳家','老けた','老人','老木','考える','考古学','耳','聖人',
+'聖体','聖体拝領','聖剣','聖域','聖書','聖水','聞く','肉まん','肉屋','肋骨','肌','肌着','肘','肝臓','肩','肩こり','育英会','肺','胃','胃痛','背中','背骨','胡椒','胸','能','能力','脅迫','脊髄','脛','脱臼',
+'脳','脾臓','腎臓','腐った','腕','腕時計','腕輪','腰','腰痛','腸','腹','腹痛','膀胱','膝','膨張する','膵臓','臆病','臨海学校','臨済宗','自信','自制','自動車','自営業','自宅','自尊心','自治会','自治体','自然死','自由','自由詩',
+'自白','自衛官','自転車','自転車道','至福','至言','興奮','舌','舞台','舞茸','航空工学','般若心経','船','船員','船長','色鉛筆','芝','芝生','花','花いちもんめ','花びら','花壇','花屋','花弁','花火大会','花瓶','花粉','花粉症','花蜜','花見',
+'苔','苗木','若々しい','若い','若木','若草色','若葉','苦','苦い','苦しむ','苦行','英語','英雄','茅葺き','茎','茨城','茶毛','茶碗','茶色','茶道','草原','草履','草書','菊','菌類','菓子パン','華道','萌黄','落下する','落下事故',
+'落胆','落葉','落語','落選','葉','葉月','葉柄','葉脈','著名','葬儀','葬送','蒸し器','蒸し暑い','蒸気','蒸気機関','蒸気船','蒸発','蓮','蓮根','蕎麦','蕪','蕾','薄力粉','薄暗い','薬','薬剤師','薬学','薬局','薬指','藍',
+'藤色','蘇生','蘭','虚偽','虚栄心','虚構','虫よけ','虫眼鏡','虹','蚊','蚊取り線香','蛇','蛍','蛍光','蛍光ペン','蛍光灯','蛸','蛾','蜂','蜃気楼','蜘蛛','蜘蛛の巣','蜜','蝶','蝶ネクタイ','融解','螺旋','蟻','血','血圧計',
+'血液','血管','衆参','衆議院','行く','行列','行政','行書','街路樹','衛星','衝突','表','表面','衰退','袴','裁判','裁判官','裁判所','裏','裕福','複製','西','西暦','要旨','見る','規制','規則','規格','視察','親',
+'親しみ','親切','親友','親愛','親戚','親指','親潮','観光','観光バス','観光学','観劇','観念','観測点','観覧車','観音','解剖学','解放','解散する','解毒剤','解答','解脱','解錠する','触る','触れる','言い訳','言う','言葉','言語学','計算','計量カップ',
+'計量スプーン','討論','託児所','託宣','記事','記憶','記者','訛り','訪問着','設計士','訴訟','診療所','証券マン','証券会社','詐欺','詐欺師','評価','評論','詠唱','試練','試験','詩','詩人','詩吟','詩篇','話す','誇り','認知科学','誕生会','誕生日',
+'誘拐','語彙','誠実','説教','説法','説話','読む','読書','課長','課題','論文','論議','諦め','諧謔','講堂','講壇','講師','講座','講義','講談','譜面','警備員','警官','警察','警察官','警察署','議会','議会制','議員','議論',
+'議長','議院内閣制','譲る','護符','護衛艦','谷','豆','豆まき','豆乳','豆腐','豆苗','豊か','豚','豚肉','豚骨','象','豪雨','豪雪','負ける','財務省','財宝','財布','貧しい','貧乏','貨物船','販売','販売員','責任','貴族','貴族的',
+'買う','買収','貸す','貼る','賃貸','賃金','資料','資本提携','賑やか','賑わい','賑わう','賛成','賛美歌','賞与','賢い','賢明','賢者','質問','質疑','贈る','贈与税','赤','赤ちゃん','赤外線','赤字','赤毛','赤道','赤飯','走り幅跳び','走り高跳び',
+'走る','起きる','起業','起業家','起点','起訴','趣旨','足','足し算','足袋','足首','路線バス','路面電車','跳ねる','跳ぶ','跳馬','車','車掌','車椅子','車道','軍人','軍師','軍港','軍艦','転がる','転生','転職','転落','軽い','軽トラック',
+'軽油','軽率','軽自動車','軽薄','軽食','軽騎兵','輪廻','辛い','辛子','辞書','農家','近世','近代','返す','返事','返答','迷宮','追突','退化','退却する','退学','退屈','退職','退職金','透明','通信教育','通勤','通夜','通学','通常',
+'通訳','通貨','通過する','速い','速報','速度違反','連休','連立','週','週刊誌','週末','週間予報','進化','進学','進歩','進級','進路予想','進路相談','遅い','遊具','遊園地','運動会','運転手','遍路','過労','過労死','過去','過密','過密化','過疎',
+'過疎化','過疎地','過程','道','道徳','道教','道路','達成する','違反','遠足','適性','選択','選挙','遺伝','遺伝子','遺跡','避妊具','還元','還暦','那覇','邦画','部屋着','部活動','部長','郵便局','郷愁','都会','都市化','都市計画家','都道府県',
+'配信','配偶者','配布物','配当','配管工','酒','酒屋','酢','酢漬け','酪農家','酸','酸っぱい','酸化','酸素','醜い','醜さ','醤油','醤油漬け','釈迦','重い','重力','重唱','重奏','重騎兵','野党','野心','野望','野球','野球選手','金',
+'金利','金婚式','金星','金時豆','金曜日','金言','金貨','金閣寺','釘','釣り','釣り師','釣り船','鈍い','鈴','鉄','鉄棒','鉄道','鉛','鉛筆','鉛筆画','鉞','鉢','鉱物','銀','銀婚式','銀杏','銀河','銀河系','銀行','銀行員',
+'銀貨','銀閣寺','銃','銃撃戦','銅','銅像','銅貨','銭','銭湯','鋭い','錬金術師','鍋','鍛冶屋','鍵','鍼灸師','鎌','鎌倉','鎌倉時代','鎧','鎮火','鏡','鏡開き','鏡餅','鐘楼','長い','長崎','長方形','長月','長期','長編',
+'長袖','長距離走','長野','長靴','長髪','門','閉じる','閉める','閉塞前線','閉鎖する','開く','開ける','開始','開放する','開花','閑散','間違い','間食','関数','関税','関節','関節痛','防具','防御する','防波堤','防虫スプレー','防虫剤','防衛省','阿弥陀','降りる',
+'限界集落','除夜の鐘','除湿機','陶器','陶芸','陸上トラック','陸橋','隅','階段','随筆','隕石','隕石衝突','障子','隷書','隼','雀','雄','雄牛','集まる','集中豪雨','集会','集合','集合する','集団','雇用','雉','雌','雌牛','雑巾','雑炊',
+'雑煮','雑穀米','雑草','雑誌','雑貨屋','雛','雛あられ','雛人形','離す','難しい','雨','雨傘','雨空','雨量計','雪','雪女','雪崩','雪男','雪空','雪駄','雲','雲梯','雲海','雷','雷光','雷神','雷鳴','電力','電動ドリル','電動歯ブラシ',
+'電圧','電子マネー','電子レンジ','電子工学','電気','電気工','電気工学','電気自動車','電池','電波','電流','電球','電車','震度','霊媒師','霜','霜月','霞','霧','霰','露','青','青のり','青年','青森','青空','青葉','靖国神社','静か','静岡',
+'静脈','非凡','非効率','革靴','靴','靴下','韓国','韓国のり','韓国語','音','音楽','音楽鑑賞','音程','音符','音階','韻','韻律','韻文','預言者','頑丈','頬','頭','頭痛','頭蓋骨','額','顎','顔','顔合わせ','顕微鏡','顕教',
+'願い','顧客対応','風','風刺','風力','風向','風呂敷','風神','風習','風船','風速','風速計','風邪','風龍','飛び込み','飛ぶ','飛行','飛行機','飛行船','飛行雲','飛龍','食べる','食パン','食事','食品ラップ','食器棚','食器洗剤','食堂','食洗機','食糧危機',
+'飢饉','飲み込む','飲む','飲酒運転','飴','飽き','餃子','養殖業者','養蜂家','饅頭','首','首相','香川','香水','香港','香道','馬','馬肉','馬術','馬跳び','馬車','馬頭琴','馬鹿','駄菓子屋','駅','駅員','駆逐艦','駐車場','駐車違反','駐輪場',
+'駒','駒回し','駕籠','騎士','騒がしい','騒乱','驚き','骨','骨折','骨盤','骨董品','高い','高層ビル','高層雲','高校','高気圧','高波','高潮','高熱','高知','高積雲','高等教育','高血圧','高貴','高速バス','高速道路','高野豆腐','高齢化','高齢者','髪',
+'髪の毛','髪飾り','鬱','鬼','鬼ごっこ','魔剣','魔女','魔導士','魔弓','魔法','魔法の杖','魔法使い','魔法少女','魔法少女もの','魔法少年','魔法戦士','魔法陣','魔物','魔王','魔神','魔術','魚','魚屋','鮃','鮒','鮪','鮫','鮭','鮮やか','鯉',
+'鯉のぼり','鯖','鯛','鯨','鯨肉','鯰','鯵','鰈','鰯','鰹','鰹節','鰻','鱒','鱸','鳥','鳥取','鳥小屋','鳥居','鳥皮','鳩','鳳凰','鴎','鴨','鴨肉','鴬','鵜','鵲','鶏','鶏ガラ','鶏皮',
+'鶏肉','鶴','鷲','鷹','鷺','鹹水湖','鹿','鹿児島','鹿肉','麒麟','麦','麦わら帽子','麦茶','麻雀','黄','黄昏','黄海','黄金','黎明','黒','黒字','黒板','黒毛','黒海','黒潮','黒豆','黒龍','黙る','黙示録','鼓',
+'鼠','鼻','鼻づまり','鼻水','鼻紙','鼻血','龍'
+];
+// === DC_WORDS_END ===
+
+// ============================================================
+// SESSION SAVE / RESTORE
+// ============================================================
+const SESSION_KEY = 'pgSession_dc';
+function saveSession() {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      myId, myName, roomCode, fbRoom, isHost,
+      ts: Date.now()
+    }));
+  } catch(e) {}
+}
+function clearSession() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(Date.now() - s.ts > 3 * 60 * 60 * 1000) { clearSession(); return null; }
+    return s;
+  } catch(e) { return null; }
+}
+function showReconnectOption() {
+  const s = loadSession();
+  if(!s) return;
+  const btn = g('btn-reconnect');
+  if(!btn) return;
+  btn.style.display = '';
+  btn.textContent = `🔄 前のルームに戻る（🔐デクリプト #${s.roomCode}）`;
+}
+async function reconnectToRoom() {
+  const s = loadSession();
+  if(!s) { g('lobby-error').textContent='セッションが見つかりません'; return; }
+  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
+  fbRoom = s.fbRoom; isHost = s.isHost;
+  g('lobby-status').textContent='再接続中…';
+  try {
+    const bc = await fbGet('broadcast');
+    if(!bc) {
+      clearSession();
+      g('lobby-error').textContent='ルームが見つかりません（終了済みの可能性があります）';
+      g('lobby-status').textContent='';
+      return;
+    }
+    fbStartPolling();
+    if(isHost) {
+      // ホスト復帰: 既存の dcFs を broadcast から復元
+      const data = await fetch(`${fbUrl}/rooms/${fbRoom}.json`).then(r=>r.json()).catch(()=>null);
+      const pub = data?.broadcast;
+      if(pub) {
+        dcPub = pub;
+        // 内部状態を broadcast から構築（不完全だが基本動作可能）
+        dcFs = {
+          phase: pub.phase || 'waiting',
+          host: myId,
+          players: pub.players || [{id:myId, name:myName, isHost:true}],
+          teams: pub.teams || {white:[], black:[]},
+          round: pub.round || 0,
+          scores: pub.scores || {white:{intercept:0,fail:0},black:{intercept:0,fail:0}},
+          keywords: pub.keywords || {white:[], black:[]},
+          history: pub.history || [],
+          log: pub.log || ['🔄 再接続しました'],
+          rematchVoters: pub.rematchVoters || [],
+        };
+        if(pub.phase === 'waiting') {
+          show('waiting');
+          g('disp-code').textContent = roomCode;
+          dcRenderWaiting();
+        } else if(pub.phase === 'gameover') {
+          show('result');
+          dcRenderResult();
+        } else {
+          show('game');
+          dcRenderGame();
+        }
+      }
+    } else {
+      // ゲスト復帰
+      await fbSendToHost({type:'join', name:myName, id:myId});
+      await fbSendToHost({type:'reconnect', id:myId, name:myName});
+      g('disp-code').textContent = roomCode;
+      show('waiting');
+      let retries = 0;
+      const retry = setInterval(()=>{
+        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
+        fbSendToHost({type:'reconnect', id:myId, name:myName}).catch(()=>{});
+        retries++;
+      }, 2000);
+    }
+    g('lobby-error').textContent='';
+    g('lobby-status').textContent='';
+    const br = g('btn-reconnect'); if(br) br.style.display = 'none';
+  } catch(e) {
+    g('lobby-error').textContent='再接続失敗: ' + (e.message||e);
+    g('lobby-status').textContent='';
+  }
+}
+async function _hostReconnectDc(msg, pid) {
+  if(!dcFs) return;
+  const rp = dcFs.players.find(p=>p.id===msg.id);
+  if(dcFs.phase === 'waiting') {
+    if(!rp && dcFs.players.length < 8) {
+      dcFs.players.push({id:msg.id, name:msg.name, isHost:false});
+    }
+    await dcBcast();
+  } else {
+    if(rp) {
+      // ゲーム中: state を再送 + チーム所属のprivateを再送
+      await dcBcast();
+      // 自チームのキーワードなどを再送
+      const team = dcFs.teams.white.includes(msg.id) ? 'white'
+                 : dcFs.teams.black.includes(msg.id) ? 'black' : null;
+      if(team) {
+        const prv = {
+          team,
+          keywords: dcFs.keywords[team] || [],
+        };
+        await fbSendTo(msg.id, prv);
+      }
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  showReconnectOption();
+});
+
+</script>
+</body>
+</html>

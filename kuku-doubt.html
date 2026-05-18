@@ -1,0 +1,1630 @@
+<!-- KUKU DOUBT v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🎲 九九ダウト</title>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #1a1a22;
+  --surface2: #25252e;
+  --surface3: #35353f;
+  --text: #f0f0f5;
+  --muted: #8a8a96;
+  --red: #ff2d4a;
+  --red-glow: rgba(255,45,74,0.4);
+  --green: #2dff8a;
+  --blue: #4fc3f7;
+  --amber: #ffb020;
+  --gold: #ffd54f;
+  --purple: #b39ddb;
+  --kk-orange: #ff8c42;
+  --kk-orange-dim: rgba(255,140,66,0.12);
+  --kk-purple: #9c27b0;
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  --mono: "SF Mono", Menlo, Monaco, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  overscroll-behavior: none;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app { max-width: 480px; margin: 0 auto; padding: 14px; min-height: 100vh; display: flex; flex-direction: column; gap: 10px; }
+.screen { display: none; flex-direction: column; gap: 10px; }
+.screen.active { display: flex; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
+h1 { font-size: 1.8rem; text-align: center; }
+h2 { font-size: 1.3rem; text-align: center; }
+h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 18px; border-radius: 10px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
+  transition: all 0.15s; user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-red { background: var(--red); color: white; border-color: var(--red); }
+.btn-blue { background: var(--blue); color: #000; border-color: var(--blue); }
+.btn-green { background: var(--green); color: #000; border-color: var(--green); }
+.btn-orange { background: var(--kk-orange); color: white; border-color: var(--kk-orange); }
+.btn-ghost { background: transparent; }
+
+.input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--surface3); background: var(--surface);
+  color: var(--text); font-size: 1rem; font-family: var(--sans);
+}
+.input:focus { outline: none; border-color: var(--kk-orange); }
+.code-input { text-align: center; font-family: var(--mono); font-size: 1.4rem; letter-spacing: 0.3em; }
+
+.row { display: flex; gap: 8px; }
+.divider { height: 1px; background: var(--surface3); margin: 4px 0; }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 14px; }
+.status-txt { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); text-align: center; min-height: 18px; }
+.error { font-family: var(--mono); font-size: 0.85rem; color: var(--red); text-align: center; min-height: 18px; }
+
+.code-box { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 12px; text-align: center; }
+.code-box .label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 2px; }
+.code-box .code { font-family: var(--mono); font-size: 2rem; letter-spacing: 0.3em; color: var(--kk-orange); margin-top: 4px; }
+.copy-btn { background: var(--surface2); padding: 8px; border-radius: 8px; border: 1px solid var(--surface3); color: var(--muted); font-size: 0.78rem; cursor: pointer; }
+
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-row { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+.player-row.is-me { border-left: 3px solid var(--blue); }
+.player-row.cur-turn { border-color: var(--amber); background: rgba(255,176,32,0.06); }
+.player-row.dead { opacity: 0.4; text-decoration: line-through; }
+.player-name { font-weight: 600; flex: 1; }
+.player-lives { font-family: var(--mono); font-size: 0.85rem; color: var(--red); }
+
+/* ── Cards ── */
+.kk-card {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 50px; height: 70px; border-radius: 8px;
+  font-family: var(--mono); font-weight: 700; font-size: 1.4rem;
+  background: linear-gradient(135deg, var(--surface2), var(--surface));
+  border: 2px solid var(--surface3);
+  flex-shrink: 0;
+}
+.kk-card.face-down { color: var(--surface3); }
+.kk-card.face-down::before { content: '?'; font-size: 1.6rem; }
+.kk-card.usotuki { background: linear-gradient(135deg, rgba(156,39,176,0.3), rgba(156,39,176,0.1)); border-color: var(--kk-purple); color: var(--purple); font-size: 0.8rem; }
+.kk-card.life { width: 40px; height: 56px; font-size: 1.1rem; }
+.kk-card.life.lost { background: rgba(255,45,74,0.15); border-color: var(--red); color: var(--red); }
+.kk-card.life.alive { background: var(--surface2); border-color: var(--surface3); color: var(--surface3); }
+.kk-card.life.alive::before { content: '🛡'; font-size: 1rem; color: var(--green); }
+.kk-card.selected { border-color: var(--kk-orange); box-shadow: 0 0 10px rgba(255,140,66,0.4); transform: translateY(-4px); }
+.kk-card.tap { cursor: pointer; }
+.kk-card.tap:active { transform: scale(0.95); }
+
+.kk-cards-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 8px; }
+
+/* ── Action buttons ── */
+.action-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.action-btn { padding: 14px; border-radius: 10px; border: 2px solid var(--surface3); background: var(--surface); cursor: pointer; text-align: left; transition: all 0.15s; }
+.action-btn:active { transform: scale(0.98); }
+.action-btn-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 3px; }
+.action-btn-desc { font-size: 0.8rem; color: var(--muted); }
+.action-btn.accept { border-color: var(--blue); }
+.action-btn.accept .action-btn-title { color: var(--blue); }
+.action-btn.doubt { border-color: var(--red); }
+.action-btn.doubt .action-btn-title { color: var(--red); }
+.action-btn.reveal { border-color: var(--amber); }
+.action-btn.reveal .action-btn-title { color: var(--amber); }
+
+/* ── Declaration display ── */
+.decl-box { padding: 14px; border-radius: 12px; background: linear-gradient(135deg, var(--kk-orange-dim), rgba(255,140,66,0.05)); border: 1px solid var(--kk-orange); text-align: center; }
+.decl-num { font-family: var(--mono); font-weight: 700; font-size: 2.5rem; color: var(--kk-orange); line-height: 1; }
+.decl-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+/* ── 99 multiplication table ── */
+.kuku-table { display: grid; grid-template-columns: repeat(10, 1fr); gap: 1px; background: var(--surface3); border-radius: 8px; overflow: hidden; font-family: var(--mono); font-size: 0.7rem; }
+.kuku-table .kk-cell { background: var(--surface); padding: 4px; text-align: center; min-width: 0; }
+.kuku-table .kk-cell.head { background: var(--surface2); font-weight: 700; color: var(--kk-orange); }
+.kuku-table .kk-cell.highlight { background: var(--kk-orange); color: #000; font-weight: 700; }
+.kuku-table .kk-cell.dim { color: var(--surface3); }
+.kuku-table .kk-cell.candidate { background: rgba(255,140,66,0.2); color: var(--kk-orange); }
+
+/* ── Public cards (field) ── */
+.field-section { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px; }
+.field-title { font-size: 0.78rem; color: var(--muted); font-family: var(--mono); letter-spacing: 1px; margin-bottom: 6px; }
+
+/* ── Reveal pairs UI ── */
+.reveal-pair-input { display: flex; gap: 8px; justify-content: center; align-items: center; margin: 10px 0; }
+.reveal-pair-input select { padding: 8px 12px; border-radius: 8px; background: var(--surface2); color: var(--text); border: 1px solid var(--surface3); font-family: var(--mono); font-size: 1.1rem; font-weight: 700; }
+
+/* ── Game log ── */
+.game-log { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px; max-height: 120px; overflow-y: auto; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.game-log div { padding: 2px 0; border-bottom: 1px dashed var(--surface3); }
+.game-log div:last-child { border-bottom: none; color: var(--text); }
+
+/* ── Result ── */
+.result-emoji { font-size: 4rem; text-align: center; }
+.result-title { font-size: 1.6rem; text-align: center; font-weight: 700; }
+.result-sub { text-align: center; color: var(--muted); }
+
+/* ── FB modal ── */
+.fb-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+.fb-modal-inner { background: var(--surface); border-radius: 14px; padding: 22px; max-width: 360px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Win announce overlay ── */
+.win-announce { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 999; animation: fadein 0.3s; }
+.win-announce-icon { font-size: 5rem; }
+.win-announce-text { font-size: 1.5rem; font-weight: 700; text-align: center; padding: 0 20px; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* ── Rematch panel ── */
+.rematch-panel { background:var(--surface); border:1px solid var(--surface3); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+.rematch-status { font-family:var(--mono); font-size:0.85rem; color:var(--muted); }
+.rematch-voter-tag { font-family:var(--mono); font-size:0.78rem; padding:3px 10px; border-radius:12px; background:rgba(45,255,138,0.12); color:#2dff8a; border:1px solid rgba(45,255,138,0.3); }
+</style>
+</head>
+<body>
+
+<!-- ===== FIREBASE SETUP MODAL ===== -->
+<div id="fb-modal" class="fb-modal" style="display:none;">
+  <div class="fb-modal-inner">
+    <h2 style="font-size:1.1rem; text-align:left;">🔑 Firebase URL</h2>
+    <p style="font-size:0.8rem; color:var(--muted);">マルチプレイには Firebase Realtime Database が必要です。</p>
+    <input class="input" id="fb-url" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com">
+    <button class="btn btn-orange" onclick="saveFbConfig()">設定して始める</button>
+    <button class="btn btn-ghost" onclick="g('fb-modal').style.display='none'">あとで</button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ===== LOBBY ===== -->
+  <div id="screen-lobby" class="screen active">
+    <h1 style="font-size:2rem;">🎲 九九ダウト</h1>
+    <p style="text-align:center; font-family:var(--mono); font-size:0.78rem; color:var(--muted); letter-spacing:2px;">九九 × ブラフゲーム</p>
+
+    <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-orange" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+      <div class="divider"></div>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+      <button class="btn btn-blue" onclick="showSoloLobby()">🤖 ひとりで遊ぶ（CPU対戦）</button>
+    </div>
+
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+    <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
+
+    <div class="panel" style="margin-top:8px;">
+      <h3 style="margin-bottom:10px;">ゲームルール</h3>
+      <p style="font-size:0.82rem; color:var(--muted); line-height:1.7;">
+        3〜4人。各プレイヤーにライフ2枚と九九カード2枚。<br>
+        手番プレイヤーは手札2枚のかけ算結果を宣言（嘘OK）。<br>
+        次のプレイヤーは「<strong style="color:var(--blue);">受け入れる</strong>」「<strong style="color:var(--red);">ダウト</strong>」「<strong style="color:var(--amber);">見破る</strong>」を選択。<br>
+        ライフが2枚なくなったら脱落、最後まで残ったプレイヤーが勝利。<br>
+        <strong style="color:var(--kk-purple);">ウソツキ</strong>カードを含む場合は必ず嘘宣言になる。
+      </p>
+    </div>
+
+    <a href="index.html" style="text-decoration:none; margin-top:10px;">
+      <button class="btn btn-ghost" style="width:100%;">← ホームに戻る</button>
+    </a>
+  </div>
+
+  <!-- ===== SOLO LOBBY ===== -->
+  <div id="screen-solo" class="screen">
+    <h2>🤖 CPU対戦の設定</h2>
+    <input class="input" id="solo-name" type="text" placeholder="あなたの名前" maxlength="12" value="あなた">
+    <div class="panel">
+      <h3 style="margin-bottom:8px;">CPU人数</h3>
+      <div class="row" style="justify-content:center;">
+        <button class="btn" onclick="setSoloCount(2)" id="solo-c2">2人</button>
+        <button class="btn" onclick="setSoloCount(3)" id="solo-c3">3人</button>
+      </div>
+      <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-top:8px;">合計3〜4人で遊びます</p>
+    </div>
+    <div id="solo-error" class="error"></div>
+    <button class="btn btn-orange" onclick="startSoloGame()">▶ ゲーム開始</button>
+    <button class="btn btn-ghost" onclick="show('lobby')">← 戻る</button>
+  </div>
+
+  <!-- ===== WAITING ===== -->
+  <div id="screen-waiting" class="screen">
+    <h2>待機ロビー</h2>
+    <div class="code-box">
+      <div class="label">ルームコード</div>
+      <div class="code" id="disp-code">----</div>
+    </div>
+    <button class="copy-btn" onclick="copyCode()">📋 コードをコピー</button>
+    <div class="divider"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="text-transform:none; font-family:var(--sans); letter-spacing:0;">参加者</h3>
+      <span id="p-count" style="font-family:var(--mono); font-size:0.85rem; color:var(--muted);">1人</span>
+    </div>
+    <div id="wait-list" class="player-list"></div>
+    <div id="wait-status" class="status-txt"></div>
+    <button id="btn-start" class="btn btn-green" onclick="startGame()" disabled>▶ ゲームを開始する</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- ===== PLAYING ===== -->
+  <div id="screen-playing" class="screen" style="gap:8px;">
+    <!-- 全プレイヤーの状態 -->
+    <div id="all-players" class="player-list"></div>
+
+    <!-- 場札・捨て札 -->
+    <div id="public-fields"></div>
+
+    <!-- 現在の宣言 -->
+    <div id="current-decl" style="display:none;" class="decl-box">
+      <div class="decl-num" id="decl-num">--</div>
+      <div class="decl-label" id="decl-label">前の人の宣言</div>
+    </div>
+
+    <!-- 自分の手札 -->
+    <div class="field-section">
+      <div class="field-title">📇 あなたの手札</div>
+      <div id="my-hand" class="kk-cards-row"></div>
+    </div>
+
+    <!-- アクションエリア -->
+    <div id="action-area"></div>
+
+    <!-- ログ -->
+    <div id="game-log" class="game-log"></div>
+
+    <button class="btn btn-ghost" onclick="if(confirm('ゲームを抜けますか？'))leaveRoom()">退出</button>
+  </div>
+
+  <!-- ===== RESULT ===== -->
+  <div id="screen-result" class="screen">
+    <div class="result-emoji" id="result-emoji">🎉</div>
+    <div class="result-title" id="result-title">勝者: ...</div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="divider"></div>
+    <h3 style="text-align:center;">最終結果</h3>
+    <div id="result-roles" class="player-list"></div>
+    <div id="rematch-panel" class="rematch-panel">
+      <div id="rematch-status" class="rematch-status"></div>
+      <div id="rematch-voters" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
+    </div>
+    <button id="btn-rematch" class="btn btn-orange" onclick="submitRematch()">🔄 もう一度遊ぶ（同じメンバーで再戦）</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ戻る</button>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+
+function saveFbConfig() {
+  const url = g('fb-url').value.trim().replace(/\/$/,'');
+  if(!url) return;
+  fbUrl = url;
+  localStorage.setItem(FB_KEY, url);
+  g('fb-modal').style.display = 'none';
+}
+
+async function checkFbConfig() {
+  if(!fbUrl) { showFbModal(); return false; }
+  try {
+    const r = await fetch(`${fbUrl}/.json?shallow=true`, {method:'GET'});
+    if(!r.ok && r.status !== 404) {
+      setErr('Firebase接続エラー（'+r.status+'）');
+      return false;
+    }
+  } catch(e) { setErr('Firebase接続失敗：URLを確認してください'); return false; }
+  return true;
+}
+function showFbModal() { g('fb-modal').style.display='flex'; }
+
+// FB primitives
+let fbRoom = '', fbPollTimer = null, fbLastBcastTs = 0, fbLastPrvTs = 0, fbLastActTs = {};
+
+async function fbPut(sub, data) {
+  if(!fbRoom) return;
+  try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)}); }
+  catch(e) { console.error('fbPut', e); }
+}
+async function fbGet(sub) {
+  if(!fbRoom) return null;
+  try {
+    const r = await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`);
+    if(!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
+async function fbDel(sub) {
+  if(!fbRoom) return;
+  try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); }
+  catch(e) {}
+}
+function fbListen() {
+  if(fbPollTimer) clearInterval(fbPollTimer);
+  fbLastBcastTs = 0; fbLastPrvTs = 0; fbLastActTs = {};
+  fbPollTimer = setInterval(fbPoll, 500);
+}
+function fbClose() {
+  if(fbPollTimer) clearInterval(fbPollTimer);
+  fbPollTimer = null; fbRoom = '';
+}
+async function fbPoll() {
+  if(!fbRoom) return;
+  // broadcast (host -> all)
+  const bc = await fbGet('broadcast');
+  if(bc && bc.ts > fbLastBcastTs) {
+    fbLastBcastTs = bc.ts;
+    if(!isHost && bc.msg) handleBroadcast(bc.msg);
+  }
+  // private (host -> me)
+  const prv = await fbGet(`private/${myId}`);
+  if(prv && prv.ts > fbLastPrvTs) {
+    fbLastPrvTs = prv.ts;
+    if(prv.msg) handlePrivate(prv.msg);
+  }
+  // actions (clients -> host)
+  if(isHost) {
+    const acts = await fbGet('action');
+    if(acts) {
+      for(const pid in acts) {
+        const a = acts[pid];
+        if(a && a.ts > (fbLastActTs[pid]||0)) {
+          fbLastActTs[pid] = a.ts;
+          if(a.msg) onMsg(a.msg, pid);
+        }
+      }
+    }
+  }
+}
+function fbBroadcast(msg) { fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg) { fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg) { fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '', myRole = null;
+let isHost = false, isSolo = false, roomCode = '';
+let fs = null, gs = null; // host fullState / public gameState
+let myHand = []; // my cards (face values)
+let myLives = []; // my life cards
+let pendingAction = null; // 'accept' or null while passing
+let soloCount = 2;
+
+// ============================================================
+// UTILS
+// ============================================================
+function g(id) { return document.getElementById(id); }
+function mk(tag, cls) { const e = document.createElement(tag); if(cls) e.className = cls; return e; }
+function show(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-'+name); if(el) el.classList.add('active');
+}
+function setErr(msg) { const e = g('lobby-error'); if(e) e.textContent = msg || ''; }
+function setSt(msg) { const s = g('lobby-status'); if(s) s.textContent = msg || ''; }
+function genId() { return 'p_' + Math.random().toString(36).slice(2,10); }
+function shuffle(arr) { const a = arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function copyCode() {
+  const code = g('disp-code').textContent;
+  navigator.clipboard?.writeText(code);
+}
+
+// ============================================================
+// CARD DECK
+// ============================================================
+// 35枚: 1〜9の数字カード + ウソツキ3枚
+// 3,4,5,6,7: 各4枚 (20枚)
+// 1,2,8,9: 各3枚 (12枚)
+// ウソツキ: 3枚
+const CARD_TYPE_USOTUKI = 'U';
+function buildDeck() {
+  const deck = [];
+  [3,4,5,6,7].forEach(n => { for(let i=0;i<4;i++) deck.push({type:'num', value:n}); });
+  [1,2,8,9].forEach(n => { for(let i=0;i<3;i++) deck.push({type:'num', value:n}); });
+  for(let i=0;i<3;i++) deck.push({type:CARD_TYPE_USOTUKI, value:0});
+  return deck;
+}
+
+// ============================================================
+// ROOM (MULTIPLAYER)
+// ============================================================
+async function createRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  myName = name; isHost = true; isSolo = false;
+  const code = Array.from({length:4}, () => Math.floor(Math.random()*10)).join('');
+  roomCode = code; fbRoom = 'KK-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'kuku-doubt', ts:Date.now()});
+    fs = initFs([{id:myId, name:myName}]);
+    gs = pub(fs);
+    fbListen();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    show('waiting'); saveSession();
+    refreshWait();
+    bcast();
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
+}
+
+async function joinRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)) { setErr('4桁の数字を入力してください'); return; }
+  myName = name; isHost = false; isSolo = false; roomCode = code;
+  fbRoom = 'KK-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta) { setErr('ルームが見つかりません'); setSt(''); return; }
+    if(meta.game !== 'kuku-doubt') { setErr('ゲーム種別が違います'); setSt(''); return; }
+    fbListen();
+    fbSendToHost({type:'join', name:myName, id:myId});
+    setErr(''); setSt('接続しました。ホストの開始を待っています...');
+    show('waiting'); saveSession();
+    g('disp-code').textContent = code;
+    g('btn-start').style.display = 'none';
+    let retries = 0;
+    const retryJoin = setInterval(()=>{
+      if(!fbRoom || retries >= 5) { clearInterval(retryJoin); return; }
+      if(gs?.players?.find(p=>p.id===myId)) { clearInterval(retryJoin); return; }
+      fbSendToHost({type:'join', name:myName, id:myId});
+      retries++;
+    }, 2000);
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); }
+}
+
+function leaveRoom() {
+  fbClose(); fs=null; gs=null; isHost=false; isSolo=false;
+  pendingAction=null; myHand=[]; myLives=[];
+  try { clearSession(); } catch(e) {}
+  show('lobby');
+}
+
+// ============================================================
+// HOST MESSAGE HANDLER
+// ============================================================
+function onMsg(d, senderPid) {
+  if(!d) return;
+  if(!fs) return;
+  switch(d.type) {
+    case 'join':
+      if(fs.phase !== 'waiting') { fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
+      if(fs.players.length >= 4) { fbSendTo(d.id, {type:'error', msg:'満員です（最大4人）'}); return; }
+      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; }
+      fs.players.push({id:d.id, name:d.name, lives:[], hand:[], dead:false, public:[], discarded:[]});
+      bcast(); break;
+    case 'declare':
+      handleDeclare(senderPid, d.value, d.isLie);
+      break;
+    case 'action':
+      handleAction(senderPid, d.action, d.data);
+      break;
+    case 'rematch':
+      _hostRematch(senderPid);
+      break;
+    case 'reconnect':
+      _hostReconnect(d, senderPid);
+      break;
+  }
+}
+
+// ============================================================
+// HOST GAME STATE
+// ============================================================
+function initFs(players) {
+  return {
+    phase: 'waiting',
+    players: players.map(p => ({id:p.id, name:p.name, lives:[], hand:[], dead:false, public:[], discarded:[]})),
+    cur: 0,                   // current player index (who needs to act)
+    prevActor: null,          // who just made the declaration
+    deck: [],
+    discardPile: [],
+    publicField: [],          // 場札（全体公開・ゲーム終了まで残る）
+    currentDecl: null,        // {value:24, isLie:?, by:pid}
+    minDecl: 0,               // 直前の宣言値（次は同じか大きい）
+    log: [],
+    winner: null,
+    startPlayerId: null,
+  };
+}
+
+function pub(f) {
+  return {
+    phase: f.phase,
+    players: f.players.map(p => ({
+      id: p.id,
+      name: p.name,
+      lives: p.lives.map(l => l), // [{lost:bool, card:?}]
+      handCount: p.hand.length,
+      dead: p.dead,
+      public: p.public.slice(),
+      discardCount: p.discarded.length,
+    })),
+    cur: f.cur,
+    prevActor: f.prevActor,
+    currentDecl: f.currentDecl,
+    minDecl: f.minDecl,
+    log: f.log.slice(-20),
+    winner: f.winner,
+    startPlayerId: f.startPlayerId,
+    deckCount: f.deck.length,
+    discardPileCount: f.discardPile.length,
+    publicField: f.publicField.slice(),
+  };
+}
+
+function bcast() {
+  gs = pub(fs);
+  fbBroadcast({type:'gs', s:gs});
+  sendPrivateHands();
+  onGsUpdate(gs);
+}
+function sendPrivateHands() {
+  fs.players.forEach(p => {
+    if(p.id === myId) {
+      myHand = p.hand.slice();
+      myLives = p.lives.slice();
+      return;
+    }
+    fbSendTo(p.id, {type:'private', hand:p.hand, lives:p.lives});
+  });
+}
+
+// ============================================================
+// GAME START
+// ============================================================
+function startGame() {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  if(fs.players.length < 3 || fs.players.length > 4) return;
+  const startBtn = g('btn-start');
+  if(startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳ 開始中...'; }
+
+  fs.phase = 'playing';
+  fs.deck = shuffle(buildDeck());
+  fs.discardPile = [];
+  fs.publicField = [];
+  fs.log = [];
+  fs.currentDecl = null;
+  fs.minDecl = 0;
+
+  // 各プレイヤーにライフ2枚と手札2枚を配る
+  fs.players.forEach(p => {
+    p.lives = [];
+    for(let i=0;i<2;i++) {
+      const c = fs.deck.pop();
+      p.lives.push({lost:false, card:c});
+    }
+    p.hand = [];
+    for(let i=0;i<2;i++) p.hand.push(fs.deck.pop());
+    p.dead = false;
+    p.public = [];
+    p.discarded = [];
+  });
+
+  // ランダムにスタートプレイヤー
+  fs.cur = Math.floor(Math.random() * fs.players.length);
+  fs.startPlayerId = fs.players[fs.cur].id;
+  fs.prevActor = null;
+  fs.log.push('🎲 ゲーム開始！スタート: ' + fs.players[fs.cur].name);
+
+  bcast();
+  // ホスト自身がスタートプレイヤーで CPU の場合（ソロ）、AI開始
+  if(isSolo) scheduleSoloAI();
+}
+
+// ============================================================
+// DECLARATION (スタートプレイヤーまたは受け入れた人の宣言)
+// ============================================================
+function handleDeclare(actorId, value, isLie) {
+  if(!fs || fs.phase !== 'playing') return;
+  const actorIdx = fs.players.findIndex(p => p.id === actorId);
+  if(actorIdx < 0 || actorIdx !== fs.cur) return;
+  if(value < fs.minDecl) return; // ルール: 同じか大きい
+
+  const actor = fs.players[actorIdx];
+  fs.currentDecl = {value, isLie:!!isLie, by:actorId, cards:actor.hand.slice()};
+  fs.minDecl = value;
+  fs.log.push('📣 ' + actor.name + ' が「' + value + '」と宣言');
+
+  fs.prevActor = actorId;
+  // 次のプレイヤー（生存者の左隣）
+  fs.cur = nextAliveIdx(actorIdx);
+  bcast();
+
+  if(isSolo) scheduleSoloAI();
+}
+
+// 次の生存プレイヤーのインデックス
+function nextAliveIdx(from) {
+  const n = fs.players.length;
+  for(let i=1;i<=n;i++) {
+    const idx = (from + i) % n;
+    if(!fs.players[idx].dead) return idx;
+  }
+  return from;
+}
+
+// ============================================================
+// ACTION (受け入れる/ダウト/見破る)
+// ============================================================
+function handleAction(actorId, action, data) {
+  if(!fs || fs.phase !== 'playing') return;
+  const actorIdx = fs.players.findIndex(p => p.id === actorId);
+  if(actorIdx < 0 || actorIdx !== fs.cur) return;
+  if(!fs.currentDecl) return;
+  const actor = fs.players[actorIdx];
+  const prevIdx = fs.players.findIndex(p => p.id === fs.prevActor);
+  const prev = fs.players[prevIdx];
+
+  if(action === 'doubt') {
+    // 宣言は本当か嘘か判定
+    const truth = evalDeclaration(fs.currentDecl.cards, fs.currentDecl.value);
+    fs.log.push('👉 ' + actor.name + ' が「ダウト！」 → ' + (truth==='true' ? '宣言は本当' : '宣言は嘘'));
+    if(truth === 'true') {
+      // ダウトした人の負け
+      loseLife(actorIdx);
+      if(!checkGameEnd()) startNewRound(actorIdx);
+    } else {
+      // 前のプレイヤーの負け
+      loseLife(prevIdx);
+      if(!checkGameEnd()) startNewRound(prevIdx);
+    }
+    return;
+  }
+
+  if(action === 'reveal') {
+    // 組み合わせ予想 (a,b)
+    const [a,b] = data.pair || [0,0];
+    const cards = fs.currentDecl.cards;
+    const correct = isPairMatch(cards, a, b);
+    fs.log.push('👁 ' + actor.name + ' 見破る！「'+a+'と'+b+'」 → ' + (correct ? '正解' : '不正解'));
+    if(correct) {
+      // 前のプレイヤーの負け
+      loseLife(prevIdx);
+      if(!checkGameEnd()) startNewRound(prevIdx);
+    } else {
+      // 見破った人の負け
+      loseLife(actorIdx);
+      if(!checkGameEnd()) startNewRound(actorIdx);
+    }
+    return;
+  }
+
+  if(action === 'accept') {
+    // 受け入れる: data.discardIndices = 捨てるカードのインデックス（0〜2）
+    // currentDecl.cards = 渡された2枚
+    const recvCards = fs.currentDecl.cards.slice();
+    const discardIdx = data.discardIndices || []; // 受け取った2枚のうち捨てる枚数（0〜2）
+
+    // 捨てる
+    discardIdx.forEach(i => fs.discardPile.push(recvCards[i]));
+    const kept = recvCards.filter((_,i) => !discardIdx.includes(i));
+    const discardCount = discardIdx.length;
+
+    // 山札から同じ枚数引く
+    const drawn = [];
+    for(let i=0;i<discardCount;i++) {
+      if(fs.deck.length === 0) reshuffleDiscard();
+      if(fs.deck.length > 0) drawn.push(fs.deck.pop());
+    }
+    const newHand = kept.concat(drawn);
+    actor.hand = newHand; // 2枚になる
+
+    // 2枚捨てた場合、山札から2枚引いて場札として公開
+    if(discardCount === 2) {
+      const fieldCards = [];
+      for(let i=0;i<2;i++) {
+        if(fs.deck.length === 0) reshuffleDiscard();
+        if(fs.deck.length > 0) fieldCards.push(fs.deck.pop());
+      }
+      fs.publicField.push(...fieldCards);
+      fs.log.push('📌 ' + actor.name + ' が2枚捨てたため、場札に '+fieldCards.map(c=>cardLabel(c)).join('・')+' を公開');
+    }
+
+    fs.log.push('🛡 ' + actor.name + ' が受け入れて手番を渡す（捨てた:'+discardCount+'枚）');
+
+    // 自分の手番として宣言フェーズに戻す
+    fs.currentDecl = null;
+    // 注意：受け入れた人が次の宣言者
+    bcast();
+
+    if(isSolo) scheduleSoloAI();
+    return;
+  }
+}
+
+// 宣言値が手札と一致するか
+function evalDeclaration(cards, declared) {
+  if(cards.some(c => c.type === CARD_TYPE_USOTUKI)) return 'lie'; // ウソツキ含む = 必ず嘘
+  const product = cards[0].value * cards[1].value;
+  return product === declared ? 'true' : 'lie';
+}
+
+// 組み合わせ判定: cards が {a,b} のペアと一致するか
+function isPairMatch(cards, a, b) {
+  if(cards.length !== 2) return false;
+  const vals = cards.map(c => c.type === CARD_TYPE_USOTUKI ? 'U' : c.value).sort();
+  const test = [a, b].sort();
+  // a, b は数字 (1〜9)。ウソツキの予想も可能にするなら 'U' を扱うが、まずは数字のみで予想
+  return vals[0] === test[0] && vals[1] === test[1];
+}
+
+function loseLife(playerIdx) {
+  const p = fs.players[playerIdx];
+  const aliveLives = p.lives.filter(l => !l.lost);
+  if(aliveLives.length === 0) return;
+  const lostLife = aliveLives[0];
+  lostLife.lost = true;
+  fs.log.push('💔 ' + p.name + ' がライフを失う');
+  // ライフ枯渇チェック
+  if(p.lives.every(l => l.lost)) {
+    p.dead = true;
+    fs.log.push('💀 ' + p.name + ' は脱落');
+  }
+}
+
+function reshuffleDiscard() {
+  if(fs.discardPile.length === 0) return;
+  fs.deck = shuffle(fs.discardPile);
+  fs.discardPile = [];
+  fs.log.push('🔄 捨て札を山札に戻してシャッフル');
+}
+
+function checkGameEnd() {
+  const alive = fs.players.filter(p => !p.dead);
+  if(alive.length <= 1) {
+    if(alive.length === 1) {
+      fs.winner = alive[0].id;
+      fs.log.push('🏆 ' + alive[0].name + ' の勝利！');
+    } else {
+      fs.log.push('全員脱落（引き分け）');
+    }
+    fs.phase = 'result';
+    bcast();
+    return true;
+  }
+  // 残り2人の場合、ライフが多い方が勝利
+  if(alive.length === 2) {
+    const livesA = alive[0].lives.filter(l => !l.lost).length;
+    const livesB = alive[1].lives.filter(l => !l.lost).length;
+    if(livesA !== livesB) {
+      const winner = livesA > livesB ? alive[0] : alive[1];
+      fs.winner = winner.id;
+      fs.log.push('🏆 ' + winner.name + ' の勝利！（ライフ多）');
+      fs.phase = 'result';
+      bcast();
+      return true;
+    }
+    // 同じなら続行
+  }
+  return false;
+}
+
+function startNewRound(startIdx) {
+  // 捨て札処理（負けたプレイヤーの場札を公開しない代わりに、ラウンドリセット）
+  // 各プレイヤーに新しい手札を配る
+  // 手元のカードを捨て札へ
+  fs.players.forEach(p => {
+    if(p.dead) return;
+    p.hand.forEach(c => fs.discardPile.push(c));
+    p.hand = [];
+  });
+  // 山札から新しい手札を配る
+  fs.players.forEach(p => {
+    if(p.dead) return;
+    for(let i=0;i<2;i++) {
+      if(fs.deck.length === 0) reshuffleDiscard();
+      if(fs.deck.length > 0) p.hand.push(fs.deck.pop());
+    }
+  });
+  // 場札と最小宣言値をリセット
+  fs.currentDecl = null;
+  fs.minDecl = 0;
+  fs.prevActor = null;
+  // 次のスタートプレイヤー
+  if(fs.players[startIdx].dead) {
+    fs.cur = nextAliveIdx(startIdx);
+  } else {
+    fs.cur = startIdx;
+  }
+  fs.startPlayerId = fs.players[fs.cur].id;
+  fs.log.push('🔄 新ラウンド開始（スタート: '+fs.players[fs.cur].name+'）');
+  bcast();
+  if(isSolo) scheduleSoloAI();
+}
+
+function cardLabel(c) {
+  if(c.type === CARD_TYPE_USOTUKI) return 'ウソ';
+  return String(c.value);
+}
+
+// ============================================================
+// CLIENT MESSAGE HANDLERS
+// ============================================================
+function handleBroadcast(msg) {
+  if(msg.type === 'gs') {
+    gs = msg.s;
+    onGsUpdate(gs);
+  } else if(msg.type === 'rematch_update') {
+    _renderRematchPanel(msg.voterIds||[], msg.players||[]);
+  } else if(msg.type === 'rematch_go') {
+    _resetRematchUI();
+  }
+}
+function handlePrivate(msg) {
+  if(msg.type === 'private') {
+    myHand = msg.hand;
+    myLives = msg.lives;
+    renderGame();
+  } else if(msg.type === 'error') {
+    setErr(msg.msg);
+  }
+}
+
+function onGsUpdate(s) {
+  if(!s) return;
+  if(s.phase === 'waiting') {
+    show('waiting');
+    refreshWait();
+  } else if(s.phase === 'playing') {
+    if(!g('screen-playing').classList.contains('active')) show('playing');
+    renderGame();
+  } else if(s.phase === 'result') {
+    showResult();
+  }
+}
+
+// ============================================================
+// WAITING SCREEN
+// ============================================================
+function refreshWait() {
+  if(!gs) return;
+  g('p-count').textContent = gs.players.length + '人';
+  const list = g('wait-list');
+  list.innerHTML = '';
+  gs.players.forEach(p => {
+    const row = mk('div', 'player-row' + (p.id===myId?' is-me':''));
+    row.innerHTML = '<span class="player-name">'+ (p.id===myId?'👤 ':'👥 ') + p.name + (p.id===gs.players[0].id?' (ホスト)':'') +'</span>';
+    list.appendChild(row);
+  });
+  if(isHost) {
+    const btn = g('btn-start');
+    btn.style.display = '';
+    btn.disabled = !(gs.players.length >= 3 && gs.players.length <= 4);
+    g('wait-status').textContent = gs.players.length < 3 ? 'あと'+(3-gs.players.length)+'人必要です（3〜4人）' :
+      gs.players.length > 4 ? '満員です（最大4人）' : '開始できます！';
+  } else {
+    g('btn-start').style.display = 'none';
+    g('wait-status').textContent = 'ホストの開始を待っています...';
+  }
+}
+
+// ============================================================
+// PLAYING SCREEN RENDER
+// ============================================================
+function renderGame() {
+  if(!gs) return;
+  // 全プレイヤーの状態
+  const list = g('all-players'); list.innerHTML = '';
+  gs.players.forEach((p, pi) => {
+    const isCur = pi === gs.cur && !p.dead;
+    const isMe = p.id === myId;
+    const row = mk('div', 'player-row' + (isMe?' is-me':'') + (isCur?' cur-turn':'') + (p.dead?' dead':''));
+    const livesHtml = p.lives.map(l => l.lost ? '<span class="kk-card life lost">'+(l.card?cardLabel(l.card):'×')+'</span>' : '<span class="kk-card life alive"></span>').join('');
+    row.innerHTML = `<span class="player-name">${isMe?'👤':'👥'} ${p.name}${isCur?' ⭐':''}${p.dead?' 💀':''}</span>
+      <span style="display:flex;gap:4px;">${livesHtml}</span>`;
+    list.appendChild(row);
+  });
+
+  // 場札・捨て札情報
+  const pubArea = g('public-fields'); pubArea.innerHTML = '';
+  if(gs.publicField.length > 0) {
+    const fs2 = mk('div', 'field-section');
+    fs2.innerHTML = '<div class="field-title">📌 場札（公開中）</div>';
+    const row = mk('div', 'kk-cards-row');
+    gs.publicField.forEach(c => {
+      const card = mk('div', 'kk-card' + (c.type===CARD_TYPE_USOTUKI?' usotuki':''));
+      card.textContent = cardLabel(c);
+      row.appendChild(card);
+    });
+    fs2.appendChild(row);
+    pubArea.appendChild(fs2);
+  }
+  if(gs.discardPileCount > 0 || gs.deckCount > 0) {
+    const fs3 = mk('div', 'field-section');
+    fs3.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:0.8rem;color:var(--muted);';
+    fs3.innerHTML = `<span>📚 山札: <strong style="color:var(--text);">${gs.deckCount}</strong> 枚</span><span>🗑 捨て札: <strong style="color:var(--text);">${gs.discardPileCount}</strong> 枚</span>`;
+    pubArea.appendChild(fs3);
+  }
+
+  // 現在の宣言
+  const declBox = g('current-decl');
+  if(gs.currentDecl) {
+    declBox.style.display = '';
+    g('decl-num').textContent = gs.currentDecl.value;
+    const byName = gs.players.find(p=>p.id===gs.currentDecl.by)?.name || '?';
+    g('decl-label').textContent = byName + ' の宣言（次の人があなた）';
+  } else {
+    declBox.style.display = 'none';
+  }
+
+  // 自分の手札
+  const hand = g('my-hand'); hand.innerHTML = '';
+  const myP = gs.players.find(p => p.id === myId);
+  if(myP && !myP.dead) {
+    myHand.forEach((c,i) => {
+      const card = mk('div', 'kk-card' + (c.type===CARD_TYPE_USOTUKI?' usotuki':''));
+      card.textContent = cardLabel(c);
+      hand.appendChild(card);
+    });
+  } else if(myP && myP.dead) {
+    hand.innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">💀 脱落しました</div>';
+  }
+
+  // アクションエリア
+  renderActionArea();
+
+  // ログ
+  const logEl = g('game-log'); logEl.innerHTML = '';
+  gs.log.forEach(line => {
+    const d = mk('div'); d.textContent = line;
+    logEl.appendChild(d);
+  });
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function renderActionArea() {
+  const area = g('action-area'); area.innerHTML = '';
+  if(!gs || gs.phase !== 'playing') return;
+  const myP = gs.players.find(p => p.id === myId);
+  if(!myP || myP.dead) return;
+  const myIdx = gs.players.findIndex(p => p.id === myId);
+  const isMyTurn = gs.cur === myIdx;
+  if(!isMyTurn) {
+    const wait = mk('div', 'status-txt');
+    wait.style.cssText = 'padding:20px; text-align:center; color:var(--muted);';
+    const curName = gs.players[gs.cur]?.name || '?';
+    wait.textContent = '⏳ ' + curName + ' の手番です';
+    area.appendChild(wait);
+    return;
+  }
+
+  // 自分の手番
+  if(!gs.currentDecl) {
+    // 宣言フェーズ（スタートプレイヤー or 受け入れた直後）
+    renderDeclareUI(area);
+  } else {
+    // アクション選択フェーズ
+    renderActionChoiceUI(area);
+  }
+}
+
+function renderDeclareUI(area) {
+  const box = mk('div', 'panel');
+  box.innerHTML = '<h3 style="text-align:center; margin-bottom:10px;">📣 かけ算結果を宣言</h3>';
+  // 手札にウソツキ含む場合は必ず嘘
+  const hasUsotuki = myHand.some(c => c.type === CARD_TYPE_USOTUKI);
+  const trueProduct = hasUsotuki ? null : myHand[0].value * myHand[1].value;
+  const minDecl = gs.minDecl;
+  const mustLie = hasUsotuki || (trueProduct !== null && trueProduct < minDecl);
+
+  if(hasUsotuki) {
+    const note = mk('div');
+    note.style.cssText = 'background:rgba(156,39,176,0.15); border:1px solid var(--kk-purple); padding:8px; border-radius:8px; margin-bottom:8px; text-align:center; font-size:0.85rem;';
+    note.innerHTML = '🃏 <strong style="color:var(--purple);">ウソツキ</strong>含み → 必ず嘘宣言';
+    box.appendChild(note);
+  } else if(trueProduct < minDecl) {
+    const note = mk('div');
+    note.style.cssText = 'background:rgba(255,45,74,0.12); border:1px solid var(--red); padding:8px; border-radius:8px; margin-bottom:8px; text-align:center; font-size:0.85rem;';
+    note.innerHTML = '⚠️ 本当の積（<strong style="color:var(--green);">'+trueProduct+'</strong>）が直前宣言（'+minDecl+'）未満 → <strong style="color:var(--red);">必ず嘘宣言</strong>になります';
+    box.appendChild(note);
+  } else {
+    const note = mk('div');
+    note.style.cssText = 'text-align:center; color:var(--muted); font-size:0.82rem; margin-bottom:8px;';
+    note.innerHTML = '本当の積: <strong style="color:var(--green);">' + trueProduct + '</strong> ／ 直前宣言以上（≥'+minDecl+'）';
+    box.appendChild(note);
+  }
+
+  if(minDecl >= 72) {
+    const warn = mk('div');
+    warn.style.cssText = 'background:rgba(255,176,32,0.1); border:1px solid var(--amber); padding:8px; border-radius:8px; margin-bottom:8px; text-align:center; font-size:0.78rem; color:var(--amber);';
+    warn.innerHTML = '⚠️ 直前宣言が高いため、選択肢が限られます（九九の最大値は81）';
+    box.appendChild(warn);
+  }
+
+  // 入力エリア
+  const inputRow = mk('div');
+  inputRow.style.cssText = 'display:flex; gap:8px; align-items:center; justify-content:center; margin-bottom:10px;';
+  inputRow.innerHTML = '<span>宣言値:</span> <input type="number" id="decl-input" class="input" style="width:100px; text-align:center; font-size:1.4rem;" min="'+Math.max(1,minDecl)+'" placeholder="'+(trueProduct||'?')+'">';
+  box.appendChild(inputRow);
+
+  // 九九早見表
+  const tableBox = mk('div');
+  tableBox.style.cssText = 'margin:10px 0;';
+  tableBox.innerHTML = '<div style="font-size:0.72rem; color:var(--muted); text-align:center; margin-bottom:4px;">九九早見表（タップで宣言値に設定）</div>';
+  const tableEl = buildKukuTable(minDecl);
+  tableBox.appendChild(tableEl);
+  box.appendChild(tableBox);
+
+  const btnRow = mk('div');
+  btnRow.style.cssText = 'display:flex; gap:8px;';
+  const declBtn = mk('button', 'btn btn-orange');
+  declBtn.textContent = '✅ 宣言する';
+  declBtn.style.flex = '1';
+  declBtn.onclick = () => {
+    const v = parseInt(g('decl-input').value, 10);
+    if(isNaN(v) || v < 1) { alert('宣言値を入力してください'); return; }
+    if(v < minDecl) { alert('直前の宣言（'+minDecl+'）以上の数字を宣言してください'); return; }
+    const isLie = hasUsotuki || v !== trueProduct;
+    declBtn.disabled = true;
+    declBtn.textContent = '⏳';
+    if(isHost) handleDeclare(myId, v, isLie);
+    else fbSendToHost({type:'declare', value:v, isLie});
+  };
+  btnRow.appendChild(declBtn);
+  box.appendChild(btnRow);
+
+  area.appendChild(box);
+}
+
+function buildKukuTable(minDecl) {
+  const t = mk('div', 'kuku-table');
+  // ヘッダー: 空, 1〜9
+  const empty = mk('div', 'kk-cell head'); empty.textContent = '×'; t.appendChild(empty);
+  for(let j=1;j<=9;j++) { const c = mk('div','kk-cell head'); c.textContent = j; t.appendChild(c); }
+  // 各行
+  for(let i=1;i<=9;i++) {
+    const headC = mk('div', 'kk-cell head'); headC.textContent = i; t.appendChild(headC);
+    for(let j=1;j<=9;j++) {
+      const p = i * j;
+      const cell = mk('div', 'kk-cell' + (p < minDecl ? ' dim' : ''));
+      cell.textContent = p;
+      if(p >= Math.max(1,minDecl)) {
+        cell.style.cursor = 'pointer';
+        cell.onclick = () => { g('decl-input').value = p; cell.classList.add('highlight'); setTimeout(()=>cell.classList.remove('highlight'), 400); };
+      }
+      t.appendChild(cell);
+    }
+  }
+  return t;
+}
+
+function renderActionChoiceUI(area) {
+  const decl = gs.currentDecl;
+  const prevName = gs.players.find(p=>p.id===decl.by)?.name || '?';
+
+  const box = mk('div', 'panel');
+  box.innerHTML = '<h3 style="text-align:center; margin-bottom:10px;">⚡ アクション選択</h3>'+
+    '<div style="text-align:center; color:var(--muted); font-size:0.85rem; margin-bottom:10px;">'+prevName+' が「'+decl.value+'」と宣言しました</div>';
+
+  const grid = mk('div', 'action-grid');
+
+  // 受け入れる
+  const acc = mk('button', 'action-btn accept');
+  acc.innerHTML = '<div class="action-btn-title">🛡 受け入れる</div><div class="action-btn-desc">カードを受け取り、捨てて、新しい宣言をする</div>';
+  acc.onclick = () => showAcceptUI(decl);
+  grid.appendChild(acc);
+
+  // ダウト
+  const doubt = mk('button', 'action-btn doubt');
+  doubt.innerHTML = '<div class="action-btn-title">👉 ダウト！</div><div class="action-btn-desc">宣言が嘘だと思う（本当なら自分の負け）</div>';
+  doubt.onclick = () => {
+    if(!confirm('ダウトしますか？\n宣言「'+decl.value+'」が嘘なら相手の負け、本当なら自分の負け。')) return;
+    doubt.disabled = true; acc.disabled = true;
+    if(isHost) handleAction(myId, 'doubt', {});
+    else fbSendToHost({type:'action', action:'doubt'});
+  };
+  grid.appendChild(doubt);
+
+  // 見破る
+  const reveal = mk('button', 'action-btn reveal');
+  reveal.innerHTML = '<div class="action-btn-title">👁 見破る</div><div class="action-btn-desc">2枚の組み合わせを当てる（正解なら相手の負け）</div>';
+  reveal.onclick = () => showRevealUI(decl);
+  grid.appendChild(reveal);
+
+  box.appendChild(grid);
+  area.appendChild(box);
+}
+
+function showAcceptUI(decl) {
+  const area = g('action-area'); area.innerHTML = '';
+  const box = mk('div', 'panel');
+  box.innerHTML = '<h3 style="text-align:center; margin-bottom:10px;">🛡 受け入れる</h3>'+
+    '<div style="text-align:center; color:var(--muted); font-size:0.82rem; margin-bottom:10px;">渡されたカードのうち、捨てる枚数を選んでください（0〜2枚）</div>';
+
+  // 渡された2枚を表示
+  const recvCards = decl.cards;
+  const wrap = mk('div'); wrap.style.cssText='display:flex; gap:10px; justify-content:center; margin:10px 0;';
+  const selected = []; // index of cards to discard
+  recvCards.forEach((c, i) => {
+    const card = mk('div', 'kk-card tap' + (c.type===CARD_TYPE_USOTUKI?' usotuki':''));
+    card.textContent = cardLabel(c);
+    card.onclick = () => {
+      const idx = selected.indexOf(i);
+      if(idx >= 0) { selected.splice(idx,1); card.classList.remove('selected'); }
+      else { selected.push(i); card.classList.add('selected'); }
+      updateAcceptHint();
+    };
+    wrap.appendChild(card);
+  });
+  box.appendChild(wrap);
+
+  const hint = mk('div');
+  hint.style.cssText='text-align:center; font-size:0.8rem; color:var(--muted); margin:8px 0;';
+  hint.id = 'accept-hint';
+  box.appendChild(hint);
+
+  function updateAcceptHint() {
+    const n = selected.length;
+    let text = '選択中: ' + n + '枚捨てる';
+    if(n === 0) text += '（2枚そのまま受け取る）';
+    else if(n === 1) text += '（1枚捨てて山札から1枚引く）';
+    else text += '（2枚とも捨てて山札から2枚引く＋場札を2枚公開）';
+    hint.textContent = text;
+  }
+  updateAcceptHint();
+
+  const btn = mk('button', 'btn btn-orange');
+  btn.textContent = '✅ 受け入れて次へ';
+  btn.style.width = '100%';
+  btn.onclick = () => {
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    if(isHost) handleAction(myId, 'accept', {discardIndices:selected});
+    else fbSendToHost({type:'action', action:'accept', data:{discardIndices:selected}});
+  };
+  box.appendChild(btn);
+
+  const back = mk('button', 'btn btn-ghost');
+  back.textContent = '← アクション選択へ戻る';
+  back.style.width = '100%';
+  back.onclick = renderActionArea;
+  box.appendChild(back);
+
+  area.appendChild(box);
+}
+
+function showRevealUI(decl) {
+  const area = g('action-area'); area.innerHTML = '';
+  const box = mk('div', 'panel');
+  box.innerHTML = '<h3 style="text-align:center; margin-bottom:10px;">👁 見破る</h3>'+
+    '<div style="text-align:center; color:var(--muted); font-size:0.82rem; margin-bottom:10px;">'+
+    '相手の手札2枚の組み合わせを予想してください</div>';
+
+  const wrap = mk('div', 'reveal-pair-input');
+  const opts = '<option value="">-</option>' + [1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}">${n}</option>`).join('');
+  wrap.innerHTML = '<select id="reveal-a">'+opts+'</select><span>×</span><select id="reveal-b">'+opts+'</select>';
+  box.appendChild(wrap);
+
+  const hint = mk('div');
+  hint.style.cssText = 'text-align:center; font-size:0.8rem; color:var(--muted); margin:8px 0;';
+  hint.id = 'reveal-hint';
+  hint.textContent = '宣言値「'+decl.value+'」に合う組み合わせを選択';
+  box.appendChild(hint);
+
+  // 宣言値に合う候補を表示
+  const candidates = findCandidatePairs(decl.value);
+  if(candidates.length > 0) {
+    const candWrap = mk('div');
+    candWrap.style.cssText = 'display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:8px 0;';
+    candWrap.innerHTML = '<div style="width:100%; text-align:center; font-size:0.75rem; color:var(--muted);">候補（タップで設定）</div>';
+    candidates.forEach(([a,b]) => {
+      const btn = mk('button', 'btn');
+      btn.style.cssText = 'padding:6px 12px; font-size:0.85rem;';
+      btn.textContent = a+'×'+b+'='+(a*b);
+      btn.onclick = () => { g('reveal-a').value = a; g('reveal-b').value = b; };
+      candWrap.appendChild(btn);
+    });
+    box.appendChild(candWrap);
+  } else {
+    const warn = mk('div');
+    warn.style.cssText = 'text-align:center; font-size:0.78rem; color:var(--red); margin:8px 0;';
+    warn.textContent = '⚠️ '+decl.value+' は九九で作れない値なので、必ず嘘です（ダウトの方が確実）';
+    box.appendChild(warn);
+  }
+
+  const btn = mk('button', 'btn btn-orange');
+  btn.textContent = '👁 見破る！';
+  btn.style.width = '100%';
+  btn.onclick = () => {
+    const a = parseInt(g('reveal-a').value, 10);
+    const b = parseInt(g('reveal-b').value, 10);
+    if(isNaN(a) || isNaN(b)) { alert('2つの数字を選択してください'); return; }
+    if(!confirm(a+' と '+b+' で見破りますか？')) return;
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    if(isHost) handleAction(myId, 'reveal', {pair:[a,b]});
+    else fbSendToHost({type:'action', action:'reveal', data:{pair:[a,b]}});
+  };
+  box.appendChild(btn);
+
+  const back = mk('button', 'btn btn-ghost');
+  back.textContent = '← アクション選択へ戻る';
+  back.style.width = '100%';
+  back.onclick = renderActionArea;
+  box.appendChild(back);
+
+  area.appendChild(box);
+}
+
+function findCandidatePairs(value) {
+  const pairs = [];
+  for(let a=1;a<=9;a++) {
+    for(let b=a;b<=9;b++) {
+      if(a*b === value) pairs.push([a,b]);
+    }
+  }
+  return pairs;
+}
+
+// ============================================================
+// RESULT
+// ============================================================
+function showResult() {
+  show('result');
+  _resetRematchUI();
+  if(!gs) return;
+  const winnerP = gs.players.find(p => p.id === gs.winner);
+  g('result-emoji').textContent = winnerP ? (winnerP.id === myId ? '🎉' : '🏆') : '🤝';
+  g('result-title').textContent = winnerP ? '勝者: ' + winnerP.name : '引き分け';
+  g('result-sub').textContent = winnerP && winnerP.id === myId ? 'おめでとうございます！' : (winnerP ? 'おしい！' : '');
+
+  const list = g('result-roles'); list.innerHTML = '';
+  gs.players.forEach(p => {
+    const row = mk('div', 'player-row' + (p.dead?' dead':''));
+    const aliveLives = p.lives.filter(l => !l.lost).length;
+    row.innerHTML = `<span class="player-name">${p.id===gs.winner?'👑 ':''}${p.name}</span><span style="font-family:var(--mono); font-size:0.85rem; color:var(--muted);">ライフ ${aliveLives}/2 ${p.dead?'💀':''}</span>`;
+    list.appendChild(row);
+  });
+}
+
+// ============================================================
+// REMATCH (voting)
+// ============================================================
+let _rematchVoters = [];
+
+function _renderRematchPanel(voterIds, players) {
+  const st = g('rematch-status'), vl = g('rematch-voters');
+  if(!st || !vl) return;
+  const total = (players||[]).length;
+  const validIds = voterIds.filter(id => (players||[]).some(p => p.id === id));
+  st.textContent = `再戦希望: ${validIds.length} / ${total} 人`;
+  vl.innerHTML = '';
+  validIds.forEach(id => {
+    const p = (players||[]).find(pp => pp.id === id);
+    if(!p) return;
+    const t = document.createElement('span');
+    t.className = 'rematch-voter-tag';
+    t.textContent = '✅ ' + p.name;
+    vl.appendChild(t);
+  });
+}
+
+function _resetRematchUI() {
+  _rematchVoters = [];
+  const btn = g('btn-rematch');
+  if(btn) { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
+  _renderRematchPanel([], fs?.players || gs?.players || []);
+}
+
+function submitRematch() {
+  if(isSolo) { _actualRestart(); return; }
+  const btn = g('btn-rematch');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ 他のプレイヤーを待っています...'; }
+  if(isHost) {
+    _hostRematch(myId);
+  } else {
+    fbSendToHost({type:'rematch', id:myId, name:myName});
+  }
+}
+
+function _hostRematch(pid) {
+  if(!fs) return;
+  const player = fs.players.find(p => p.id === pid);
+  if(!player) return;
+  // 退出済みプレイヤーIDを除去
+  _rematchVoters = _rematchVoters.filter(id => fs.players.some(p => p.id === id));
+  if(_rematchVoters.includes(pid)) return;
+  _rematchVoters.push(pid);
+  fbBroadcast({type:'rematch_update', voterIds:_rematchVoters, players:fs.players.map(p=>({id:p.id,name:p.name}))});
+  _renderRematchPanel(_rematchVoters, fs.players);
+  if(_rematchVoters.length >= fs.players.length) {
+    fbBroadcast({type:'rematch_go'});
+    _actualRestart();
+  }
+}
+
+function _actualRestart() {
+  _rematchVoters = [];
+  const btn = g('btn-rematch');
+  if(btn) { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
+  if(isHost) {
+    fs.phase = 'waiting';
+    fs.players.forEach(p => { p.lives=[]; p.hand=[]; p.dead=false; p.public=[]; p.discarded=[]; });
+    fs.currentDecl = null; fs.minDecl = 0; fs.publicField = []; fs.discardPile = [];
+    fs.log = []; fs.winner = null;
+    bcast();
+    refreshWait(); show('waiting');
+    if(isSolo) {
+      setTimeout(() => startGame(), 300);
+    }
+  }
+}
+
+// 互換用エイリアス（既存呼び出し対策）
+function restartGame() { submitRematch(); }
+function handleRematch(senderPid) { _hostRematch(senderPid); }
+
+// ============================================================
+// SOLO (CPU) MODE
+// ============================================================
+function showSoloLobby() {
+  isSolo = true;
+  show('solo');
+  setSoloCount(2);
+}
+function setSoloCount(n) {
+  soloCount = n;
+  g('solo-c2').style.background = n===2?'var(--kk-orange)':'';
+  g('solo-c3').style.background = n===3?'var(--kk-orange)':'';
+}
+function startSoloGame() {
+  const name = g('solo-name').value.trim() || 'あなた';
+  myName = name; isSolo = true; isHost = true;
+  myId = genId();
+  const cpuNames = ['ボット太郎','ボット花子','AI次郎','機械郎'];
+  const players = [{id:myId, name:myName}];
+  for(let i=0;i<soloCount;i++) players.push({id:'cpu'+i, name:cpuNames[i]});
+  fs = initFs(players);
+  fbRoom = ''; // solo mode = no firebase
+  show('playing');
+  startGame();
+}
+
+// CPU AI
+let soloAITimer = null;
+function scheduleSoloAI() {
+  if(!isSolo || !fs || fs.phase !== 'playing') return;
+  const curP = fs.players[fs.cur];
+  if(!curP || curP.id === myId || curP.dead) return;
+  if(soloAITimer) clearTimeout(soloAITimer);
+  soloAITimer = setTimeout(() => {
+    runCpuTurn();
+  }, 1200);
+}
+function runCpuTurn() {
+  if(!fs || fs.phase !== 'playing') return;
+  const curP = fs.players[fs.cur];
+  if(!curP || curP.id === myId || curP.dead) return;
+
+  if(!fs.currentDecl) {
+    // 宣言フェーズ
+    const hand = curP.hand;
+    const hasUsotuki = hand.some(c => c.type === CARD_TYPE_USOTUKI);
+    const trueProduct = hasUsotuki ? null : hand[0].value * hand[1].value;
+    const minDecl = fs.minDecl;
+    // 宣言可能な九九値の候補（minDecl以上、81以下）
+    const allCandidates = [];
+    for(let a=1;a<=9;a++) for(let b=a;b<=9;b++) {
+      const p = a*b;
+      if(p >= minDecl && p <= 81) allCandidates.push(p);
+    }
+    let declVal;
+    if(hasUsotuki) {
+      // 嘘宣言（九九にあるかどうかは問わない、minDecl以上ならOK）
+      declVal = allCandidates.length > 0
+        ? allCandidates[Math.floor(Math.random()*allCandidates.length)]
+        : Math.min(minDecl + 1, 100); // 81超になる場合は仕方なく嘘で大きい数字
+    } else if(trueProduct >= minDecl && trueProduct <= 81) {
+      // 70%本当、30%嘘
+      if(Math.random() < 0.7) declVal = trueProduct;
+      else {
+        const lies = allCandidates.filter(v => v !== trueProduct);
+        declVal = lies.length > 0 ? lies[Math.floor(Math.random()*lies.length)] : trueProduct;
+      }
+    } else {
+      // 本当の積が minDecl 未満 → 必ず嘘宣言
+      declVal = allCandidates.length > 0
+        ? allCandidates[Math.floor(Math.random()*allCandidates.length)]
+        : Math.min(minDecl + 1, 100);
+    }
+    const isLie = hasUsotuki || declVal !== trueProduct;
+    handleDeclare(curP.id, declVal, isLie);
+    return;
+  }
+
+  // アクションフェーズ
+  const decl = fs.currentDecl;
+  const candidates = findCandidatePairs(decl.value);
+  const noPossible = candidates.length === 0;
+  const myAlive = curP.lives.filter(l=>!l.lost).length;
+
+  // 戦略1: 候補が存在しない値（九九で作れない数字）→ ほぼ確実にダウト
+  if(noPossible) {
+    handleAction(curP.id, 'doubt', {});
+    return;
+  }
+
+  // 戦略2: 宣言値が81のとき → 次に受け入れたら81しか宣言できなくなる → ダウトor見破るしかない
+  // 受け入れた場合、自分の手札の本当の積で81を超える宣言ができないので必ず嘘になる＝ハイリスク
+  if(decl.value >= 72) {
+    // 候補が1つしかない高い値はピンポイントで見破れる
+    if(candidates.length === 1 && Math.random() < 0.4) {
+      handleAction(curP.id, 'reveal', {pair:candidates[0]});
+      return;
+    }
+    // 高確率でダウト（受け入れても詰むため）
+    if(Math.random() < 0.7) {
+      handleAction(curP.id, 'doubt', {});
+      return;
+    }
+  }
+
+  // 戦略3: 候補が1個だけ → 見破りやすい
+  if(candidates.length === 1 && Math.random() < 0.15) {
+    handleAction(curP.id, 'reveal', {pair:candidates[0]});
+    return;
+  }
+
+  // 戦略4: 自分のライフが2でかつ宣言値が中程度以上 → たまにダウト
+  if(myAlive === 2 && decl.value >= 36 && Math.random() < 0.25) {
+    handleAction(curP.id, 'doubt', {});
+    return;
+  }
+
+  // 戦略5: ライフ1でも疑わしければダウト（残りライフが少ない時は慎重に）
+  if(myAlive === 1 && decl.value >= 56 && Math.random() < 0.2) {
+    handleAction(curP.id, 'doubt', {});
+    return;
+  }
+
+  // デフォルト: 受け入れる
+  const recvCards = decl.cards;
+  const discardIndices = [];
+  recvCards.forEach((c, i) => {
+    if(c.type === CARD_TYPE_USOTUKI) {
+      // ウソツキは捨てたい（持ってると次回必ず嘘になる）
+      if(Math.random() < 0.7) discardIndices.push(i);
+    } else if(c.value <= 2 && Math.random() < 0.5) {
+      // 小さい数字は捨ててもいい
+      discardIndices.push(i);
+    } else if(c.value >= 8 && fs.minDecl < 30 && Math.random() < 0.3) {
+      // 大きい数字は宣言値が低い時に捨てる戦略もあり
+      discardIndices.push(i);
+    }
+  });
+  handleAction(curP.id, 'accept', {discardIndices});
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  showReconnectOption();
+  // 初期画面はlobby
+});
+
+// ============================================================
+// SESSION SAVE / RESTORE
+// ============================================================
+const SESSION_KEY = 'pgSession_kk';
+function saveSession() {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      myId, myName, roomCode, fbRoom, isHost,
+      ts: Date.now()
+    }));
+  } catch(e) {}
+}
+function clearSession() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(Date.now() - s.ts > 3 * 60 * 60 * 1000) { clearSession(); return null; }
+    return s;
+  } catch(e) { return null; }
+}
+function showReconnectOption() {
+  const s = loadSession();
+  if(!s) return;
+  const btn = g('btn-reconnect');
+  if(!btn) return;
+  btn.style.display = '';
+  btn.textContent = `🔄 前のルームに戻る（🎲九九ダウト #${s.roomCode}）`;
+}
+async function reconnectToRoom() {
+  const s = loadSession();
+  if(!s) { setErr('セッションが見つかりません'); return; }
+  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
+  fbRoom = s.fbRoom; isHost = s.isHost;
+  setSt('再接続中...');
+  try {
+    const meta = await fbGet('meta');
+    if(!meta) {
+      clearSession();
+      setErr('ルームが見つかりません（終了済みの可能性があります）');
+      setSt(''); return;
+    }
+    fbListen();
+    if(isHost) {
+      const data = await fetch(`${fbUrl}/rooms/${fbRoom}.json`).then(r=>r.json()).catch(()=>null);
+      const savedGs = data?.broadcast?.msg?.s;
+      if(savedGs) {
+        gs = savedGs;
+        fs = JSON.parse(JSON.stringify(savedGs));
+        onGsUpdate(gs);
+      } else {
+        show('waiting');
+        const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
+        if(typeof refreshWait === 'function') refreshWait();
+      }
+    } else {
+      fbSendToHost({type:'join', name:myName, id:myId});
+      fbSendToHost({type:'reconnect', id:myId, name:myName});
+      setSt('接続しました！');
+      show('waiting');
+      const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
+      const bs = g('btn-start'); if(bs) bs.style.display = 'none';
+      let retries = 0;
+      const retry = setInterval(()=>{
+        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
+        fbSendToHost({type:'reconnect', id:myId, name:myName});
+        retries++;
+      }, 2000);
+    }
+    setErr(''); setSt('');
+    const br = g('btn-reconnect'); if(br) br.style.display = 'none';
+  } catch(e) {
+    setErr('再接続失敗: ' + (e.message||e));
+    setSt('');
+  }
+}
+function _hostReconnect(d, senderPid) {
+  if(!fs) return;
+  const rp = fs.players.find(p=>p.id===d.id);
+  if(fs.phase === 'waiting') {
+    if(!rp && fs.players.length < 4) {
+      fs.players.push({id:d.id, name:d.name, lives:[], hand:[], dead:false, public:[], discarded:[]});
+    }
+    bcast();
+  } else {
+    if(rp) {
+      bcast();
+      // 必要に応じてプライベート情報を再送
+      if(typeof _resendPrivate === 'function') _resendPrivate(d.id);
+    }
+  }
+}
+</script>
+</body>
+</html>

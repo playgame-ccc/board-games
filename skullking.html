@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🏴‍☠️ スカルキング</title>
+<style>
+:root {
+  --bg: #0a1420;
+  --surface: #14202e;
+  --surface2: #1d2c3e;
+  --surface3: #2a3d54;
+  --gold: #d4af37;
+  --gold-bright: #f0c850;
+  --gold-glow: rgba(212,175,55,0.4);
+  --sea: #3aa0d0;
+  --sea-glow: rgba(58,160,208,0.3);
+  --red: #d63243;
+  --red-glow: rgba(214,50,67,0.4);
+  --green: #2dff8a;
+  --amber: #ffb020;
+  --text: #e8e8f0;
+  --muted: #6a7a8c;
+  --mono: 'Courier New', monospace;
+
+  /* Card suit colors */
+  --yellow: #e6c200;
+  --purple: #9050c8;
+  --suit-green: #4caf50;
+  --black: #2a2a3a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background: radial-gradient(ellipse at top, rgba(212,175,55,0.06), transparent 60%),
+              radial-gradient(ellipse at bottom, rgba(58,160,208,0.05), transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+.screen { display: none; padding: 14px; max-width: 540px; margin: 0 auto; position: relative; z-index: 1; gap: 12px; }
+.screen.active { display: flex; flex-direction: column; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: 1px; margin: 0; }
+h1 { font-size: 1.8rem; text-align: center; margin: 18px 0 6px; }
+h2 { font-size: 1.3rem; text-align: center; margin: 14px 0 8px; color: var(--gold); }
+h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
+
+.title-main {
+  font-size: 2.2rem; text-align: center; letter-spacing: 6px;
+  color: var(--gold); text-shadow: 0 0 20px var(--gold-glow);
+  margin: 16px 0 4px;
+}
+.title-sub {
+  text-align: center; font-family: var(--mono);
+  font-size: 0.85rem; letter-spacing: 3px; color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* Inputs */
+.input {
+  width: 100%; padding: 12px 14px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--surface3); border-radius: 8px;
+  font-size: 1rem; outline: none; font-family: inherit;
+}
+.input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-glow); }
+.input.code-input {
+  font-family: var(--mono); letter-spacing: 8px;
+  font-size: 1.4rem; text-align: center;
+}
+
+/* Buttons */
+.btn {
+  width: 100%; padding: 13px;
+  border: none; border-radius: 8px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.btn-gold {
+  background: var(--gold); color: #1a1a1a;
+  box-shadow: 0 4px 16px var(--gold-glow);
+}
+.btn-gold:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(212,175,55,0.6); }
+
+.btn-sea {
+  background: var(--surface2); color: var(--sea);
+  border: 1px solid rgba(58,160,208,0.4);
+}
+.btn-sea:hover:not(:disabled) { border-color: var(--sea); box-shadow: 0 0 16px var(--sea-glow); }
+
+.btn-red {
+  background: var(--red); color: white;
+  box-shadow: 0 4px 16px var(--red-glow);
+}
+
+.btn-ghost {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--surface3); font-weight: 600;
+}
+.btn-ghost:hover:not(:disabled) { border-color: var(--muted); color: var(--text); }
+
+/* Row */
+.row { display: flex; gap: 8px; }
+.row .input { flex: 1; }
+.row .btn { width: auto; padding: 12px 18px; flex-shrink: 0; }
+
+.divider { height: 1px; background: linear-gradient(90deg, transparent, var(--surface3), transparent); margin: 4px 0; }
+
+/* Panel */
+.panel {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 10px; padding: 14px;
+}
+
+/* Status */
+.error { color: var(--red); font-size: 0.85rem; min-height: 18px; }
+.status-txt { color: var(--muted); font-size: 0.85rem; min-height: 18px; }
+
+/* Room code box */
+.code-box {
+  background: var(--surface); border: 1px solid rgba(212,175,55,0.4);
+  border-radius: 10px; padding: 18px; text-align: center;
+}
+.code-box .label {
+  font-family: var(--mono); font-size: 0.75rem;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.code-box .code {
+  font-family: var(--mono); font-size: 2.6rem; font-weight: 700;
+  letter-spacing: 10px; color: var(--gold);
+  text-shadow: 0 0 16px var(--gold-glow);
+}
+
+/* Player list */
+.player-list { display: flex; flex-direction: column; gap: 8px; }
+.player-item {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 8px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.92rem;
+}
+.player-item.is-me { border-color: rgba(58,160,208,0.5); }
+.player-item.is-host { border-color: rgba(212,175,55,0.5); }
+.player-item.is-turn { background: rgba(212,175,55,0.1); border-color: var(--gold); }
+.player-item.is-cpu { opacity: 0.85; }
+
+.p-info { flex: 1; }
+.p-name { font-weight: 700; }
+.p-sub { font-size: 0.75rem; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+.p-score { font-family: var(--mono); color: var(--gold); font-size: 1rem; font-weight: 700; }
+.p-bid {
+  display: inline-block; padding: 2px 8px;
+  background: var(--surface2); border-radius: 4px;
+  font-family: var(--mono); font-size: 0.85rem;
+}
+.p-bid.met { background: rgba(45,255,138,0.15); color: var(--green); }
+.p-bid.over { background: rgba(214,50,67,0.15); color: var(--red); }
+
+/* Count selector */
+.count-selector { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.count-btn {
+  width: 44px; height: 44px;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--surface3); border-radius: 8px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  font-family: inherit;
+}
+.count-btn.selected {
+  background: var(--gold); color: #1a1a1a;
+  border-color: var(--gold); box-shadow: 0 0 12px var(--gold-glow);
+}
+.count-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.count-label { text-align: center; margin-top: 10px; font-family: var(--mono); color: var(--sea); font-size: 0.9rem; }
+
+/* Cards */
+.card {
+  position: relative;
+  width: 60px; height: 88px;
+  border-radius: 8px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  padding: 6px 4px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 2px solid rgba(0,0,0,0.3);
+  flex-shrink: 0;
+}
+.card.large { width: 70px; height: 100px; }
+.card.small { width: 44px; height: 64px; font-size: 0.8rem; padding: 4px 2px; }
+.card-num { font-size: 1.4rem; line-height: 1; }
+.card.small .card-num { font-size: 1rem; }
+.card-suit { font-size: 1.1rem; line-height: 1; }
+.card.small .card-suit { font-size: 0.9rem; }
+
+.card.yellow { background: linear-gradient(180deg, #f0d000, #c8a800); color: #2a2a2a; }
+.card.purple { background: linear-gradient(180deg, #b070d8, #7a40a0); color: white; }
+.card.suit-green { background: linear-gradient(180deg, #5cd060, #3a9c40); color: white; }
+.card.black { background: linear-gradient(180deg, #404858, #1a1e2a); color: #f0c850; border-color: #f0c850; }
+.card.back {
+  background: repeating-linear-gradient(45deg, #2a3d54, #2a3d54 4px, #1a2b3e 4px, #1a2b3e 8px);
+  color: var(--gold);
+  font-size: 1.5rem;
+}
+
+/* Special cards */
+.card.sk { background: linear-gradient(180deg, #f0c850, #b8860b); color: #1a1a1a; border-color: #fff; }
+.card.pirate { background: linear-gradient(180deg, #b54040, #6a1818); color: #fff; }
+.card.mermaid { background: linear-gradient(180deg, #5ec8e8, #2080a8); color: #fff; }
+.card.escape { background: linear-gradient(180deg, #888888, #404040); color: #ddd; }
+.card.tigress { background: linear-gradient(180deg, #ff9800, #c66600); color: #fff; }
+.card.tigress.as-pirate { background: linear-gradient(180deg, #b54040, #c66600); }
+.card.tigress.as-escape { background: linear-gradient(180deg, #888888, #c66600); }
+
+.card-special-icon { font-size: 1.6rem; line-height: 1; }
+.card.small .card-special-icon { font-size: 1.2rem; }
+.card-special-name { font-size: 0.62rem; line-height: 1; letter-spacing: 0; font-weight: 700; }
+.card.small .card-special-name { font-size: 0.55rem; }
+
+.card.playable { cursor: pointer; }
+.card.playable:hover { transform: translateY(-6px); box-shadow: 0 6px 16px rgba(212,175,55,0.4); }
+.card.selected { transform: translateY(-10px); box-shadow: 0 8px 20px var(--gold-glow); }
+.card.disabled { opacity: 0.4; cursor: not-allowed; }
+.card.disabled:hover { transform: none; box-shadow: none; }
+
+/* Special card toggles */
+.special-toggle-list { display: flex; flex-direction: column; gap: 8px; }
+.special-toggle-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--surface3);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.special-toggle-item.on { border-color: var(--gold); background: rgba(212,175,55,0.08); }
+.special-toggle-item .st-icon { font-size: 1.4rem; }
+.special-toggle-item .st-info { flex: 1; }
+.special-toggle-item .st-name { font-weight: 700; font-size: 0.92rem; }
+.special-toggle-item .st-desc { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.special-toggle-item .st-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--surface3);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; color: var(--bg);
+}
+.special-toggle-item.on .st-check { background: var(--gold); border-color: var(--gold); color: #1a1a1a; }
+
+/* Modal */
+.modal-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 100;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-bg.active { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  padding: 22px;
+  max-width: 400px; width: 100%;
+  box-shadow: 0 0 40px var(--gold-glow);
+}
+.modal h3 { text-align: center; color: var(--gold); margin-bottom: 14px; }
+.modal-body { color: var(--text); font-size: 0.92rem; line-height: 1.6; margin-bottom: 14px; }
+.modal-buttons { display: flex; flex-direction: column; gap: 8px; }
+
+/* Hand area */
+.hand-area {
+  display: flex; gap: 6px;
+  padding: 10px;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 10px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  min-height: 110px;
+  align-items: center;
+}
+
+/* Trick table */
+.trick-table {
+  background: var(--surface);
+  border: 1px solid var(--surface3);
+  border-radius: 12px;
+  padding: 16px;
+  min-height: 140px;
+}
+.trick-cards { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.trick-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.trick-slot .slot-name { font-size: 0.75rem; color: var(--muted); font-family: var(--mono); }
+.trick-slot.winner { 
+  background: rgba(212,175,55,0.15); 
+  border-radius: 8px; 
+  padding: 4px;
+}
+
+/* Bid input */
+.bid-buttons { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.bid-btn {
+  min-width: 44px; height: 44px; padding: 0 12px;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--surface3); border-radius: 8px;
+  font-size: 1.1rem; font-weight: 700; cursor: pointer;
+  font-family: inherit;
+}
+.bid-btn.selected { background: var(--gold); color: #1a1a1a; border-color: var(--gold); }
+
+/* Info badges */
+.badge {
+  display: inline-block; padding: 4px 10px;
+  background: var(--surface2); border-radius: 6px;
+  font-family: var(--mono); font-size: 0.85rem;
+}
+.badge.trump { background: rgba(212,175,55,0.15); color: var(--gold); }
+.badge.lead { background: rgba(58,160,208,0.15); color: var(--sea); }
+.badge.round { background: rgba(214,50,67,0.15); color: var(--red); }
+
+.info-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 4px; }
+
+/* Log */
+.log {
+  max-height: 140px; overflow-y: auto;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--muted); line-height: 1.5;
+  background: var(--surface2); border-radius: 6px;
+  padding: 8px; margin-top: 6px;
+}
+.log-entry { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.log-entry:last-child { border-bottom: none; }
+
+/* Result */
+.result-hero {
+  text-align: center; padding: 28px 16px;
+  background: var(--surface); border: 1px solid var(--gold);
+  border-radius: 14px;
+  box-shadow: 0 0 40px var(--gold-glow);
+}
+.result-emoji { font-size: 4rem; margin-bottom: 10px; }
+.result-title { font-size: 1.6rem; font-weight: 700; color: var(--gold); letter-spacing: 2px; }
+.result-sub { font-size: 0.95rem; color: var(--muted); margin-top: 6px; }
+
+.rank-list { display: flex; flex-direction: column; gap: 6px; }
+.rank-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 8px;
+}
+.rank-item.first { border-color: var(--gold); background: rgba(212,175,55,0.08); }
+.rank-num { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; min-width: 32px; color: var(--gold); }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease; }
+
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.pulse { animation: pulse 1.4s ease-in-out infinite; }
+
+/* Rematch */
+.rematch-voters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rematch-voter-tag {
+  background: rgba(45,255,138,0.15); color: var(--green);
+  padding: 4px 10px; border-radius: 12px;
+  font-size: 0.8rem; font-family: var(--mono);
+}
+
+/* Game header */
+.game-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; background: var(--surface);
+  border: 1px solid var(--surface3); border-radius: 8px;
+}
+
+/* Scoreboard */
+.scoreboard {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 8px; padding: 8px;
+}
+.score-row {
+  display: grid;
+  grid-template-columns: 1fr 60px 50px 60px;
+  gap: 6px;
+  padding: 6px 4px;
+  align-items: center;
+  font-size: 0.88rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.score-row.header { color: var(--muted); font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; }
+.score-row.me { background: rgba(58,160,208,0.08); border-radius: 4px; }
+.score-cell { font-family: var(--mono); text-align: center; }
+.score-cell.name { text-align: left; font-family: inherit; font-weight: 600; }
+.score-cell.total { color: var(--gold); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ LOBBY ============================================================ -->
+<div id="screen-lobby" class="screen active">
+  <h1 class="title-main">🏴‍☠️ スカルキング</h1>
+  <div class="title-sub">SKULL KING - SIMPLE</div>
+  <div class="panel">
+    <p style="font-size:0.85rem; color:var(--muted); line-height:1.7;">
+      <strong style="color:var(--gold);">マストフォロー</strong>の<strong style="color:var(--sea);">トリックテイキング</strong>。<br>
+      各ラウンドの最初に「自分が取るトリック数」を宣言。ピタリ賞で得点、外せば減点。最後に最高得点のプレイヤーが勝者。
+    </p>
+  </div>
+  <input class="input" id="in-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12">
+
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">ラウンド数（部屋を作る場合）</div>
+    <div class="count-selector">
+      <button class="count-btn round-btn selected" data-r="5" onclick="ttSetRounds(5)">5</button>
+      <button class="count-btn round-btn" data-r="7" onclick="ttSetRounds(7)">7</button>
+      <button class="count-btn round-btn" data-r="10" onclick="ttSetRounds(10)">10</button>
+    </div>
+  </div>
+
+  <button class="btn btn-gold" onclick="ttCreateRoom()">🏠 部屋を作る（ホスト）</button>
+  <div class="divider"></div>
+  <div class="row">
+    <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4">
+    <button class="btn btn-sea" onclick="ttJoinRoom()">参加</button>
+  </div>
+  <button class="btn btn-red" onclick="ttShowSoloLobby()">🤖 ひとりで遊ぶ（CPU対戦）</button>
+  <div id="lobby-status" class="status-txt"></div>
+  <div id="lobby-error" class="error"></div>
+  <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--gold); color:var(--gold);">🔄 前のルームに戻る</button>
+</div>
+
+<!-- ============================================================ SOLO SETUP ============================================================ -->
+<div id="screen-solo" class="screen">
+  <h2>CPU対戦設定</h2>
+  <input class="input" id="solo-name" type="text" placeholder="あなたの名前" maxlength="12">
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">プレイ人数（自分を含む）</div>
+    <div class="count-selector">
+      <button class="count-btn solo-count-btn selected" data-n="3" onclick="ttSetSoloCount(3)">3</button>
+      <button class="count-btn solo-count-btn" data-n="4" onclick="ttSetSoloCount(4)">4</button>
+      <button class="count-btn solo-count-btn" data-n="5" onclick="ttSetSoloCount(5)">5</button>
+      <button class="count-btn solo-count-btn" data-n="6" onclick="ttSetSoloCount(6)">6</button>
+    </div>
+    <div class="count-label" id="solo-count-label">CPU: 2人 / あなた: 1人</div>
+  </div>
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">ラウンド数</div>
+    <div class="count-selector">
+      <button class="count-btn solo-round-btn selected" data-r="5" onclick="ttSetSoloRounds(5)">5</button>
+      <button class="count-btn solo-round-btn" data-r="7" onclick="ttSetSoloRounds(7)">7</button>
+      <button class="count-btn solo-round-btn" data-r="10" onclick="ttSetSoloRounds(10)">10</button>
+    </div>
+  </div>
+  <details class="panel">
+    <summary style="cursor:pointer; color:var(--gold); font-size:0.88rem;">⚙️ 特殊カード設定</summary>
+    <div id="solo-specials-body" style="margin-top:10px;"></div>
+    <div id="solo-specials-info" style="margin-top:8px; padding:6px; background:var(--surface2); border-radius:6px; font-size:0.75rem; color:var(--muted); text-align:center;"></div>
+  </details>
+  <div id="solo-error" class="error"></div>
+  <button class="btn btn-gold" onclick="ttStartSoloGame()">▶ ゲーム開始</button>
+  <button class="btn btn-ghost" onclick="show('lobby')">← 戻る</button>
+</div>
+
+<!-- ============================================================ WAITING ============================================================ -->
+<div id="screen-waiting" class="screen">
+  <h2>待機ロビー</h2>
+  <div class="code-box">
+    <div class="label">ルームコード</div>
+    <div class="code" id="disp-code">----</div>
+  </div>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h3>参加者</h3>
+    <span id="p-count" style="font-family:var(--mono); color:var(--muted); font-size:0.85rem;">1人</span>
+  </div>
+  <div id="wait-list" class="player-list"></div>
+  <div id="wait-rounds-info" style="text-align:center; color:var(--gold); font-family:var(--mono); font-size:0.9rem;"></div>
+
+  <details class="panel" id="wait-specials-panel">
+    <summary style="cursor:pointer; color:var(--gold); font-size:0.88rem;">⚙️ 特殊カード設定（ホスト）</summary>
+    <div id="wait-specials-body" style="margin-top:10px;"></div>
+    <div id="wait-specials-info" style="margin-top:8px; padding:6px; background:var(--surface2); border-radius:6px; font-size:0.75rem; color:var(--muted); text-align:center;"></div>
+  </details>
+
+  <div id="wait-status" class="status-txt"></div>
+  <button id="btn-start" class="btn btn-gold" onclick="ttStartGame()" disabled>▶ ゲームを開始する</button>
+  <button class="btn btn-ghost" onclick="ttLeaveRoom()">← 退出</button>
+</div>
+
+<!-- ============================================================ BID PHASE ============================================================ -->
+<div id="screen-bid" class="screen">
+  <div class="game-header">
+    <div class="badge round" id="bid-round-info">R 1/5</div>
+    <div class="badge trump">切り札: 🏴‍☠️ 黒</div>
+    <div class="badge" id="bid-mybid-info">未宣言</div>
+  </div>
+
+  <h2 style="margin:8px 0;">🎯 宣言フェーズ</h2>
+  <div style="text-align:center; color:var(--muted); font-size:0.88rem;">
+    今ラウンドで取るトリック数を予想して宣言してください
+  </div>
+
+  <div class="panel">
+    <h3 style="text-align:center; margin-bottom:8px;">あなたの手札</h3>
+    <div id="bid-my-hand" class="hand-area" style="justify-content:center;"></div>
+  </div>
+
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:10px; color:var(--muted); font-size:0.85rem;">宣言する数（0〜手札枚数）</div>
+    <div id="bid-buttons" class="bid-buttons"></div>
+    <button id="btn-confirm-bid" class="btn btn-gold" style="margin-top:12px;" onclick="ttConfirmBid()" disabled>宣言を確定する</button>
+  </div>
+
+  <div class="panel">
+    <h3>📋 宣言状況</h3>
+    <div id="bid-status-list" class="player-list"></div>
+  </div>
+
+  <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="ttLeaveGame()">← 退出</button>
+</div>
+
+<!-- ============================================================ PLAY PHASE ============================================================ -->
+<div id="screen-play" class="screen">
+  <div class="game-header">
+    <div class="badge round" id="play-round-info">R 1/5</div>
+    <div class="badge" id="play-trick-info">T 1/1</div>
+    <div class="badge trump">🏴‍☠️ 切り札</div>
+  </div>
+
+  <div class="scoreboard" id="play-scoreboard"></div>
+
+  <div class="panel">
+    <div id="play-turn-info" style="text-align:center; font-size:0.9rem; margin-bottom:8px; color:var(--gold);"></div>
+    <div class="trick-table">
+      <div id="play-trick-area" class="trick-cards"></div>
+    </div>
+    <div id="play-lead-info" style="text-align:center; font-size:0.8rem; color:var(--muted); margin-top:6px;"></div>
+  </div>
+
+  <div class="panel">
+    <h3 style="text-align:center;">あなたの手札</h3>
+    <div id="play-my-hand" class="hand-area" style="justify-content:center;"></div>
+    <div id="play-action-hint" style="text-align:center; font-size:0.85rem; color:var(--sea); margin-top:8px; min-height:18px;"></div>
+  </div>
+
+  <details class="panel">
+    <summary style="cursor:pointer; color:var(--gold); font-size:0.85rem;">📋 ゲームログ</summary>
+    <div id="play-log" class="log"></div>
+  </details>
+
+  <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="ttLeaveGame()">← 退出</button>
+</div>
+
+<!-- ============================================================ ROUND END ============================================================ -->
+<div id="screen-roundend" class="screen">
+  <h2 id="roundend-title">ラウンド終了</h2>
+
+  <div class="panel">
+    <h3>このラウンドの結果</h3>
+    <div class="scoreboard" id="roundend-scoreboard"></div>
+  </div>
+
+  <div id="roundend-next-info" style="text-align:center; color:var(--muted); font-size:0.85rem;"></div>
+
+  <button id="btn-next-round" class="btn btn-gold" onclick="ttNextRound()">▶ 次のラウンドへ</button>
+  <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="ttLeaveGame()">← 退出</button>
+</div>
+
+<!-- ============================================================ RESULT ============================================================ -->
+<div id="screen-result" class="screen">
+  <div class="result-hero">
+    <div class="result-emoji" id="result-emoji">🏆</div>
+    <div class="result-title" id="result-title">ゲーム終了</div>
+    <div class="result-sub" id="result-sub"></div>
+  </div>
+
+  <div class="panel">
+    <h3>最終順位</h3>
+    <div class="rank-list" id="result-rank-list"></div>
+  </div>
+
+  <div class="panel">
+    <h3>📋 ゲームログ</h3>
+    <div class="log" id="result-log" style="max-height:200px;"></div>
+  </div>
+
+  <div class="panel" id="result-rematch-panel" style="display:none;">
+    <div id="result-rematch-status" style="text-align:center; color:var(--sea); font-family:var(--mono); font-size:0.88rem;"></div>
+    <div id="result-rematch-voters" class="rematch-voters"></div>
+  </div>
+
+  <button id="btn-rematch" class="btn btn-gold" onclick="ttRematch()">🔄 もう一度遊ぶ</button>
+  <button class="btn btn-ghost" onclick="ttLeaveGame()">← ロビーへ</button>
+</div>
+
+<!-- ============================================================ TIGRESS MODAL ============================================================ -->
+<div id="modal-tigress" class="modal-bg">
+  <div class="modal">
+    <h3>🐯 ティグリスを選択</h3>
+    <div class="modal-body">
+      ティグリスを「海賊」と「逃亡」のどちらとして使いますか？
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-red" onclick="ttSubmitTigress('pirate')">🗡️ 海賊として使う</button>
+      <button class="btn btn-ghost" onclick="ttSubmitTigress('escape')">🏳️ 逃亡として使う</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const FB_URL = 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+let fbRoom = '';
+let fbListener = null;
+let fbLastSeen = {};
+
+async function fbPut(sub, data){
+  if(!fbRoom) return;
+  try {
+    await fetch(`${FB_URL}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)});
+  } catch(e){ console.warn('fbPut error', e); }
+}
+async function fbGet(sub){
+  if(!fbRoom) return null;
+  try {
+    const r = await fetch(`${FB_URL}/rooms/${fbRoom}/${sub}.json`);
+    return await r.json();
+  } catch(e){ return null; }
+}
+async function fbDel(sub){
+  if(!fbRoom) return;
+  try { await fetch(`${FB_URL}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){}
+}
+function fbBroadcast(msg){
+  if(!fbRoom) return;
+  const k = 'b_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  fbPut('broadcast/' + k, {...msg, ts:Date.now()});
+}
+function fbSendTo(pid, msg){
+  if(!fbRoom) return;
+  const k = 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  fbPut(`private/${pid}/${k}`, {...msg, ts:Date.now()});
+}
+function fbSendToHost(msg){
+  if(!fbRoom) return;
+  const k = 'h_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  fbPut(`action/${k}`, {...msg, sender:myId, ts:Date.now()});
+}
+function fbListen(){
+  if(fbListener) clearInterval(fbListener);
+  fbListener = setInterval(fbPoll, 1100);
+  fbPoll();
+}
+async function fbPoll(){
+  if(!fbRoom) return;
+  const b = await fbGet('broadcast') || {};
+  Object.entries(b).forEach(([k,v])=>{
+    if(!v||fbLastSeen[k]) return; fbLastSeen[k]=true;
+    onMsg(v, v.sender);
+  });
+  const p = await fbGet(`private/${myId}`) || {};
+  Object.entries(p).forEach(([k,v])=>{
+    if(!v||fbLastSeen['p_'+k]) return; fbLastSeen['p_'+k]=true;
+    onMsg(v, null);
+  });
+  if(isHost){
+    const a = await fbGet('action') || {};
+    Object.entries(a).forEach(([k,v])=>{
+      if(!v||fbLastSeen['a_'+k]) return; fbLastSeen['a_'+k]=true;
+      onMsg(v, v.sender);
+    });
+  }
+}
+function fbClose(){
+  if(fbListener) clearInterval(fbListener);
+  fbListener = null; fbRoom = ''; fbLastSeen = {};
+}
+async function checkFbConfig(){
+  try {
+    const r = await fetch(`${FB_URL}/.json?shallow=true`);
+    return r.ok;
+  } catch(e){ return false; }
+}
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const TT_SUITS = [
+  {key:'yellow',    label:'黄', icon:'⚓', color:'yellow'},
+  {key:'purple',    label:'紫', icon:'🦜', color:'purple'},
+  {key:'green',     label:'緑', icon:'🗺️', color:'suit-green'},
+  {key:'black',     label:'黒', icon:'🏴‍☠️', color:'black'}, // trump
+];
+const TT_TRUMP = 'black';
+const TT_CARDS_PER_SUIT = 14;
+
+// 特殊カード定義
+const TT_SPECIALS = [
+  {key:'sk',      name:'スカルキング', icon:'👑',     count:1, color:'sk',      desc:'最強。海賊に勝つ。マーメイドに負ける'},
+  {key:'pirate',  name:'海賊',         icon:'🗡️',    count:5, color:'pirate',  desc:'通常カードに勝つ。複数なら先出しが勝つ'},
+  {key:'mermaid', name:'マーメイド',   icon:'🧜‍♀️', count:2, color:'mermaid', desc:'海賊・通常に勝つ。SKを倒すと+50点'},
+  {key:'escape',  name:'逃亡',         icon:'🏳️',     count:5, color:'escape',  desc:'必ず負ける。手札処理用'},
+  {key:'tigress', name:'ティグリス',   icon:'🐯',     count:1, color:'tigress', desc:'プレイ時に海賊か逃亡を選ぶ'},
+];
+
+// 特殊カード強さランク（カード単体の強さ。実際の勝者判定は ttResolveTrick で循環考慮）
+const SPECIAL_RANK = { sk: 1000, mermaid: 500, pirate: 400, normal_trump: 300, normal_lead: 200, escape: -1 };
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = null;
+let myName = '';
+let isHost = false;
+let isSolo = false;
+let roomCode = '';
+let ttSelectedRounds = 5;   // lobby selection
+let ttSoloCount = 3;
+let ttSoloRounds = 5;
+let ttSelectedSpecials = {sk:false, pirate:false, mermaid:false, escape:false, tigress:false}; // for room create
+let ttSoloSpecials = {sk:false, pirate:false, mermaid:false, escape:false, tigress:false};      // for solo
+let ttFs = null;           // full state (host only)
+let ttGs = null;           // public state
+let ttMyCards = [];        // private hand
+let ttMyBid = null;        // pending bid before confirmed
+let ttPendingTigressCardId = null; // when user clicks tigress, show modal
+let ttAiTimer = null;
+let ttRematchVoters = [];
+
+function genId(){ return 'p_' + Math.random().toString(36).substr(2,9) + '_' + Date.now().toString(36); }
+
+// ============================================================
+// HELPERS
+// ============================================================
+function g(id){ return document.getElementById(id); }
+function mk(tag, cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function show(scr){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-' + scr);
+  if(el) el.classList.add('active');
+}
+function setErr(msg){ const el=g('lobby-error'); if(el) el.textContent=msg||''; }
+function setSt(msg){ const el=g('lobby-status'); if(el) el.textContent=msg||''; }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function suitInfo(k){ return TT_SUITS.find(s=>s.key===k); }
+function specialInfo(k){ return TT_SPECIALS.find(s=>s.key===k); }
+
+// Card object: normal = {id, suit, num, kind:'normal'}
+//               special = {id, kind:'sk'|'pirate'|'mermaid'|'escape'|'tigress', special:true}
+function makeDeck(specials){
+  const deck = [];
+  TT_SUITS.forEach(s=>{
+    for(let n=1; n<=TT_CARDS_PER_SUIT; n++){
+      deck.push({id:`${s.key}_${n}`, suit:s.key, num:n, kind:'normal'});
+    }
+  });
+  // 特殊カードを追加
+  if(specials){
+    TT_SPECIALS.forEach(sp=>{
+      if(!specials[sp.key]) return;
+      for(let i=0; i<sp.count; i++){
+        deck.push({id:`${sp.key}_${i+1}`, kind:sp.key, special:true});
+      }
+    });
+  }
+  return deck;
+}
+
+function cardEl(card, opts={}){
+  let cls;
+  let inner;
+  if(card.kind === 'normal'){
+    const s = suitInfo(card.suit);
+    cls = 'card ' + s.color;
+    inner = `<div class="card-num">${card.num}</div><div class="card-suit">${s.icon}</div>`;
+  } else {
+    const sp = specialInfo(card.kind);
+    cls = 'card ' + sp.color;
+    // ティグリスがプレイ時に変身している場合は色を変える
+    if(card.kind === 'tigress' && card.mode){
+      cls += ' as-' + card.mode;
+    }
+    let displayLabel = sp.name;
+    let displayIcon = sp.icon;
+    if(card.kind === 'tigress' && card.mode){
+      const md = specialInfo(card.mode);
+      displayLabel = sp.name + '→' + md.name;
+      displayIcon = sp.icon + md.icon;
+    }
+    inner = `<div class="card-special-icon">${displayIcon}</div><div class="card-special-name">${displayLabel}</div>`;
+  }
+  if(opts.size) cls += ' ' + opts.size;
+  if(opts.extra) cls += ' ' + opts.extra;
+  const div = mk('div', cls);
+  div.innerHTML = inner;
+  if(opts.onClick) div.onclick = opts.onClick;
+  return div;
+}
+
+// Lobby select
+function ttSetRounds(r){
+  ttSelectedRounds = r;
+  document.querySelectorAll('.round-btn').forEach(b=>{
+    b.classList.toggle('selected', parseInt(b.dataset.r)===r);
+  });
+}
+function ttSetSoloCount(n){
+  ttSoloCount = n;
+  document.querySelectorAll('.solo-count-btn').forEach(b=>{
+    b.classList.toggle('selected', parseInt(b.dataset.n)===n);
+  });
+  g('solo-count-label').textContent = `CPU: ${n-1}人 / あなた: 1人`;
+}
+function ttSetSoloRounds(r){
+  ttSoloRounds = r;
+  document.querySelectorAll('.solo-round-btn').forEach(b=>{
+    b.classList.toggle('selected', parseInt(b.dataset.r)===r);
+  });
+}
+function ttShowSoloLobby(){
+  ttRenderSpecialsPanel('solo-specials-body', 'solo-specials-info', ttSoloSpecials, true);
+  show('solo');
+}
+
+// 特殊カード切り替え用
+function ttToggleSpecial(target, key){
+  if(target === 'lobby'){
+    ttSelectedSpecials[key] = !ttSelectedSpecials[key];
+    ttRenderSpecialsPanel('wait-specials-body', 'wait-specials-info', ttSelectedSpecials, true);
+    // ホストが部屋を作った後ならゲスト全員に同期する
+    if(ttFs && ttFs.phase === 'waiting' && isHost){
+      ttFs.specials = {...ttSelectedSpecials};
+      ttBcast();
+    }
+  } else if(target === 'solo'){
+    ttSoloSpecials[key] = !ttSoloSpecials[key];
+    ttRenderSpecialsPanel('solo-specials-body', 'solo-specials-info', ttSoloSpecials, true);
+  }
+}
+
+// 特殊カードパネルを描画
+function ttRenderSpecialsPanel(bodyId, infoId, specials, editable){
+  const body = g(bodyId);
+  const info = g(infoId);
+  if(!body) return;
+  body.innerHTML = '';
+  const list = mk('div', 'special-toggle-list');
+  let totalSpecial = 0;
+  TT_SPECIALS.forEach(sp=>{
+    const on = !!specials[sp.key];
+    if(on) totalSpecial += sp.count;
+    const item = mk('div', 'special-toggle-item' + (on?' on':''));
+    item.innerHTML = `
+      <div class="st-icon">${sp.icon}</div>
+      <div class="st-info">
+        <div class="st-name">${sp.name} ×${sp.count}</div>
+        <div class="st-desc">${sp.desc}</div>
+      </div>
+      <div class="st-check">${on?'✓':''}</div>
+    `;
+    if(editable){
+      const target = bodyId === 'solo-specials-body' ? 'solo' : 'lobby';
+      item.onclick = ()=> ttToggleSpecial(target, sp.key);
+    }
+    list.appendChild(item);
+  });
+  body.appendChild(list);
+  if(info){
+    const total = 56 + totalSpecial;
+    info.textContent = `通常56枚 + 特殊${totalSpecial}枚 = 合計 ${total}枚`;
+  }
+}
+
+// ============================================================
+// ROOM
+// ============================================================
+async function ttCreateRoom(){
+  if(!(await checkFbConfig())){ setErr('接続失敗（ネットワークまたはFirebase設定を確認）'); return; }
+  const name = g('in-name').value.trim();
+  if(!name){ setErr('名前を入力してください'); return; }
+  myName = name; isHost = true; isSolo = false;
+  const code = Array.from({length:4}, ()=>Math.floor(Math.random()*10)).join('');
+  roomCode = code; fbRoom = 'TT-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'skullking', rounds:ttSelectedRounds, ts:Date.now()});
+    ttFs = {
+      phase:'waiting',
+      players:[{id:myId, name:myName, isHost:true, isCpu:false}],
+      totalRounds: ttSelectedRounds,
+      round: 1,
+      specials: {...ttSelectedSpecials},
+      log: ['🏴‍☠️ 部屋を作成しました'],
+    };
+    ttBcast();
+    fbListen();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    show('waiting');
+    ttRenderWaiting();
+    saveSession();
+  } catch(e){ setErr('エラー: ' + e.message); }
+}
+
+async function ttJoinRoom(){
+  if(!(await checkFbConfig())){ setErr('接続失敗'); return; }
+  const name = g('in-name').value.trim();
+  if(!name){ setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)){ setErr('4桁の数字を入力'); return; }
+  myName = name; isHost = false; isSolo = false; roomCode = code;
+  fbRoom = 'TT-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta){ setErr('ルームが見つかりません'); return; }
+    if(meta.game !== 'skullking'){ setErr('ゲームの種類が違います'); return; }
+    fbListen();
+    fbSendToHost({type:'tt_join', name:myName, id:myId});
+    setErr(''); setSt('接続しました');
+    show('waiting');
+    g('disp-code').textContent = code;
+    g('btn-start').style.display = 'none';
+    saveSession();
+    // Retry join
+    let retries = 0;
+    const retryJoin = setInterval(()=>{
+      if(!fbRoom || retries>=5) { clearInterval(retryJoin); return; }
+      if(ttGs?.players?.find(p=>p.id===myId)) { clearInterval(retryJoin); return; }
+      fbSendToHost({type:'tt_join', name:myName, id:myId});
+      retries++;
+    }, 2000);
+  } catch(e){ setErr('参加失敗'); }
+}
+
+function ttLeaveRoom(){ try { clearSession(); } catch(e) {} fbClose(); ttReset(); show('lobby'); }
+function ttLeaveGame(){
+  if(ttAiTimer){ clearTimeout(ttAiTimer); ttAiTimer=null; }
+  try { clearSession(); } catch(e) {}
+  fbClose(); ttReset(); show('lobby');
+}
+function ttReset(){
+  ttFs = null; ttGs = null; ttMyCards = []; ttMyBid = null;
+  isSolo = false; isHost = false; myId = null;
+  ttRematchVoters = [];
+  fbRoom = ''; fbLastSeen = {};
+}
+
+// ============================================================
+// SOLO
+// ============================================================
+function ttStartSoloGame(){
+  const name = g('solo-name').value.trim();
+  if(!name){ g('solo-error').textContent='名前を入力してください'; return; }
+  g('solo-error').textContent = '';
+  myName = name; myId = 'human'; isHost = true; isSolo = true;
+  const cpuNames = ['CPU-A','CPU-B','CPU-C','CPU-D','CPU-E'];
+  ttFs = {
+    phase:'waiting',
+    players:[
+      {id:'human', name:myName, isHost:true, isCpu:false},
+      ...Array.from({length:ttSoloCount-1}, (_,i)=>({id:'cpu-'+i, name:cpuNames[i], isHost:false, isCpu:true}))
+    ],
+    totalRounds: ttSoloRounds,
+    round: 1,
+    specials: {...ttSoloSpecials},
+    log: ['🏴‍☠️ CPU対戦を開始'],
+  };
+  ttStartGameInternal();
+}
+
+// ============================================================
+// BROADCAST
+// ============================================================
+function ttBcast(){
+  if(!ttFs) return;
+  ttGs = ttPub(ttFs);
+  if(isSolo){ ttOnGsUpdate(); return; }
+  fbBroadcast({type:'tt_gs', s:ttGs});
+}
+
+function ttPub(f){
+  return {
+    phase: f.phase,
+    players: f.players.map(p=>({
+      id:p.id, name:p.name, isHost:p.isHost, isCpu:p.isCpu,
+      handCount: p.hand ? p.hand.length : 0,
+      bid: p.bid !== undefined ? p.bid : null,
+      bidConfirmed: p.bidConfirmed || false,
+      tricks: p.tricks || 0,
+      score: p.score || 0,
+      bonus: p.bonus || 0,
+      baseBonus: p.baseBonus || 0,
+      specialBonus: p.specialBonus || 0,
+      bonusNotes: p.bonusNotes || [],
+    })),
+    totalRounds: f.totalRounds,
+    round: f.round,
+    trick: f.trick || 1,
+    tricksThisRound: f.tricksThisRound || 0,
+    leadIdx: f.leadIdx,
+    curIdx: f.curIdx,
+    leadSuit: f.leadSuit,
+    trickCards: f.trickCards || [],
+    lastTrickWinnerId: f.lastTrickWinnerId,
+    specials: f.specials || {},
+    log: (f.log || []).slice(-40),
+    winnerId: f.winnerId,
+  };
+}
+
+// ============================================================
+// START GAME (HOST)
+// ============================================================
+function ttStartGame(){
+  if(!ttFs || ttFs.phase !== 'waiting') return;
+  if(ttFs.players.length < 3){ alert('3人以上必要です'); return; }
+  ttStartGameInternal();
+}
+
+function ttStartGameInternal(){
+  // Reset scores
+  ttFs.players.forEach(p=>{ p.score = 0; });
+  ttFs.round = 1;
+  ttStartRound();
+}
+
+function ttStartRound(){
+  const n = ttFs.players.length;
+  const deck = shuffle(makeDeck(ttFs.specials));
+  // 山札不足を防ぐため、配布枚数を制限
+  const maxPerPlayer = Math.floor(deck.length / n);
+  const cardsPerPlayer = Math.min(ttFs.round, maxPerPlayer);
+
+  // Deal cards
+  ttFs.players.forEach((p, i)=>{
+    p.hand = deck.slice(i*cardsPerPlayer, (i+1)*cardsPerPlayer);
+    p.bid = null;
+    p.bidConfirmed = false;
+    p.tricks = 0;
+    p.bonus = 0;
+  });
+
+  // Round 1 leader is host, subsequent rounds rotate
+  if(ttFs.round === 1){
+    ttFs.leadIdx = 0;
+  } else {
+    ttFs.leadIdx = (ttFs.leadIdx + 1) % n;
+  }
+  ttFs.curIdx = ttFs.leadIdx;
+  ttFs.phase = 'bid';
+  ttFs.trick = 1;
+  ttFs.tricksThisRound = cardsPerPlayer;
+  ttFs.leadSuit = null;
+  ttFs.trickCards = [];
+  ttFs.lastTrickWinnerId = null;
+
+  ttFs.log.push(`━━ ラウンド ${ttFs.round}/${ttFs.totalRounds}（${cardsPerPlayer}枚配布） ━━`);
+
+  // Send private hands
+  ttFs.players.forEach(p=>{
+    if(!p.isCpu && !isSolo){
+      fbSendTo(p.id, {type:'tt_private', hand:p.hand});
+    } else if(p.id === myId){
+      ttMyCards = p.hand.slice();
+      ttMyBid = null;
+    }
+  });
+
+  ttBcast();
+
+  // CPU auto-bid
+  if(isHost){
+    ttScheduleCpuBids();
+  }
+}
+
+// ============================================================
+// BID PHASE
+// ============================================================
+function ttScheduleCpuBids(){
+  if(!ttFs || ttFs.phase !== 'bid') return;
+  ttFs.players.forEach((p, idx)=>{
+    if(p.isCpu && !p.bidConfirmed){
+      setTimeout(()=>{
+        if(!ttFs || ttFs.phase !== 'bid') return;
+        if(p.bidConfirmed) return;
+        const bid = ttCpuBid(p);
+        p.bid = bid;
+        p.bidConfirmed = true;
+        ttFs.log.push(`💭 ${p.name} が ${bid}トリック宣言`);
+        ttBcast();
+        ttCheckBidsAllDone();
+      }, 800 + idx*400);
+    }
+  });
+}
+
+function ttCpuBid(p){
+  // 強そうなカードをカウント
+  const n = p.hand.length;
+  let est = 0;
+  p.hand.forEach(c=>{
+    if(c.kind === 'normal'){
+      if(c.suit === TT_TRUMP){
+        if(c.num >= 10) est += 0.9;
+        else if(c.num >= 5) est += 0.5;
+        else est += 0.2;
+      } else {
+        if(c.num >= 12) est += 0.5;
+        else if(c.num >= 9) est += 0.3;
+      }
+    } else if(c.kind === 'sk'){
+      est += 1.0;
+    } else if(c.kind === 'mermaid'){
+      est += 0.8;
+    } else if(c.kind === 'pirate'){
+      est += 0.7;
+    } else if(c.kind === 'tigress'){
+      est += 0.5;
+    }
+    // escape は est を増やさない
+  });
+  // ランダム要素
+  est += (Math.random() - 0.5) * 0.6;
+  let bid = Math.round(est);
+  if(bid < 0) bid = 0;
+  if(bid > n) bid = n;
+  return bid;
+}
+
+function ttHostBidSubmit(senderId, bid){
+  if(!ttFs || ttFs.phase !== 'bid') return;
+  const p = ttFs.players.find(x=>x.id===senderId);
+  if(!p || p.bidConfirmed) return;
+  const n = p.hand.length;
+  if(typeof bid !== 'number' || bid < 0 || bid > n) return;
+  p.bid = bid;
+  p.bidConfirmed = true;
+  ttFs.log.push(`💭 ${p.name} が ${bid}トリック宣言`);
+  ttBcast();
+  ttCheckBidsAllDone();
+}
+
+function ttCheckBidsAllDone(){
+  if(!ttFs) return;
+  if(ttFs.players.every(p=>p.bidConfirmed)){
+    ttFs.phase = 'play';
+    ttFs.log.push(`━ 全員宣言完了 → プレイ開始 ━`);
+    ttBcast();
+    if(isHost) ttScheduleCpuPlay();
+  }
+}
+
+// Client-side: send bid
+function ttConfirmBid(){
+  if(ttMyBid === null) return;
+  if(isSolo){
+    ttHostBidSubmit(myId, ttMyBid);
+  } else if(isHost){
+    ttHostBidSubmit(myId, ttMyBid);
+  } else {
+    fbSendToHost({type:'tt_action_bid', bid:ttMyBid});
+  }
+  g('btn-confirm-bid').disabled = true;
+  g('btn-confirm-bid').textContent = '宣言済み';
+}
+
+// ============================================================
+// PLAY PHASE
+// ============================================================
+function ttScheduleCpuPlay(){
+  if(!ttFs || ttFs.phase !== 'play') return;
+  const cur = ttFs.players[ttFs.curIdx];
+  if(!cur || !cur.isCpu) return;
+  if(ttAiTimer) clearTimeout(ttAiTimer);
+  ttAiTimer = setTimeout(()=>{
+    if(!ttFs || ttFs.phase !== 'play') return;
+    const card = ttCpuPlay(cur);
+    ttHostPlayCard(cur.id, card.id);
+  }, 900);
+}
+
+function ttCpuPlay(p){
+  const hand = p.hand;
+  const lead = ttFs.leadSuit;
+  // 特殊カードは常に出せる。通常カードはマストフォロー対象
+  const hasLead = lead && hand.some(c=>c.kind==='normal' && c.suit === lead);
+  let playable;
+  if(hasLead){
+    // リードスートを持っていれば、リードスートカード + 特殊カードが出せる
+    playable = hand.filter(c=>c.kind !== 'normal' || c.suit === lead);
+  } else {
+    playable = hand.slice();
+  }
+  // 欲しいかどうか
+  const want = (p.tricks < p.bid);
+  if(want){
+    // 勝ちたい：スカルキング > マーメイド > 海賊 > 切り札高 > 通常高
+    const sk = playable.find(c=>c.kind === 'sk');
+    if(sk) return sk;
+    const merm = playable.find(c=>c.kind === 'mermaid');
+    if(merm) return merm;
+    // ティグリスを海賊として出す
+    const tig = playable.find(c=>c.kind === 'tigress');
+    const pir = playable.find(c=>c.kind === 'pirate');
+    if(pir) return pir;
+    if(tig){ tig.mode = 'pirate'; return tig; }
+    const trumpInHand = playable.filter(c=>c.kind==='normal' && c.suit===TT_TRUMP).sort((a,b)=>b.num - a.num);
+    if(trumpInHand.length){
+      return trumpInHand[0];
+    }
+    // 通常カードで最大値
+    const normals = playable.filter(c=>c.kind==='normal').sort((a,b)=>b.num - a.num);
+    if(normals.length) return normals[0];
+    return playable[0];
+  } else {
+    // 勝ちたくない：逃亡 > 通常の低カード > 海賊 > マーメイド > SK の順で出す
+    const esc = playable.find(c=>c.kind === 'escape');
+    if(esc) return esc;
+    const tig = playable.find(c=>c.kind === 'tigress');
+    if(tig){ tig.mode = 'escape'; return tig; }
+    const normals = playable.filter(c=>c.kind==='normal').sort((a,b)=>a.num - b.num);
+    if(normals.length) return normals[0];
+    // 仕方なく特殊カードを出す。SKは最後
+    const pir = playable.find(c=>c.kind === 'pirate');
+    if(pir) return pir;
+    const merm = playable.find(c=>c.kind === 'mermaid');
+    if(merm) return merm;
+    return playable[0];
+  }
+}
+
+function ttHostPlayCard(senderId, cardId, opts={}){
+  if(!ttFs || ttFs.phase !== 'play') return;
+  const p = ttFs.players.find(x=>x.id===senderId);
+  if(!p) return;
+  if(ttFs.players[ttFs.curIdx].id !== senderId) return;
+  const card = p.hand.find(c=>c.id===cardId);
+  if(!card) return;
+
+  // ティグリスの場合、modeが必要
+  if(card.kind === 'tigress'){
+    if(!opts.tigressMode){
+      // クライアントから来た場合はopts経由でmode指定がない
+      // ただし、CPUの場合はttCpuPlayで既にmodeをセット済み
+      if(!card.mode){
+        // クライアント側からはopts.tigressModeが必要
+        return; // 不正
+      }
+    } else {
+      card.mode = opts.tigressMode;
+    }
+  }
+
+  // マストフォロー判定：通常カードリードの場合
+  if(ttFs.leadSuit && card.kind === 'normal' && card.suit !== ttFs.leadSuit){
+    // 同スートの通常カードを持っていればNG
+    if(p.hand.some(c=>c.kind==='normal' && c.suit === ttFs.leadSuit)){
+      return; // illegal
+    }
+  }
+
+  // 手札から削除
+  p.hand = p.hand.filter(c=>c.id !== cardId);
+  ttFs.trickCards.push({playerId:senderId, card});
+
+  // リードスート設定：通常カードがリードのみ。特殊カードや逃亡はリードを設定しない
+  if(ttFs.trickCards.length === 1){
+    if(card.kind === 'normal'){
+      ttFs.leadSuit = card.suit;
+    }
+    // 特殊カードがリード時はleadSuitはnullのまま（誰も付き合う必要なし）
+  } else {
+    // 2枚目以降：すでにリードがあれば変わらない。
+    // ただし、リードがなく（最初の何枚かが特殊/逃亡）、初めて通常カードが出た場合、それがリードを設定
+    if(!ttFs.leadSuit && card.kind === 'normal'){
+      ttFs.leadSuit = card.suit;
+    }
+  }
+
+  // ログ表示用
+  let cardStr;
+  if(card.kind === 'normal'){
+    const s = suitInfo(card.suit);
+    cardStr = `${card.num}${s.icon}`;
+  } else {
+    const sp = specialInfo(card.kind);
+    cardStr = sp.icon + sp.name;
+    if(card.kind === 'tigress' && card.mode){
+      const md = specialInfo(card.mode);
+      cardStr += `(${md.icon}${md.name})`;
+    }
+  }
+  ttFs.log.push(`▶ ${p.name}: ${cardStr}`);
+
+  // Send updated hand to player
+  if(!p.isCpu && !isSolo){
+    fbSendTo(p.id, {type:'tt_private', hand:p.hand});
+  } else if(p.id === myId){
+    ttMyCards = p.hand.slice();
+  }
+
+  // Next player or resolve trick
+  if(ttFs.trickCards.length === ttFs.players.length){
+    ttBcast();
+    setTimeout(()=>ttResolveTrick(), 1200);
+  } else {
+    ttFs.curIdx = (ttFs.curIdx + 1) % ttFs.players.length;
+    ttBcast();
+    if(isHost) ttScheduleCpuPlay();
+  }
+}
+
+// カード単体の有効タイプを取得（ティグリスは mode を見る）
+function ttEffectiveKind(card){
+  if(card.kind === 'tigress' && card.mode){
+    return card.mode; // 'pirate' or 'escape'
+  }
+  return card.kind;
+}
+
+function ttResolveTrick(){
+  if(!ttFs) return;
+  const trick = ttFs.trickCards;
+  const lead = ttFs.leadSuit;
+
+  // 各カードの実効的な種類を取り出し
+  const items = trick.map(t=>({...t, ek:ttEffectiveKind(t.card)}));
+
+  // 勝者判定（強さ順、循環関係を含む）
+  let winner = null;
+  let mermaidBeatsSk = false;
+
+  // 1. SK と マーメイドの組み合わせチェック（マーメイドがSKに勝つ特殊ケース）
+  const hasSk = items.find(t=>t.ek === 'sk');
+  const mermaids = items.filter(t=>t.ek === 'mermaid');
+  if(hasSk && mermaids.length){
+    // 最初のマーメイドが勝つ（複数なら先出し優先）
+    winner = mermaids[0];
+    mermaidBeatsSk = true;
+  } else if(hasSk){
+    winner = hasSk;
+  } else if(mermaids.length){
+    winner = mermaids[0];
+  }
+
+  // 2. 海賊
+  if(!winner){
+    const pirates = items.filter(t=>t.ek === 'pirate');
+    if(pirates.length){
+      winner = pirates[0]; // 先出し優先
+    }
+  }
+
+  // 3. 切り札の最大値
+  if(!winner){
+    const trumps = items.filter(t=>t.ek === 'normal' && t.card.suit === TT_TRUMP);
+    if(trumps.length){
+      winner = trumps.reduce((a,b)=> a.card.num > b.card.num ? a : b);
+    }
+  }
+
+  // 4. リードスートの最大値
+  if(!winner && lead){
+    const leads = items.filter(t=>t.ek === 'normal' && t.card.suit === lead);
+    if(leads.length){
+      winner = leads.reduce((a,b)=> a.card.num > b.card.num ? a : b);
+    }
+  }
+
+  // 5. 全員逃亡/特殊のみで通常カードなし → 最初に出した人が勝者
+  if(!winner){
+    winner = items[0];
+  }
+
+  const wp = ttFs.players.find(p=>p.id === winner.playerId);
+  wp.tricks++;
+  ttFs.lastTrickWinnerId = wp.id;
+
+  // ボーナス計算
+  if(!wp.bonusDetail) wp.bonusDetail = [];
+  if(mermaidBeatsSk){
+    wp.bonusDetail.push({type:'mermaid_sk', pts:50, note:'🧜‍♀️ がSKを撃破'});
+  }
+  if(winner.ek === 'sk'){
+    const piratesCount = items.filter(t=>t.ek === 'pirate').length;
+    if(piratesCount > 0){
+      wp.bonusDetail.push({type:'sk_pirate', pts:piratesCount*30, note:`👑 が海賊${piratesCount}人撃破`});
+    }
+  }
+  // 14のカードでトリック取得時のボーナス
+  if(winner.ek === 'normal' && winner.card.num === 14){
+    if(winner.card.suit === TT_TRUMP){
+      wp.bonusDetail.push({type:'trump14', pts:20, note:'🏴‍☠️14でトリック取得'});
+    } else {
+      wp.bonusDetail.push({type:'normal14', pts:10, note:'14でトリック取得'});
+    }
+  }
+
+  ttFs.log.push(`🏆 ${wp.name} がトリック獲得（計${wp.tricks}）`);
+
+  // Next trick or round end
+  if(wp.hand.length === 0){
+    ttBcast();
+    setTimeout(()=>ttEndRound(), 1400);
+    return;
+  }
+  // Winner leads next trick
+  ttFs.leadIdx = ttFs.players.findIndex(p=>p.id===wp.id);
+  ttFs.curIdx = ttFs.leadIdx;
+  ttFs.leadSuit = null;
+  ttFs.trickCards = [];
+  ttFs.trick++;
+  ttBcast();
+  setTimeout(()=>{ if(isHost) ttScheduleCpuPlay(); }, 200);
+}
+
+// ============================================================
+// ROUND END / SCORING
+// ============================================================
+function ttEndRound(){
+  if(!ttFs) return;
+  ttFs.phase = 'roundend';
+  // Calculate scoring
+  ttFs.players.forEach(p=>{
+    const bid = p.bid;
+    const got = p.tricks;
+    let baseBonus = 0;
+    if(bid === 0){
+      if(got === 0){ baseBonus = ttFs.round * 10; }
+      else { baseBonus = ttFs.round * -10; }
+    } else {
+      if(bid === got){ baseBonus = bid * 20; }
+      else { baseBonus = -Math.abs(bid - got) * 10; }
+    }
+    // 特殊カードボーナス（宣言ピタリの場合のみ加算、公式ルール）
+    let specialBonus = 0;
+    let bonusNotes = [];
+    if(bid === got && (p.bonusDetail||[]).length){
+      p.bonusDetail.forEach(b=>{
+        specialBonus += b.pts;
+        bonusNotes.push(`${b.note}+${b.pts}`);
+      });
+    }
+    const bonus = baseBonus + specialBonus;
+    p.bonus = bonus;
+    p.baseBonus = baseBonus;
+    p.specialBonus = specialBonus;
+    p.bonusNotes = bonusNotes;
+    p.score += bonus;
+    p.bonusDetail = []; // reset for next round
+    let line = `📊 ${p.name}: 宣言${bid}/獲得${got} → ${baseBonus>=0?'+':''}${baseBonus}点`;
+    if(specialBonus > 0){ line += ` + ボーナス${specialBonus}点`; }
+    line += `（累計 ${p.score}）`;
+    ttFs.log.push(line);
+  });
+  ttBcast();
+}
+
+function ttNextRound(){
+  if(!isHost){
+    fbSendToHost({type:'tt_action_next'});
+    g('btn-next-round').disabled = true;
+    g('btn-next-round').textContent = '他のプレイヤー待ち...';
+    return;
+  }
+  if(!ttFs) return;
+  if(ttFs.round >= ttFs.totalRounds){
+    // Game end
+    ttEndGame();
+    return;
+  }
+  ttFs.round++;
+  ttStartRound();
+}
+
+function ttEndGame(){
+  if(!ttFs) return;
+  ttFs.phase = 'result';
+  const sorted = ttFs.players.slice().sort((a,b)=>b.score - a.score);
+  ttFs.winnerId = sorted[0].id;
+  ttFs.log.push(`🏆 ${sorted[0].name} が勝利！（${sorted[0].score}点）`);
+  ttBcast();
+}
+
+// ============================================================
+// REMATCH
+// ============================================================
+function ttRematch(){
+  if(isSolo){ ttRematchGo(); return; }
+  if(isHost){
+    ttHostRematch(myId);
+    g('btn-rematch').disabled = true;
+    g('btn-rematch').textContent = '他のプレイヤー待ち...';
+  } else {
+    fbSendToHost({type:'tt_action_rematch'});
+    g('btn-rematch').disabled = true;
+    g('btn-rematch').textContent = '他のプレイヤー待ち...';
+  }
+}
+
+function ttHostRematch(pid){
+  if(!ttFs || ttFs.phase !== 'result') return;
+  const p = ttFs.players.find(x=>x.id===pid);
+  if(!p) return;
+  if(ttRematchVoters.includes(p.name)) return;
+  ttRematchVoters.push(p.name);
+  fbBroadcast({type:'tt_rematch_update', voters:ttRematchVoters, total:ttFs.players.length});
+  ttRenderRematchPanel(ttRematchVoters, ttFs.players.length);
+  if(ttRematchVoters.length >= ttFs.players.length){
+    fbBroadcast({type:'tt_rematch_go'});
+    ttRematchGo();
+  }
+}
+
+function ttRematchGo(){
+  ttRematchVoters = [];
+  if(!ttFs) return;
+  ttFs.players.forEach(p=>{
+    p.score = 0; p.bid = null; p.bidConfirmed = false; p.tricks = 0; p.bonus = 0; p.hand = [];
+  });
+  ttFs.log = ['🔄 再戦開始'];
+  ttFs.round = 1;
+  ttFs.phase = 'waiting';
+  ttBcast();
+  show('waiting');
+  ttRenderWaiting();
+  g('btn-rematch').disabled = false;
+  g('btn-rematch').textContent = '🔄 もう一度遊ぶ';
+  g('btn-next-round').disabled = false;
+  g('btn-next-round').textContent = '▶ 次のラウンドへ';
+  // Auto-start
+  if(isHost){
+    setTimeout(()=>{ if(ttFs && ttFs.phase === 'waiting') ttStartGameInternal(); }, 500);
+  }
+}
+
+function ttRenderRematchPanel(voters, total){
+  const panel = g('result-rematch-panel');
+  if(panel) panel.style.display = '';
+  const st = g('result-rematch-status');
+  const vl = g('result-rematch-voters');
+  if(st) st.textContent = `再戦希望: ${voters.length} / ${total} 人`;
+  if(vl){
+    vl.innerHTML = '';
+    voters.forEach(name=>{
+      const t = mk('span', 'rematch-voter-tag');
+      t.textContent = '✅ ' + name;
+      vl.appendChild(t);
+    });
+  }
+}
+
+// ============================================================
+// MESSAGE HANDLING
+// ============================================================
+function onMsg(d, senderId){
+  if(!d || !d.type) return;
+  // Host-side actions
+  if(isHost){
+    if(d.type === 'tt_join'){ ttHostJoin(d, senderId); return; }
+    if(d.type === 'tt_action_bid'){ ttHostBidSubmit(senderId, d.bid); return; }
+    if(d.type === 'tt_action_play'){ ttHostPlayCard(senderId, d.cardId, {tigressMode:d.tigressMode}); return; }
+    if(d.type === 'tt_action_next'){ ttHostNext(senderId); return; }
+    if(d.type === 'tt_action_rematch'){ ttHostRematch(senderId); return; }
+    if(d.type === 'tt_reconnect'){ _hostReconnect(d, senderId); return; }
+  }
+  // Public broadcasts
+  if(d.type === 'tt_gs'){ ttGs = d.s; ttOnGsUpdate(); return; }
+  if(d.type === 'tt_private'){
+    if(d.hand) ttMyCards = d.hand;
+    ttUpdateGame();
+    return;
+  }
+  if(d.type === 'tt_rematch_update'){
+    ttRenderRematchPanel(d.voters || [], d.total || 0);
+    return;
+  }
+  if(d.type === 'tt_rematch_go'){
+    ttRematchGo();
+    return;
+  }
+}
+
+function ttHostJoin(d){
+  if(!ttFs || ttFs.phase !== 'waiting') return;
+  if(ttFs.players.length >= 6){ fbSendTo(d.id, {type:'tt_full'}); return; }
+  if(ttFs.players.find(p=>p.id===d.id)) return;
+  ttFs.players.push({id:d.id, name:d.name, isHost:false, isCpu:false});
+  ttFs.log.push(`👤 ${d.name} が参加しました`);
+  ttBcast();
+}
+
+// Host-side: collect "next round" votes (auto-advance)
+let ttNextVoters = [];
+function ttHostNext(pid){
+  if(!ttFs || ttFs.phase !== 'roundend') return;
+  if(!ttNextVoters.includes(pid)) ttNextVoters.push(pid);
+  if(ttNextVoters.length >= ttFs.players.filter(p=>!p.isCpu).length){
+    ttNextVoters = [];
+    if(ttFs.round >= ttFs.totalRounds){ ttEndGame(); }
+    else { ttFs.round++; ttStartRound(); }
+  }
+}
+
+// ============================================================
+// CLIENT UPDATE / RENDERING
+// ============================================================
+function ttOnGsUpdate(){
+  if(!ttGs) return;
+  const ph = ttGs.phase;
+  if(ph === 'waiting'){
+    if(!g('screen-waiting').classList.contains('active')) show('waiting');
+    ttRenderWaiting();
+  } else if(ph === 'bid'){
+    if(!g('screen-bid').classList.contains('active')) show('bid');
+    ttRenderBid();
+  } else if(ph === 'play'){
+    if(!g('screen-play').classList.contains('active')) show('play');
+    ttRenderPlay();
+  } else if(ph === 'roundend'){
+    if(!g('screen-roundend').classList.contains('active')) show('roundend');
+    ttRenderRoundEnd();
+  } else if(ph === 'result'){
+    if(!g('screen-result').classList.contains('active')) show('result');
+    ttRenderResult();
+  }
+}
+
+function ttUpdateGame(){
+  // Re-render private hand
+  if(g('screen-bid').classList.contains('active')) ttRenderBid();
+  if(g('screen-play').classList.contains('active')) ttRenderPlay();
+}
+
+function ttRenderWaiting(){
+  if(!ttGs) return;
+  g('p-count').textContent = ttGs.players.length + '人';
+  g('wait-rounds-info').textContent = `ラウンド数: ${ttGs.totalRounds}`;
+  const list = g('wait-list');
+  list.innerHTML = '';
+  ttGs.players.forEach(p=>{
+    const item = mk('div', 'player-item' + (p.id===myId?' is-me':'') + (p.isHost?' is-host':''));
+    item.innerHTML = `
+      <div class="p-info">
+        <div class="p-name">${p.isHost?'👑 ':''}${p.name}${p.id===myId?' (あなた)':''}</div>
+        <div class="p-sub">${p.isHost?'HOST':''}${p.isCpu?' / CPU':''}</div>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+  g('wait-status').textContent = ttGs.players.length >= 3
+    ? `${ttGs.players.length}人参加中。開始できます`
+    : `あと${3-ttGs.players.length}人必要です（最少3人）`;
+  if(isHost){
+    g('btn-start').style.display = '';
+    g('btn-start').disabled = ttGs.players.length < 3;
+  } else {
+    g('btn-start').style.display = 'none';
+  }
+  // 特殊カードパネル：ホストは編集可、ゲストは閲覧のみ
+  const currentSpecials = ttGs.specials || {sk:false,pirate:false,mermaid:false,escape:false,tigress:false};
+  if(isHost){
+    // ホストがttSelectedSpecialsをttGs.specialsに同期しておく（再表示時用）
+    ttSelectedSpecials = {...currentSpecials};
+  }
+  ttRenderSpecialsPanel('wait-specials-body', 'wait-specials-info', currentSpecials, isHost);
+}
+
+function ttRenderBid(){
+  if(!ttGs) return;
+  g('bid-round-info').textContent = `R ${ttGs.round}/${ttGs.totalRounds}`;
+  const me = ttGs.players.find(p=>p.id===myId);
+  g('bid-mybid-info').textContent = me && me.bidConfirmed ? `あなたの宣言: ${me.bid}` : '未宣言';
+
+  // Hand
+  const hand = g('bid-my-hand');
+  hand.innerHTML = '';
+  ttMyCards.forEach(c=>{
+    hand.appendChild(cardEl(c));
+  });
+
+  // Bid buttons
+  const btns = g('bid-buttons');
+  btns.innerHTML = '';
+  const n = ttMyCards.length;
+  for(let i=0; i<=n; i++){
+    const b = mk('button', 'bid-btn' + (ttMyBid===i?' selected':''));
+    b.textContent = i;
+    b.onclick = ()=>{
+      if(me && me.bidConfirmed) return;
+      ttMyBid = i;
+      ttRenderBid();
+    };
+    if(me && me.bidConfirmed) b.disabled = true;
+    btns.appendChild(b);
+  }
+
+  // Confirm button
+  const cBtn = g('btn-confirm-bid');
+  if(me && me.bidConfirmed){
+    cBtn.disabled = true;
+    cBtn.textContent = '宣言済み（他プレイヤー待ち）';
+  } else {
+    cBtn.disabled = (ttMyBid === null);
+    cBtn.textContent = '宣言を確定する';
+  }
+
+  // Status list
+  const list = g('bid-status-list');
+  list.innerHTML = '';
+  ttGs.players.forEach(p=>{
+    const item = mk('div', 'player-item' + (p.id===myId?' is-me':''));
+    const bidStr = p.bidConfirmed ? `✅ 宣言: ${p.bid}` : '⏳ 思考中...';
+    item.innerHTML = `
+      <div class="p-info">
+        <div class="p-name">${p.name}${p.id===myId?' (あなた)':''}</div>
+        <div class="p-sub">${p.isCpu?'CPU':''}</div>
+      </div>
+      <span class="p-bid${p.bidConfirmed?' met':''}">${bidStr}</span>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function ttRenderPlay(){
+  if(!ttGs) return;
+  g('play-round-info').textContent = `R ${ttGs.round}/${ttGs.totalRounds}`;
+  g('play-trick-info').textContent = `T ${ttGs.trick}/${ttGs.tricksThisRound}`;
+
+  // Scoreboard
+  const sb = g('play-scoreboard');
+  sb.innerHTML = '';
+  const header = mk('div', 'score-row header');
+  header.innerHTML = '<div class="score-cell name">プレイヤー</div><div class="score-cell">宣言</div><div class="score-cell">獲得</div><div class="score-cell">合計</div>';
+  sb.appendChild(header);
+  ttGs.players.forEach(p=>{
+    const row = mk('div', 'score-row' + (p.id===myId?' me':''));
+    const cur = ttGs.players[ttGs.curIdx];
+    const isTurn = cur && cur.id === p.id;
+    row.innerHTML = `
+      <div class="score-cell name">${isTurn?'▶ ':''}${p.name}${p.isCpu?' (CPU)':''}</div>
+      <div class="score-cell">${p.bid}</div>
+      <div class="score-cell">${p.tricks}</div>
+      <div class="score-cell total">${p.score}</div>
+    `;
+    sb.appendChild(row);
+  });
+
+  // Turn info
+  const cur = ttGs.players[ttGs.curIdx];
+  if(cur){
+    g('play-turn-info').textContent = cur.id === myId ? '🎯 あなたの手番です' : `⏳ ${cur.name} の手番...`;
+  }
+
+  // Lead info
+  if(ttGs.leadSuit){
+    const s = suitInfo(ttGs.leadSuit);
+    g('play-lead-info').textContent = `リードスート: ${s.icon} ${s.label}（このスートを持っていれば必ず出す）`;
+  } else {
+    g('play-lead-info').textContent = '最初のカードを出してください（自由）';
+  }
+
+  // Trick area
+  const ta = g('play-trick-area');
+  ta.innerHTML = '';
+  ttGs.trickCards.forEach(t=>{
+    const slot = mk('div', 'trick-slot');
+    const player = ttGs.players.find(p=>p.id===t.playerId);
+    const nameSpan = mk('div', 'slot-name');
+    nameSpan.textContent = player ? player.name : '?';
+    slot.appendChild(cardEl(t.card, {size:'small'}));
+    slot.appendChild(nameSpan);
+    ta.appendChild(slot);
+  });
+  if(ttGs.trickCards.length === 0){
+    ta.innerHTML = '<div style="color:var(--muted); font-size:0.85rem;">（カードが出されるとここに表示）</div>';
+  }
+
+  // Hand
+  const hand = g('play-my-hand');
+  hand.innerHTML = '';
+  const myTurn = cur && cur.id === myId;
+  const lead = ttGs.leadSuit;
+  // 通常カードでリードスートを持っているか（特殊カードは無視）
+  const hasLeadSuit = lead && ttMyCards.some(c=>c.kind==='normal' && c.suit === lead);
+  ttMyCards.forEach(c=>{
+    let canPlay = myTurn;
+    // 特殊カードは常に出せる。通常カードのみマストフォロー対象。
+    if(myTurn && c.kind === 'normal' && lead && hasLeadSuit && c.suit !== lead){
+      canPlay = false;
+    }
+    const el = cardEl(c, {
+      extra: canPlay ? 'playable' : (myTurn ? 'disabled' : ''),
+      onClick: canPlay ? ()=>ttPlayMyCard(c.id, c) : null,
+    });
+    hand.appendChild(el);
+  });
+
+  // Action hint
+  if(myTurn){
+    if(lead && hasLeadSuit){
+      const s = suitInfo(lead);
+      g('play-action-hint').textContent = `${s.icon} ${s.label}（または特殊カード）を出してください`;
+    } else if(lead){
+      g('play-action-hint').textContent = '同スートを持っていません。自由に出せます';
+    } else {
+      g('play-action-hint').textContent = 'リードカードを出してください';
+    }
+  } else {
+    g('play-action-hint').textContent = '';
+  }
+
+  // Log
+  const log = g('play-log');
+  log.innerHTML = '';
+  (ttGs.log || []).slice(-30).forEach(line=>{
+    const e = mk('div', 'log-entry');
+    e.textContent = line;
+    log.appendChild(e);
+  });
+  log.scrollTop = log.scrollHeight;
+}
+
+function ttPlayMyCard(cardId, card){
+  // ティグリスの場合はモーダルで選択させる
+  if(card && card.kind === 'tigress'){
+    ttPendingTigressCardId = cardId;
+    g('modal-tigress').classList.add('active');
+    return;
+  }
+  if(isSolo || isHost){
+    ttHostPlayCard(myId, cardId);
+  } else {
+    fbSendToHost({type:'tt_action_play', cardId});
+  }
+}
+
+function ttSubmitTigress(mode){
+  g('modal-tigress').classList.remove('active');
+  const cardId = ttPendingTigressCardId;
+  ttPendingTigressCardId = null;
+  if(!cardId) return;
+  if(isSolo || isHost){
+    ttHostPlayCard(myId, cardId, {tigressMode:mode});
+  } else {
+    fbSendToHost({type:'tt_action_play', cardId, tigressMode:mode});
+  }
+}
+
+function ttRenderRoundEnd(){
+  if(!ttGs) return;
+  g('roundend-title').textContent = `ラウンド ${ttGs.round}/${ttGs.totalRounds} 終了`;
+  const sb = g('roundend-scoreboard');
+  sb.innerHTML = '';
+  const header = mk('div', 'score-row header');
+  header.innerHTML = '<div class="score-cell name">プレイヤー</div><div class="score-cell">宣言</div><div class="score-cell">獲得</div><div class="score-cell">合計</div>';
+  sb.appendChild(header);
+  // Sort by score desc
+  const sorted = ttGs.players.slice().sort((a,b)=>b.score - a.score);
+  sorted.forEach(p=>{
+    const row = mk('div', 'score-row' + (p.id===myId?' me':''));
+    const bonusStr = p.bonus >= 0 ? `+${p.bonus}` : `${p.bonus}`;
+    const bonusColor = p.bonus >= 0 ? 'var(--green)' : 'var(--red)';
+    row.innerHTML = `
+      <div class="score-cell name">${p.name}${p.isCpu?' (CPU)':''}</div>
+      <div class="score-cell">${p.bid}</div>
+      <div class="score-cell">${p.tricks} <span style="color:${bonusColor}; font-size:0.78rem;">(${bonusStr})</span></div>
+      <div class="score-cell total">${p.score}</div>
+    `;
+    sb.appendChild(row);
+    // 特殊ボーナスの内訳
+    if(p.bonusNotes && p.bonusNotes.length){
+      const note = mk('div', '');
+      note.style.cssText = 'grid-column:1/-1; padding:2px 8px; font-size:0.72rem; color:var(--gold);';
+      note.textContent = '  └ ' + p.bonusNotes.join(' / ');
+      sb.appendChild(note);
+    }
+  });
+
+  // Next info
+  if(ttGs.round >= ttGs.totalRounds){
+    g('btn-next-round').textContent = '🏆 結果を見る';
+    g('roundend-next-info').textContent = '最終ラウンド終了';
+  } else {
+    g('btn-next-round').textContent = '▶ 次のラウンドへ';
+    g('btn-next-round').disabled = false;
+    g('roundend-next-info').textContent = `次は ラウンド ${ttGs.round+1}（${ttGs.round+1}枚配布）`;
+  }
+}
+
+function ttRenderResult(){
+  if(!ttGs) return;
+  const sorted = ttGs.players.slice().sort((a,b)=>b.score - a.score);
+  const winner = sorted[0];
+  g('result-emoji').textContent = winner.id === myId ? '🏆' : '🏴‍☠️';
+  g('result-title').textContent = winner.id === myId ? 'あなたの勝利！' : `${winner.name} の勝利`;
+  g('result-sub').textContent = `${winner.score}点で1位`;
+
+  const list = g('result-rank-list');
+  list.innerHTML = '';
+  sorted.forEach((p, i)=>{
+    const item = mk('div', 'rank-item' + (i===0?' first':''));
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':' ';
+    item.innerHTML = `
+      <div class="rank-num">${medal} ${i+1}</div>
+      <div class="p-info">
+        <div class="p-name">${p.name}${p.id===myId?' (あなた)':''}${p.isCpu?' (CPU)':''}</div>
+      </div>
+      <div class="p-score">${p.score}点</div>
+    `;
+    list.appendChild(item);
+  });
+
+  // Log
+  const log = g('result-log');
+  log.innerHTML = '';
+  (ttGs.log || []).slice(-50).forEach(line=>{
+    const e = mk('div', 'log-entry');
+    e.textContent = line;
+    log.appendChild(e);
+  });
+
+  // Reset rematch panel
+  ttRematchVoters = [];
+  g('result-rematch-panel').style.display = 'none';
+  g('btn-rematch').disabled = false;
+  g('btn-rematch').textContent = '🔄 もう一度遊ぶ';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', ()=>{
+  // Set initial selections
+  ttSetRounds(5);
+  ttSetSoloCount(3);
+  ttSetSoloRounds(5);
+  // 特殊カードパネル初期描画（ソロ用は ttShowSoloLobby で描画される）
+  ttRenderSpecialsPanel('solo-specials-body', 'solo-specials-info', ttSoloSpecials, true);
+  showReconnectOption();
+});
+
+// ============================================================
+// SESSION SAVE / RESTORE
+// ============================================================
+const SESSION_KEY = 'pgSession_sk';
+function saveSession() {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      myId, myName, roomCode, fbRoom, isHost,
+      ts: Date.now()
+    }));
+  } catch(e) {}
+}
+function clearSession() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(Date.now() - s.ts > 3 * 60 * 60 * 1000) { clearSession(); return null; }
+    return s;
+  } catch(e) { return null; }
+}
+function showReconnectOption() {
+  const s = loadSession();
+  if(!s) return;
+  const btn = g('btn-reconnect');
+  if(!btn) return;
+  btn.style.display = '';
+  btn.textContent = `🔄 前のルームに戻る（🏴‍☠️スカルキング #${s.roomCode}）`;
+}
+async function reconnectToRoom() {
+  const s = loadSession();
+  if(!s) { setErr('セッションが見つかりません'); return; }
+  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
+  fbRoom = s.fbRoom; isHost = s.isHost;
+  setSt('再接続中...');
+  try {
+    const meta = await fbGet('meta');
+    if(!meta) {
+      clearSession();
+      setErr('ルームが見つかりません（終了済みの可能性があります）');
+      setSt(''); return;
+    }
+    fbListen();
+    if(isHost) {
+      const data = await fetch(`${fbUrl}/rooms/${fbRoom}.json`).then(r=>r.json()).catch(()=>null);
+      // skullking はbroadcastがキー分割されているのでlatest broadcastを探す
+      const bcs = data?.broadcast;
+      let savedGs = null;
+      if(bcs) {
+        const keys = Object.keys(bcs);
+        // tt_gs型のbroadcastを後ろから探す
+        for(let i=keys.length-1; i>=0; i--) {
+          if(bcs[keys[i]]?.type === 'tt_gs' && bcs[keys[i]]?.s) { savedGs = bcs[keys[i]].s; break; }
+        }
+      }
+      if(savedGs) {
+        ttGs = savedGs;
+        ttFs = JSON.parse(JSON.stringify(savedGs));
+        ttOnGsUpdate();
+      } else {
+        show('waiting');
+        const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
+        if(typeof ttRenderWaiting === 'function') ttRenderWaiting();
+      }
+    } else {
+      fbSendToHost({type:'tt_join', name:myName, id:myId});
+      fbSendToHost({type:'tt_reconnect', id:myId, name:myName});
+      setSt('接続しました！');
+      show('waiting');
+      const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
+      const bs = g('btn-start'); if(bs) bs.style.display = 'none';
+      let retries = 0;
+      const retry = setInterval(()=>{
+        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
+        fbSendToHost({type:'tt_reconnect', id:myId, name:myName});
+        retries++;
+      }, 2000);
+    }
+    setErr(''); setSt('');
+    const br = g('btn-reconnect'); if(br) br.style.display = 'none';
+  } catch(e) {
+    setErr('再接続失敗: ' + (e.message||e));
+    setSt('');
+  }
+}
+function _hostReconnect(d, senderId) {
+  if(!ttFs) return;
+  const rp = ttFs.players.find(p=>p.id===d.id);
+  if(ttFs.phase === 'waiting') {
+    if(!rp && ttFs.players.length < 6) {
+      ttFs.players.push({id:d.id, name:d.name, isHost:false, isCpu:false});
+    }
+    ttBcast();
+  } else {
+    if(rp) {
+      ttBcast();
+      // ゲーム中の手札を再送
+      if(rp.hand) {
+        fbSendTo(d.id, {type:'tt_private', hand:rp.hand});
+      }
+    }
+  }
+}
+</script>
+</body>
+</html>

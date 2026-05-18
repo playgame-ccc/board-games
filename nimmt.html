@@ -1,0 +1,1611 @@
+<!-- 6 NIMMT v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🐂 ニムト 6 nimmt!</title>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --surface: #161b2a;
+  --surface2: #1f2535;
+  --surface3: #2f364a;
+  --text: #f0f0f5;
+  --muted: #8a96a8;
+  --red: #ff2d4a;
+  --green: #2dff8a;
+  --blue: #3af0ff;
+  --amber: #ffb020;
+  --nimmt-cow: #d97e3a;
+  --nimmt-bg: #f5e6d3;
+  --c1: #f5f5f5;   /* 通常 1牛 */
+  --c2: #4a9eff;   /* 2牛 (末尾5) */
+  --c3: #5fd97a;   /* 3牛 (末尾0) */
+  --c5: #b15bff;   /* 5牛 (ゾロ目) */
+  --c7: #ff5757;   /* 7牛 (55) */
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  --mono: "SF Mono", Menlo, Monaco, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  overscroll-behavior: none;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app { max-width: 480px; margin: 0 auto; padding: 14px; min-height: 100vh; display: flex; flex-direction: column; gap: 10px; }
+.screen { display: none; flex-direction: column; gap: 10px; }
+.screen.active { display: flex; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
+h1 { font-size: 1.8rem; text-align: center; }
+h2 { font-size: 1.3rem; text-align: center; }
+h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 18px; border-radius: 10px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
+  transition: all 0.15s; user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-cow { background: var(--nimmt-cow); color: white; border-color: var(--nimmt-cow); }
+.btn-red { background: var(--red); color: white; border-color: var(--red); }
+.btn-blue { background: var(--blue); color: #000; border-color: var(--blue); }
+.btn-green { background: var(--green); color: #000; border-color: var(--green); }
+.btn-amber { background: var(--amber); color: #000; border-color: var(--amber); }
+.btn-ghost { background: transparent; }
+
+.input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--surface3); background: var(--surface);
+  color: var(--text); font-size: 1rem; font-family: var(--sans);
+}
+.input:focus { outline: none; border-color: var(--nimmt-cow); }
+.code-input { text-align: center; font-family: var(--mono); font-size: 1.4rem; letter-spacing: 0.3em; }
+
+.row { display: flex; gap: 8px; }
+.divider { height: 1px; background: var(--surface3); margin: 4px 0; }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 14px; }
+.status-txt { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); text-align: center; min-height: 18px; }
+.error { font-family: var(--mono); font-size: 0.85rem; color: var(--red); text-align: center; min-height: 18px; }
+
+.code-box { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 12px; text-align: center; }
+.code-box .label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); letter-spacing: 2px; }
+.code-box .code { font-family: var(--mono); font-size: 2rem; letter-spacing: 0.3em; color: var(--nimmt-cow); margin-top: 4px; }
+.copy-btn { background: var(--surface2); padding: 8px; border-radius: 8px; border: 1px solid var(--surface3); color: var(--muted); font-size: 0.78rem; cursor: pointer; }
+
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-row { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+.player-row.is-me { border-left: 3px solid var(--nimmt-cow); }
+.player-name { font-weight: 600; flex: 1; }
+
+/* 設定行 */
+.setting-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface2); border: 1px solid var(--surface3); border-radius: 10px;
+}
+.setting-row label { flex: 1; font-size: 0.9rem; }
+.setting-row .toggle-group { display: flex; gap: 4px; }
+.setting-row .toggle-btn {
+  padding: 6px 14px; border-radius: 6px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--muted); cursor: pointer; font-size: 0.85rem;
+}
+.setting-row .toggle-btn.active {
+  background: var(--nimmt-cow); color: white; border-color: var(--nimmt-cow);
+}
+
+/* ── カード ── */
+.card {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 72px;
+  border-radius: 8px;
+  background: var(--nimmt-bg);
+  color: #2a1810;
+  font-family: var(--mono); font-weight: 900; font-size: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  border: 2px solid #c4a574;
+  flex-shrink: 0;
+  user-select: none;
+  flex-direction: column;
+  gap: 2px;
+}
+.card.cow1 { border-top: 6px solid var(--c1); border-bottom: 6px solid var(--c1); }
+.card.cow2 { border-top: 6px solid var(--c2); border-bottom: 6px solid var(--c2); }
+.card.cow3 { border-top: 6px solid var(--c3); border-bottom: 6px solid var(--c3); }
+.card.cow5 { border-top: 6px solid var(--c5); border-bottom: 6px solid var(--c5); }
+.card.cow7 { border-top: 6px solid var(--c7); border-bottom: 6px solid var(--c7); }
+
+.card .cow-icons {
+  position: absolute;
+  bottom: 2px;
+  font-size: 0.55rem;
+  color: rgba(42,24,16,0.7);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.card.small {
+  width: 38px; height: 52px;
+  font-size: 1.05rem;
+}
+.card.small .cow-icons {
+  font-size: 0.45rem;
+}
+
+.card.tiny {
+  width: 28px; height: 38px;
+  font-size: 0.78rem;
+  border-width: 1px;
+}
+.card.tiny.cow1, .card.tiny.cow2, .card.tiny.cow3, .card.tiny.cow5, .card.tiny.cow7 {
+  border-top-width: 3px; border-bottom-width: 3px;
+}
+.card.tiny .cow-icons { display: none; }
+
+.card.back {
+  background: linear-gradient(135deg, var(--nimmt-cow), #8a4a1e);
+  color: white;
+  border-color: #6a3812;
+}
+.card.back::before { content: '🐂'; font-size: 1.4rem; }
+
+/* ── 場の4列 ── */
+.field-rows {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.field-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 6px;
+  background: var(--surface2);
+  border-radius: 8px;
+  min-height: 60px;
+  overflow-x: auto;
+}
+.field-row-label {
+  font-family: var(--mono); font-size: 0.7rem;
+  color: var(--muted);
+  width: 16px;
+  flex-shrink: 0;
+}
+.field-row.danger {
+  background: rgba(255,45,74,0.1);
+  border: 1px solid var(--red);
+}
+.field-row.warn {
+  background: rgba(255,176,32,0.08);
+}
+
+/* ── 手札 ── */
+.hand-area {
+  background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px;
+  padding: 10px;
+}
+.hand-cards {
+  display: flex; gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.hand-cards .card {
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.hand-cards .card:active { transform: scale(0.95); }
+.hand-cards .card.selected {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 20px rgba(217,126,58,0.5);
+  outline: 3px solid var(--nimmt-cow);
+}
+.hand-cards .card.played {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ── プレイヤー状態 ── */
+.players-bar {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.player-mini {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 8px; padding: 6px 10px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.82rem;
+}
+.player-mini.is-me { border-left: 3px solid var(--nimmt-cow); }
+.player-mini.played { background: rgba(45,255,138,0.05); }
+.player-mini-name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-mini-cows {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--nimmt-cow);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.player-mini-status {
+  font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+  flex-shrink: 0;
+}
+.player-mini-status.played { color: var(--green); }
+
+/* ── 状態バー ── */
+.game-state-bar {
+  display: flex; justify-content: space-around; gap: 8px;
+  background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px;
+  padding: 8px;
+  font-family: var(--mono); font-size: 0.78rem;
+}
+.state-box {
+  text-align: center;
+}
+.state-label {
+  font-size: 0.65rem; color: var(--muted); letter-spacing: 1px;
+}
+.state-value {
+  font-weight: 700; font-size: 1rem; color: var(--nimmt-cow);
+}
+
+/* ── 結果 ── */
+.result-emoji { font-size: 4rem; text-align: center; }
+.result-title { font-size: 1.6rem; text-align: center; font-weight: 700; }
+.score-list { display: flex; flex-direction: column; gap: 6px; }
+.score-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 10px;
+}
+.score-row.winner { border-color: var(--green); background: rgba(45,255,138,0.05); }
+.score-row.is-me { border-left: 3px solid var(--nimmt-cow); }
+.score-rank { font-family: var(--mono); font-weight: 700; color: var(--muted); width: 32px; }
+.score-name { flex: 1; font-weight: 600; }
+.score-cows { font-family: var(--mono); font-weight: 700; color: var(--nimmt-cow); }
+
+/* ── ゲームログ ── */
+.game-log { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px; max-height: 110px; overflow-y: auto; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+.game-log div { padding: 2px 0; border-bottom: 1px dashed var(--surface3); line-height: 1.4; }
+.game-log div:last-child { border-bottom: none; color: var(--text); }
+
+/* ── ラウンド進行表示 ── */
+.round-banner {
+  background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.round-banner .big {
+  font-size: 1.4rem; font-weight: 700; color: var(--nimmt-cow);
+}
+
+/* ── 同時出し処理アニメ ── */
+.reveal-banner {
+  background: rgba(217,126,58,0.15);
+  border: 1px solid var(--nimmt-cow);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--nimmt-cow);
+}
+
+/* ── FB modal ── */
+.fb-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+.fb-modal-inner { background: var(--surface); border-radius: 14px; padding: 22px; max-width: 360px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* ── 列を引き取る選択 ── */
+.row-pick-list { display: flex; flex-direction: column; gap: 6px; }
+.row-pick-item {
+  padding: 8px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--surface3);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.row-pick-item:active { transform: scale(0.98); }
+.row-pick-item.selected { background: rgba(217,126,58,0.15); border-color: var(--nimmt-cow); }
+.row-pick-cows {
+  font-family: var(--mono); font-weight: 700;
+  color: var(--nimmt-cow);
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+/* ── Rematch panel ── */
+.rematch-panel { background:var(--surface); border:1px solid var(--surface3); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+.rematch-status { font-family:var(--mono); font-size:0.85rem; color:var(--muted); }
+.rematch-voter-tag { font-family:var(--mono); font-size:0.78rem; padding:3px 10px; border-radius:12px; background:rgba(45,255,138,0.12); color:#2dff8a; border:1px solid rgba(45,255,138,0.3); }
+</style>
+</head>
+<body>
+
+<!-- FB MODAL -->
+<div id="fb-modal" class="fb-modal" style="display:none;">
+  <div class="fb-modal-inner">
+    <h2 style="font-size:1.1rem; text-align:left;">🔑 Firebase URL</h2>
+    <p style="font-size:0.8rem; color:var(--muted);">マルチプレイには Firebase Realtime Database が必要です。</p>
+    <input class="input" id="fb-url" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com">
+    <button class="btn btn-cow" onclick="saveFbConfig()">設定して始める</button>
+    <button class="btn btn-ghost" onclick="g('fb-modal').style.display='none'">あとで</button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ===== LOBBY ===== -->
+  <div id="screen-lobby" class="screen active">
+    <h1>🐂 ニムト</h1>
+    <p style="text-align:center; font-family:var(--mono); font-size:0.78rem; color:var(--muted); letter-spacing:2px;">6 nimmt! 牛を避けて生き残れ</p>
+
+    <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-cow" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+      <div class="divider"></div>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+    </div>
+
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+    <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
+
+    <div class="panel" style="margin-top:8px;">
+      <h3 style="margin-bottom:10px;">ゲームルール</h3>
+      <p style="font-size:0.82rem; color:var(--muted); line-height:1.7;">
+        2〜10人で遊ぶ数字カードゲーム。<br>
+        1〜104の数字カードを<strong style="color:var(--nimmt-cow);">全員同時に出す</strong>。<br>
+        場の4列に<strong style="color:var(--green);">小さい順</strong>に並べていく。<br>
+        ⚠️ <strong style="color:var(--red);">列の6枚目</strong>を出した人は、その列の5枚を回収（牛マイナス点）。<br>
+        牛が一番少ない人が勝者。
+      </p>
+      <p style="font-size:0.78rem; color:var(--muted); line-height:1.6; margin-top:8px;">
+        🎮 <strong>ゲームモード</strong><br>
+        ⚡ <strong>ショート</strong>: 1ラウンド10手番で終了（約10〜15分）<br>
+        🐂 <strong>通常</strong>: 累計66点を超えた人が出るまで（30〜60分）
+      </p>
+      <p style="font-size:0.75rem; color:var(--muted); line-height:1.6; margin-top:8px;">
+        🐂 牛の数: 末尾5=2牛 / 末尾0=3牛 / ゾロ目=5牛 / 55=7牛 / その他=1牛
+      </p>
+    </div>
+
+    <a href="index.html" style="text-decoration:none; margin-top:10px;">
+      <button class="btn btn-ghost" style="width:100%;">← ホームに戻る</button>
+    </a>
+  </div>
+
+  <!-- ===== WAITING ===== -->
+  <div id="screen-waiting" class="screen">
+    <h2>待機ロビー</h2>
+    <div class="code-box">
+      <div class="label">ルームコード</div>
+      <div class="code" id="disp-code">----</div>
+    </div>
+    <button class="copy-btn" onclick="copyCode()">📋 コードをコピー</button>
+    <div class="divider"></div>
+
+    <!-- ホストのみ設定可能 -->
+    <div id="host-settings" style="display:none;">
+      <h3 style="margin-bottom:8px;">ゲーム設定（ホストのみ）</h3>
+      <div class="setting-row">
+        <label>モード</label>
+        <div class="toggle-group">
+          <button id="opt-mode-short" class="toggle-btn active" onclick="setGameMode('short')">ショート</button>
+          <button id="opt-mode-normal" class="toggle-btn" onclick="setGameMode('normal')">通常</button>
+        </div>
+      </div>
+      <p id="mode-desc" style="font-size:0.72rem; color:var(--muted); padding:6px 4px; line-height:1.5;">
+        ⚡ ショート: 1ラウンド10手番で終了（約10〜15分）
+      </p>
+    </div>
+
+    <div id="guest-mode-info" style="display:none; padding:8px 12px; background:var(--surface2); border-radius:8px; font-size:0.78rem; color:var(--muted); text-align:center;">
+      モード: <span id="guest-mode-text">ショート</span>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="text-transform:none; font-family:var(--sans); letter-spacing:0;">参加者</h3>
+      <span id="p-count" style="font-family:var(--mono); font-size:0.85rem; color:var(--muted);">1人</span>
+    </div>
+    <div id="wait-list" class="player-list"></div>
+    <div id="wait-status" class="status-txt"></div>
+    <button id="btn-start" class="btn btn-green" onclick="startGame()" disabled>▶ ゲームを開始する</button>
+    <p style="font-size:0.72rem; color:var(--amber); text-align:center; padding:6px; background:rgba(255,176,32,0.08); border-radius:6px; line-height:1.5;">
+      ⚠️ ホストが接続を切ると、ゲームが進行できなくなります。
+    </p>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- ===== PLAYING ===== -->
+  <div id="screen-playing" class="screen" style="gap:8px;">
+
+    <!-- 状態バー -->
+    <div class="game-state-bar">
+      <div class="state-box">
+        <div class="state-label">モード</div>
+        <div class="state-value" id="state-mode" style="font-size:0.85rem;">--</div>
+      </div>
+      <div class="state-box">
+        <div class="state-label">ラウンド</div>
+        <div class="state-value" id="state-round">1</div>
+      </div>
+      <div class="state-box">
+        <div class="state-label">手番</div>
+        <div class="state-value" id="state-trick">1/10</div>
+      </div>
+      <div class="state-box">
+        <div class="state-label">出した人</div>
+        <div class="state-value" id="state-played">0/0</div>
+      </div>
+    </div>
+
+    <!-- 場の4列 -->
+    <div class="panel">
+      <div style="font-size:0.78rem; color:var(--muted); font-family:var(--mono); letter-spacing:1px; margin-bottom:6px;">🃏 場のカード列</div>
+      <div id="field-rows" class="field-rows"></div>
+    </div>
+
+    <!-- 自分の手札 -->
+    <div class="hand-area">
+      <div style="font-size:0.78rem; color:var(--muted); font-family:var(--mono); letter-spacing:1px; margin-bottom:6px;">🎴 あなたの手札（タップして選択）</div>
+      <div id="my-hand" class="hand-cards"></div>
+      <div id="play-action" style="margin-top:8px; display:none;">
+        <button class="btn btn-cow" onclick="submitPlay()" style="width:100%;">📤 このカードを出す</button>
+      </div>
+      <div id="waiting-others" style="margin-top:8px; display:none;">
+        <div class="reveal-banner">⏳ 他のプレイヤーを待っています...</div>
+      </div>
+    </div>
+
+    <!-- 列引き取り選択 (発生時のみ) -->
+    <div id="row-pick-section" style="display:none;" class="panel">
+      <h3 style="margin-bottom:6px;">⚠️ あなたのカードは全列より小さいです</h3>
+      <p style="font-size:0.85rem; color:var(--muted); margin-bottom:8px;">
+        引き取る列を選んでください（牛が少ない列を選ぶのがオススメ）
+      </p>
+      <div id="row-pick-list" class="row-pick-list"></div>
+      <button id="btn-confirm-row-pick" class="btn btn-amber" style="width:100%; margin-top:8px;" onclick="confirmRowPick()" disabled>選択した列を引き取る</button>
+    </div>
+
+    <!-- プレイヤー状態 -->
+    <div>
+      <div style="font-size:0.78rem; color:var(--muted); font-family:var(--mono); letter-spacing:1px; margin-bottom:4px;">👥 プレイヤー</div>
+      <div id="players-bar" class="players-bar"></div>
+    </div>
+
+    <!-- ログ -->
+    <div id="game-log" class="game-log"></div>
+
+    <button class="btn btn-ghost" onclick="if(confirm('ゲームを抜けますか？'))leaveRoom()">退出</button>
+  </div>
+
+  <!-- ===== ROUND END ===== -->
+  <div id="screen-round-end" class="screen">
+    <div class="round-banner">
+      <h3 style="text-transform:none; font-family:var(--sans); letter-spacing:0; font-size:1rem;">ラウンド <span id="re-round">1</span> 終了</h3>
+    </div>
+    <div id="re-scores" class="score-list"></div>
+    <p id="re-status" class="status-txt"></p>
+    <button class="btn btn-cow" onclick="proceedToNextRound()" id="btn-next-round" style="display:none;">▶ 次のラウンドへ</button>
+    <p id="re-waiting" style="font-size:0.78rem; color:var(--muted); text-align:center; display:none;">ホストの操作を待っています...</p>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- ===== RESULT ===== -->
+  <div id="screen-result" class="screen">
+    <div class="result-emoji">🐂</div>
+    <div class="result-title">ゲーム終了！</div>
+    <p style="text-align:center; color:var(--muted);">牛が一番少ない人の勝利</p>
+    <div id="result-scores" class="score-list"></div>
+    <div id="rematch-panel" class="rematch-panel">
+      <div id="rematch-status" class="rematch-status"></div>
+      <div id="rematch-voters" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
+    </div>
+    <button id="btn-rematch" class="btn btn-cow" onclick="submitRematch()">🔄 もう一度遊ぶ（同じメンバーで再戦）</button>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ戻る</button>
+    <a href="index.html" style="text-decoration:none;"><button class="btn btn-ghost" style="width:100%;">🏠 ハブに戻る</button></a>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const MAX_FIELD_ROW_LEN = 5; // 6枚目を出したらアウト
+
+// 牛の数を計算
+function cowsOf(num) {
+  if(num === 55) return 7;
+  // ゾロ目（11,22,...,99,44/66/77/88/99の判定）
+  if(num >= 11 && num % 11 === 0) return 5;
+  if(num % 10 === 0) return 3; // 末尾0
+  if(num % 5 === 0) return 2;  // 末尾5
+  return 1;
+}
+
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+function saveFbConfig() {
+  const url = g('fb-url').value.trim().replace(/\/$/,'');
+  if(!url) return;
+  fbUrl = url; localStorage.setItem(FB_KEY, url); g('fb-modal').style.display='none';
+}
+async function checkFbConfig() {
+  if(!fbUrl) { showFbModal(); return false; }
+  try {
+    const r = await fetch(`${fbUrl}/.json?shallow=true`, {method:'GET'});
+    if(!r.ok && r.status !== 404) { setErr('Firebase接続エラー'); return false; }
+  } catch(e) { setErr('Firebase接続失敗'); return false; }
+  return true;
+}
+function showFbModal() { g('fb-modal').style.display='flex'; }
+
+// FB primitives
+let fbRoom = '', fbPollTimer = null, fbLastBcastTs = 0, fbLastPrvTs = 0, fbLastActTs = {};
+async function fbPut(sub, data) { if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)}); } catch(e){} }
+async function fbGet(sub) { if(!fbRoom) return null; try { const r = await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`); if(!r.ok) return null; return await r.json(); } catch(e) { return null; } }
+async function fbDel(sub) { if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){} }
+function fbListen() {
+  if(fbPollTimer) clearInterval(fbPollTimer);
+  fbLastBcastTs = 0; fbLastPrvTs = 0; fbLastActTs = {};
+  fbPollTimer = setInterval(fbPoll, 500);
+}
+function fbClose() { if(fbPollTimer) clearInterval(fbPollTimer); fbPollTimer = null; fbRoom = ''; }
+async function fbPoll() {
+  if(!fbRoom) return;
+  const bc = await fbGet('broadcast');
+  if(bc && bc.ts > fbLastBcastTs) {
+    fbLastBcastTs = bc.ts;
+    if(!isHost && bc.msg) handleBroadcast(bc.msg);
+  }
+  const prv = await fbGet(`private/${myId}`);
+  if(prv && prv.ts > fbLastPrvTs) {
+    fbLastPrvTs = prv.ts;
+    if(prv.msg) handlePrivate(prv.msg);
+  }
+  if(isHost) {
+    const acts = await fbGet('action');
+    if(acts) {
+      for(const pid in acts) {
+        const a = acts[pid];
+        if(a && a.ts > (fbLastActTs[pid]||0)) {
+          fbLastActTs[pid] = a.ts;
+          if(a.msg) onMsg(a.msg, pid);
+        }
+      }
+    }
+  }
+}
+function fbBroadcast(msg) { fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg) { fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg) { fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '';
+let isHost = false, roomCode = '';
+let fs = null, gs = null;
+let myHand = null; // 自分の手札（数字配列）[number, number, ...]
+let selectedCardIdx = -1; // 選択中の手札idx
+let selectedRowIdx = -1; // 列引き取り時の選択
+
+// ============================================================
+// UTILS
+// ============================================================
+function g(id) { return document.getElementById(id); }
+function mk(tag, cls) { const e = document.createElement(tag); if(cls) e.className = cls; return e; }
+function show(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-'+name); if(el) el.classList.add('active');
+}
+function setErr(msg) { const e = g('lobby-error'); if(e) e.textContent = msg || ''; }
+function setSt(msg) { const s = g('lobby-status'); if(s) s.textContent = msg || ''; }
+function genId() { return 'p_' + Math.random().toString(36).slice(2,10); }
+function shuffle(a) { const x=a.slice(); for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];} return x; }
+function copyCode() { navigator.clipboard?.writeText(g('disp-code').textContent); }
+
+// ============================================================
+// ROOM
+// ============================================================
+async function createRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  myName = name; isHost = true;
+  const code = Array.from({length:4}, () => Math.floor(Math.random()*10)).join('');
+  roomCode = code; fbRoom = 'NM-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'nimmt', ts:Date.now()});
+    fs = initFs([{id:myId, name:myName}]);
+    gs = pubFs(fs);
+    fbListen();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    show('waiting'); saveSession(); refreshWait(); bcast();
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
+}
+
+async function joinRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)) { setErr('4桁の数字'); return; }
+  myName = name; isHost = false; roomCode = code;
+  fbRoom = 'NM-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta) { setErr('ルームが見つかりません'); setSt(''); return; }
+    if(meta.game !== 'nimmt') { setErr('ゲーム種別が違います'); setSt(''); return; }
+    fbListen();
+    fbSendToHost({type:'join', name:myName, id:myId});
+    setSt('接続しました...');
+    show('waiting'); saveSession();
+    g('disp-code').textContent = code;
+    g('btn-start').style.display = 'none';
+    let retries = 0;
+    const rj = setInterval(()=>{
+      if(!fbRoom || retries >= 5) { clearInterval(rj); return; }
+      if(gs?.players?.find(p=>p.id===myId)) { clearInterval(rj); return; }
+      fbSendToHost({type:'join', name:myName, id:myId});
+      retries++;
+    }, 2000);
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); }
+}
+
+function leaveRoom() {
+  fbClose(); fs=null; gs=null; isHost=false;
+  myHand = null; selectedCardIdx = -1;
+  try { clearSession(); } catch(e) {}
+  show('lobby');
+}
+
+function setGameMode(mode) {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  if(mode !== 'short' && mode !== 'normal') return;
+  fs.gameMode = mode;
+  g('opt-mode-short').classList.toggle('active', mode === 'short');
+  g('opt-mode-normal').classList.toggle('active', mode === 'normal');
+  updateModeDesc();
+  bcast();
+}
+
+function updateModeDesc() {
+  const el = g('mode-desc');
+  if(!el) return;
+  const mode = (fs && fs.gameMode) || 'short';
+  if(mode === 'short') {
+    el.textContent = '⚡ ショート: 1ラウンド10手番で終了（約10〜15分）';
+  } else {
+    el.textContent = '🐂 通常: 累計66点を超えた人が出るまで複数ラウンド（30〜60分）';
+  }
+}
+
+// ============================================================
+// HOST MESSAGE HANDLER
+// ============================================================
+function onMsg(d, senderPid) {
+  if(!d) return;
+  if(!fs) return;
+  switch(d.type) {
+    case 'join':
+      if(fs.phase !== 'waiting') { fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
+      if(fs.players.length >= 10) { fbSendTo(d.id, {type:'error', msg:'満員（最大10人）'}); return; }
+      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; }
+      fs.players.push({id:d.id, name:d.name, hand:[], cows:0});
+      bcast(); break;
+    case 'play':
+      handlePlay(senderPid, d.cardNum);
+      break;
+    case 'pickRow':
+      handleRowPick(senderPid, d.rowIdx);
+      break;
+    case 'nextRound':
+      handleNextRound(senderPid);
+      break;
+    case 'rematch':
+      _hostRematch(senderPid);
+      break;
+    case 'reconnect':
+      _hostReconnect(d, senderPid);
+      break;
+  }
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+function initFs(players) {
+  return {
+    phase: 'waiting',
+    players: players.map(p => ({id:p.id, name:p.name, hand:[], cows:0})),
+    field: [[], [], [], []], // 4つの列、各列に数字の配列
+    pendingPlays: {}, // {playerId: cardNum} 全員出すまで保留
+    pendingRowPick: null, // {playerId, cardNum} 列引き取り待ち
+    trickNum: 1, // 1〜10の手番
+    roundNum: 1, // ラウンド数
+    gameMode: 'short', // 'short' (1ラウンド) | 'normal' (66点まで)
+    log: [],
+    winner: null,
+  };
+}
+
+function pubFs(f) {
+  return {
+    phase: f.phase,
+    players: f.players.map(p => ({
+      id: p.id, name: p.name,
+      // 手札は枚数だけ公開
+      handCount: p.hand.length,
+      cows: p.cows,
+      // 出したかどうか（カード自体は非公開、出した数字はreveal時に公開）
+      hasPlayed: f.pendingPlays && f.pendingPlays[p.id] !== undefined,
+    })),
+    field: f.field.map(row => row.slice()),
+    trickNum: f.trickNum,
+    roundNum: f.roundNum,
+    gameMode: f.gameMode || 'short',
+    log: f.log.slice(-30),
+    winner: f.winner,
+    pendingRowPick: f.pendingRowPick ? {playerId: f.pendingRowPick.playerId, cardNum: f.pendingRowPick.cardNum} : null,
+    revealedPlays: f.revealedPlays || null, // [{playerId, name, cardNum}] 公開時のみ
+    roundEndScores: f.roundEndScores || null,
+  };
+}
+
+function bcast() {
+  gs = pubFs(fs);
+  fbBroadcast({type:'gs', s:gs});
+  // 各プレイヤーに自分の手札をprivateで送信
+  sendPrivateHands();
+  const me = fs.players.find(p => p.id === myId);
+  if(me) myHand = me.hand.slice();
+  onGsUpdate(gs);
+}
+
+function sendPrivateHands() {
+  fs.players.forEach(p => {
+    if(p.id === myId) return;
+    fbSendTo(p.id, {type:'myhand', hand: p.hand.slice()});
+  });
+}
+
+// ============================================================
+// START GAME / ROUND
+// ============================================================
+function startGame() {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  const n = fs.players.length;
+  if(n < 2 || n > 10) return;
+  const startBtn = g('btn-start');
+  if(startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳ 開始中...'; }
+
+  fs.roundNum = 1;
+  fs.players.forEach(p => { p.cows = 0; p.hand = []; });
+  startNewRound();
+}
+
+function startNewRound() {
+  // 104枚をシャッフル
+  const deck = [];
+  for(let i=1;i<=104;i++) deck.push(i);
+  const shuffled = shuffle(deck);
+
+  // 各プレイヤーに10枚配布
+  fs.players.forEach(p => {
+    p.hand = shuffled.splice(0, 10).sort((a,b) => a-b);
+  });
+
+  // 場に4枚並べる（各列1枚）
+  fs.field = [[], [], [], []];
+  for(let i=0;i<4;i++) {
+    fs.field[i].push(shuffled.shift());
+  }
+
+  fs.pendingPlays = {};
+  fs.pendingRowPick = null;
+  fs.revealedPlays = null;
+  fs.roundEndScores = null;
+  fs.trickNum = 1;
+  fs.phase = 'playing';
+  fs.log.push('🎲 ラウンド ' + fs.roundNum + ' 開始！');
+  fs.log.push('🃏 場の初期カード: ' + fs.field.map(r => r[0]).join(' / '));
+
+  bcast();
+}
+
+// ============================================================
+// PLAY HANDLING (同時出し)
+// ============================================================
+function handlePlay(actorId, cardNum) {
+  if(!fs || fs.phase !== 'playing') return;
+  const actor = fs.players.find(p => p.id === actorId);
+  if(!actor) return;
+  if(fs.pendingPlays[actorId] !== undefined) return; // 既に出した
+  if(fs.pendingRowPick) return; // 列引き取り中はプレイ不可
+
+  // 手札にあるかチェック
+  if(!actor.hand.includes(cardNum)) return;
+
+  fs.pendingPlays[actorId] = cardNum;
+  fs.log.push('🤫 ' + actor.name + ' がカードを伏せて出した');
+
+  // 全員出したかチェック
+  const allPlayed = fs.players.every(p => fs.pendingPlays[p.id] !== undefined);
+  if(allPlayed) {
+    resolveTrickStep1();
+  } else {
+    bcast();
+  }
+}
+
+// Step 1: 全員のカードを公開
+function resolveTrickStep1() {
+  // 出したカードを全員から手札削除
+  fs.players.forEach(p => {
+    const num = fs.pendingPlays[p.id];
+    if(num !== undefined) {
+      const idx = p.hand.indexOf(num);
+      if(idx !== -1) p.hand.splice(idx, 1);
+    }
+  });
+
+  // 公開リストを作成（小さい順にソート）
+  const plays = [];
+  for(const pid in fs.pendingPlays) {
+    const p = fs.players.find(x => x.id === pid);
+    plays.push({playerId: pid, name: p.name, cardNum: fs.pendingPlays[pid]});
+  }
+  plays.sort((a, b) => a.cardNum - b.cardNum);
+
+  fs.revealedPlays = plays;
+  fs.log.push('🎴 全員のカードを公開: ' + plays.map(p => p.cardNum + '(' + p.name + ')').join(' / '));
+
+  // 処理キューにセット（順番に処理）
+  fs.processQueue = plays.slice();
+  fs.pendingPlays = {};
+
+  bcast();
+  // 1秒後に処理開始
+  setTimeout(() => processQueueStep(), 1000);
+}
+
+// 公開カードを順次処理
+function processQueueStep() {
+  if(!fs || !fs.processQueue || fs.processQueue.length === 0) {
+    // 処理完了
+    finishTrick();
+    return;
+  }
+  const next = fs.processQueue.shift();
+  const cardNum = next.cardNum;
+  const playerId = next.playerId;
+  const player = fs.players.find(p => p.id === playerId);
+  if(!player) {
+    setTimeout(() => processQueueStep(), 300);
+    return;
+  }
+
+  // どの列に置くか決定
+  // ルール: カードより小さい末尾値を持つ列の中で、最も末尾値が大きい列
+  const rowEnds = fs.field.map(row => row[row.length-1]);
+  let bestRow = -1;
+  let bestEnd = -1;
+  for(let i=0;i<4;i++) {
+    if(rowEnds[i] < cardNum && rowEnds[i] > bestEnd) {
+      bestEnd = rowEnds[i];
+      bestRow = i;
+    }
+  }
+
+  if(bestRow === -1) {
+    // 全列より小さい → プレイヤーに列を選ばせる
+    fs.pendingRowPick = {playerId, cardNum};
+    fs.log.push('⚠️ ' + player.name + ' のカード(' + cardNum + ')は全列より小さい。列を引き取る選択中...');
+    bcast();
+    return; // ユーザー入力待ち
+  }
+
+  // 6枚目になる？
+  if(fs.field[bestRow].length >= MAX_FIELD_ROW_LEN) {
+    // この列の5枚を回収
+    const taken = fs.field[bestRow].slice();
+    const totalCows = taken.reduce((s, n) => s + cowsOf(n), 0);
+    player.cows += totalCows;
+    fs.log.push('💥 ' + player.name + ' が6枚目を出した！列' + (bestRow+1) + 'の5枚を回収（+' + totalCows + '牛）');
+    // 列をクリアして6枚目を新しい1枚目に
+    fs.field[bestRow] = [cardNum];
+  } else {
+    // 普通に追加
+    fs.field[bestRow].push(cardNum);
+    fs.log.push('✅ ' + player.name + ' が ' + cardNum + ' を列' + (bestRow+1) + 'に追加');
+  }
+
+  bcast();
+  // 次の処理へ（少し間をあける）
+  setTimeout(() => processQueueStep(), 600);
+}
+
+// 列引き取りの処理
+function handleRowPick(actorId, rowIdx) {
+  if(!fs || !fs.pendingRowPick) return;
+  if(fs.pendingRowPick.playerId !== actorId) return;
+  if(rowIdx < 0 || rowIdx > 3) return;
+
+  const player = fs.players.find(p => p.id === actorId);
+  if(!player) return;
+  const cardNum = fs.pendingRowPick.cardNum;
+
+  // 指定列を回収
+  const taken = fs.field[rowIdx].slice();
+  const totalCows = taken.reduce((s, n) => s + cowsOf(n), 0);
+  player.cows += totalCows;
+  fs.log.push('🎯 ' + player.name + ' が列' + (rowIdx+1) + 'を選択して回収（+' + totalCows + '牛）');
+  // 列をクリアして引き取ったカードを新しい1枚目に
+  fs.field[rowIdx] = [cardNum];
+
+  fs.pendingRowPick = null;
+  bcast();
+
+  // 次の処理へ
+  setTimeout(() => processQueueStep(), 600);
+}
+
+// 全カード処理完了後
+function finishTrick() {
+  fs.processQueue = null;
+  fs.revealedPlays = null;
+
+  // 手番進行
+  fs.trickNum += 1;
+
+  // ラウンド終了？（10手番 = 全員が10枚出した）
+  if(fs.trickNum > 10) {
+    endRound();
+    return;
+  }
+
+  bcast();
+}
+
+// ============================================================
+// ROUND END / GAME END
+// ============================================================
+function endRound() {
+  fs.phase = 'roundEnd';
+  fs.log.push('🏁 ラウンド ' + fs.roundNum + ' 終了');
+  // 各プレイヤーの累計牛
+  fs.roundEndScores = fs.players.map(p => ({
+    id: p.id, name: p.name, cows: p.cows
+  })).sort((a, b) => a.cows - b.cows);
+
+  // ゲーム終了判定
+  let gameEnd = false;
+  if(fs.gameMode === 'short') {
+    // ショートモード: 1ラウンドで終了
+    gameEnd = true;
+  } else {
+    // 通常モード: 66点以上で終了
+    gameEnd = fs.players.some(p => p.cows >= 66);
+  }
+
+  if(gameEnd) {
+    fs.phase = 'result';
+    // 最終スコア計算
+    fs.finalScores = fs.players.map(p => ({
+      id: p.id, name: p.name, cows: p.cows
+    })).sort((a, b) => a.cows - b.cows);
+    fs.log.push('🏆 ゲーム終了！勝者: ' + fs.finalScores[0].name);
+  }
+  bcast();
+}
+
+function handleNextRound(actorId) {
+  if(!fs || fs.phase !== 'roundEnd') return;
+  // ホストだけが進められる
+  if(fs.players[0].id !== actorId) return;
+  fs.roundNum += 1;
+  startNewRound();
+}
+
+function proceedToNextRound() {
+  if(!isHost) return;
+  if(!fs || fs.phase !== 'roundEnd') return;
+  handleNextRound(myId);
+}
+
+// ============================================================
+// REMATCH
+// ============================================================
+// ============================================================
+// REMATCH (voting)
+// ============================================================
+let _rematchVoters = [];
+
+function _renderRematchPanel(voterIds, players) {
+  const st = g('rematch-status'), vl = g('rematch-voters');
+  if(!st || !vl) return;
+  const total = (players||[]).length;
+  const validIds = voterIds.filter(id => (players||[]).some(p => p.id === id));
+  st.textContent = `再戦希望: ${validIds.length} / ${total} 人`;
+  vl.innerHTML = '';
+  validIds.forEach(id => {
+    const p = (players||[]).find(pp => pp.id === id);
+    if(!p) return;
+    const t = document.createElement('span');
+    t.className = 'rematch-voter-tag';
+    t.textContent = '✅ ' + p.name;
+    vl.appendChild(t);
+  });
+}
+
+function _resetRematchUI() {
+  _rematchVoters = [];
+  const btn = g('btn-rematch');
+  if(btn) { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
+  _renderRematchPanel([], fs?.players || gs?.players || []);
+}
+
+function submitRematch() {
+  const btn = g('btn-rematch');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ 他のプレイヤーを待っています...'; }
+  if(isHost) {
+    _hostRematch(myId);
+  } else {
+    fbSendToHost({type:'rematch', id:myId, name:myName});
+  }
+}
+
+function _hostRematch(pid) {
+  if(!fs) return;
+  const player = fs.players.find(p => p.id === pid);
+  if(!player) return;
+  // 退出済みプレイヤーIDを除去
+  _rematchVoters = _rematchVoters.filter(id => fs.players.some(p => p.id === id));
+  if(_rematchVoters.includes(pid)) return;
+  _rematchVoters.push(pid);
+  fbBroadcast({type:'rematch_update', voterIds:_rematchVoters, players:fs.players.map(p=>({id:p.id,name:p.name}))});
+  _renderRematchPanel(_rematchVoters, fs.players);
+  if(_rematchVoters.length >= fs.players.length) {
+    fbBroadcast({type:'rematch_go'});
+    _actualRestart();
+  }
+}
+
+function _actualRestart() {
+  _rematchVoters = [];
+  const btn = g('btn-rematch');
+  if(btn) { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
+  if(isHost) {
+    fs.phase = 'waiting';
+    fs.players.forEach(p => { p.hand = []; p.cows = 0; });
+    fs.field = [[],[],[],[]];
+    fs.pendingPlays = {}; fs.pendingRowPick = null;
+    fs.revealedPlays = null; fs.roundEndScores = null;
+    fs.finalScores = null;
+    fs.trickNum = 1; fs.roundNum = 1;
+    fs.log = []; fs.winner = null;
+    bcast();
+    show('waiting');
+    refreshWait();
+  }
+}
+
+// 互換用エイリアス
+function restartGame() { submitRematch(); }
+function handleRematchReq(senderPid) { _hostRematch(senderPid); }
+
+// ============================================================
+// CLIENT HANDLERS
+// ============================================================
+function handleBroadcast(msg) {
+  if(msg.type === 'gs') {
+    gs = msg.s;
+    onGsUpdate(gs);
+  } else if(msg.type === 'rematch_update') {
+    _renderRematchPanel(msg.voterIds||[], msg.players||[]);
+  } else if(msg.type === 'rematch_go') {
+    _resetRematchUI();
+  }
+}
+function handlePrivate(msg) {
+  if(msg.type === 'myhand') {
+    myHand = msg.hand;
+    renderPlaying();
+  } else if(msg.type === 'error') {
+    setErr(msg.msg);
+  }
+}
+
+function onGsUpdate(s) {
+  if(!s) return;
+  if(s.phase === 'waiting') { show('waiting'); refreshWait(); }
+  else if(s.phase === 'playing') {
+    if(!g('screen-playing').classList.contains('active')) show('playing');
+    renderPlaying();
+  }
+  else if(s.phase === 'roundEnd') {
+    show('round-end');
+    renderRoundEnd();
+  }
+  else if(s.phase === 'result') {
+    showResult();
+  }
+}
+
+// ============================================================
+// WAITING
+// ============================================================
+function refreshWait() {
+  if(!gs) return;
+  g('p-count').textContent = gs.players.length + '人';
+  const list = g('wait-list');
+  list.innerHTML = '';
+  gs.players.forEach(p => {
+    const row = mk('div', 'player-row' + (p.id===myId?' is-me':''));
+    const nameSpan = mk('span', 'player-name');
+    nameSpan.textContent = (p.id===myId?'👤 ':'👥 ') + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
+    row.appendChild(nameSpan);
+    list.appendChild(row);
+  });
+  // モード表示同期
+  const mode = gs.gameMode || 'short';
+  if(isHost) {
+    g('host-settings').style.display = '';
+    g('guest-mode-info').style.display = 'none';
+    g('opt-mode-short').classList.toggle('active', mode === 'short');
+    g('opt-mode-normal').classList.toggle('active', mode === 'normal');
+    updateModeDesc();
+  } else {
+    g('host-settings').style.display = 'none';
+    g('guest-mode-info').style.display = '';
+    g('guest-mode-text').textContent = mode === 'short' ? '⚡ ショート（1ラウンドで終了）' : '🐂 通常（66点まで）';
+  }
+  if(isHost) {
+    const btn = g('btn-start');
+    btn.style.display = '';
+    btn.disabled = !(gs.players.length >= 2 && gs.players.length <= 10);
+    btn.textContent = '▶ ゲームを開始する';
+    g('wait-status').textContent = gs.players.length < 2 ? 'あと1人以上必要です（2〜10人）' :
+      gs.players.length > 10 ? '満員（最大10人）' : '開始できます！';
+  } else {
+    g('btn-start').style.display = 'none';
+    g('wait-status').textContent = 'ホストの開始を待っています...';
+  }
+}
+
+// ============================================================
+// PLAYING RENDER
+// ============================================================
+function renderPlaying() {
+  if(!gs) return;
+  // 状態バー
+  g('state-mode').textContent = gs.gameMode === 'short' ? '⚡ショート' : '🐂通常';
+  g('state-round').textContent = gs.roundNum;
+  g('state-trick').textContent = gs.trickNum + '/10';
+  const playedCount = gs.players.filter(p => p.hasPlayed).length;
+  g('state-played').textContent = playedCount + '/' + gs.players.length;
+
+  // 場の4列
+  renderField();
+
+  // 自分の手札
+  renderMyHand();
+
+  // プレイヤー状態
+  renderPlayers();
+
+  // 列引き取り待ち？
+  const isPickingForMe = gs.pendingRowPick && gs.pendingRowPick.playerId === myId;
+  if(isPickingForMe) {
+    g('row-pick-section').style.display = '';
+    renderRowPicker();
+    // 自分のターンに集中させるため手札のプレイUIは隠す
+    g('play-action').style.display = 'none';
+    g('waiting-others').style.display = 'none';
+  } else {
+    g('row-pick-section').style.display = 'none';
+  }
+
+  // 他人が列引き取り中
+  if(gs.pendingRowPick && gs.pendingRowPick.playerId !== myId) {
+    const picker = gs.players.find(p => p.id === gs.pendingRowPick.playerId);
+    g('waiting-others').innerHTML = '<div class="reveal-banner">⏳ ' + (picker?.name || '他のプレイヤー') + ' が列を引き取り中... (' + gs.pendingRowPick.cardNum + ')</div>';
+    g('waiting-others').style.display = '';
+    g('play-action').style.display = 'none';
+  }
+
+  // ログ
+  const logEl = g('game-log');
+  logEl.innerHTML = '';
+  (gs.log||[]).forEach(line => {
+    const d = mk('div'); d.textContent = line; logEl.appendChild(d);
+  });
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function renderField() {
+  const fr = g('field-rows');
+  fr.innerHTML = '';
+  for(let i=0;i<4;i++) {
+    const rowEl = mk('div', 'field-row');
+    const count = (gs.field[i] || []).length;
+    if(count === 5) rowEl.classList.add('danger');
+    else if(count === 4) rowEl.classList.add('warn');
+
+    const label = mk('div', 'field-row-label');
+    label.textContent = (i+1);
+    rowEl.appendChild(label);
+
+    (gs.field[i] || []).forEach(num => {
+      const c = makeCardElement(num, 'small');
+      rowEl.appendChild(c);
+    });
+    // 空きスロット（残り何枚で危険か視覚化）
+    for(let j=count;j<5;j++) {
+      const slot = mk('div');
+      slot.style.cssText = 'width:38px; height:52px; border:1px dashed var(--surface3); border-radius:4px; flex-shrink:0; opacity:0.4;';
+      rowEl.appendChild(slot);
+    }
+    fr.appendChild(rowEl);
+  }
+}
+
+function makeCardElement(num, size) {
+  const cows = cowsOf(num);
+  const c = mk('div', 'card cow' + cows + (size ? ' ' + size : ''));
+  const numSpan = mk('div');
+  numSpan.textContent = num;
+  c.appendChild(numSpan);
+  // 牛アイコン
+  const cowSpan = mk('div', 'cow-icons');
+  cowSpan.textContent = '🐂'.repeat(cows);
+  c.appendChild(cowSpan);
+  return c;
+}
+
+function renderMyHand() {
+  const handEl = g('my-hand');
+  handEl.innerHTML = '';
+  const me = gs.players.find(p => p.id === myId);
+  const iHavePlayed = me && me.hasPlayed;
+
+  if(!myHand || myHand.length === 0) {
+    handEl.innerHTML = '<div style="color:var(--muted); padding:20px; text-align:center;">手札がありません</div>';
+    g('play-action').style.display = 'none';
+    g('waiting-others').style.display = 'none';
+    return;
+  }
+
+  myHand.forEach((num, idx) => {
+    const c = makeCardElement(num);
+    if(selectedCardIdx === idx) c.classList.add('selected');
+    if(iHavePlayed) {
+      c.classList.add('played');
+    } else {
+      c.onclick = () => {
+        selectedCardIdx = (selectedCardIdx === idx) ? -1 : idx;
+        renderMyHand();
+        updatePlayActionButton();
+      };
+    }
+    handEl.appendChild(c);
+  });
+
+  updatePlayActionButton();
+}
+
+function updatePlayActionButton() {
+  const me = gs.players.find(p => p.id === myId);
+  const iHavePlayed = me && me.hasPlayed;
+  const pickingForMe = gs.pendingRowPick && gs.pendingRowPick.playerId === myId;
+
+  if(pickingForMe) {
+    g('play-action').style.display = 'none';
+    g('waiting-others').style.display = 'none';
+    return;
+  }
+
+  if(iHavePlayed) {
+    g('play-action').style.display = 'none';
+    g('waiting-others').style.display = '';
+    g('waiting-others').innerHTML = '<div class="reveal-banner">⏳ 他のプレイヤーを待っています...</div>';
+  } else if(selectedCardIdx >= 0) {
+    g('play-action').style.display = '';
+    g('waiting-others').style.display = 'none';
+  } else {
+    g('play-action').style.display = 'none';
+    g('waiting-others').style.display = 'none';
+  }
+}
+
+function renderPlayers() {
+  const pb = g('players-bar');
+  pb.innerHTML = '';
+  gs.players.forEach(p => {
+    const row = mk('div', 'player-mini' + (p.id===myId?' is-me':'') + (p.hasPlayed?' played':''));
+    const nameSpan = mk('div', 'player-mini-name');
+    nameSpan.textContent = (p.id===myId?'👤':'👥') + ' ' + p.name;
+    row.appendChild(nameSpan);
+    const cowsSpan = mk('div', 'player-mini-cows');
+    cowsSpan.textContent = '🐂' + p.cows;
+    row.appendChild(cowsSpan);
+    const statusSpan = mk('div', 'player-mini-status' + (p.hasPlayed?' played':''));
+    statusSpan.textContent = p.hasPlayed ? '✅ 出した' : '⏳ 検討中';
+    row.appendChild(statusSpan);
+    pb.appendChild(row);
+  });
+}
+
+function renderRowPicker() {
+  const pl = g('row-pick-list');
+  pl.innerHTML = '';
+  selectedRowIdx = -1;
+  for(let i=0;i<4;i++) {
+    const row = gs.field[i] || [];
+    const totalCows = row.reduce((s, n) => s + cowsOf(n), 0);
+    const item = mk('div', 'row-pick-item');
+    item.onclick = () => {
+      selectedRowIdx = i;
+      Array.from(pl.children).forEach((el,j) => el.classList.toggle('selected', j === i));
+      g('btn-confirm-row-pick').disabled = false;
+    };
+    const label = mk('div');
+    label.style.cssText = 'font-family:var(--mono); font-weight:700; color:var(--muted); width:24px;';
+    label.textContent = '列' + (i+1);
+    item.appendChild(label);
+    // ミニカード列表示
+    const cardsDiv = mk('div');
+    cardsDiv.style.cssText = 'display:flex; gap:2px; flex:1; overflow:hidden;';
+    row.forEach(num => {
+      const c = makeCardElement(num, 'tiny');
+      cardsDiv.appendChild(c);
+    });
+    item.appendChild(cardsDiv);
+    const cowsLabel = mk('div', 'row-pick-cows');
+    cowsLabel.textContent = '+🐂' + totalCows;
+    item.appendChild(cowsLabel);
+    pl.appendChild(item);
+  }
+  g('btn-confirm-row-pick').disabled = true;
+}
+
+function confirmRowPick() {
+  if(selectedRowIdx < 0) return;
+  if(!confirm('列' + (selectedRowIdx + 1) + 'を引き取りますか？')) return;
+  const rowIdx = selectedRowIdx;
+  g('btn-confirm-row-pick').disabled = true;
+  if(isHost) handleRowPick(myId, rowIdx);
+  else fbSendToHost({type:'pickRow', rowIdx});
+  selectedRowIdx = -1;
+}
+
+// ============================================================
+// PLAY SUBMITTER
+// ============================================================
+let isSubmittingPlay = false;
+function submitPlay() {
+  if(isSubmittingPlay) return;
+  if(selectedCardIdx < 0 || !myHand) return;
+  const cardNum = myHand[selectedCardIdx];
+  if(cardNum === undefined) return;
+  isSubmittingPlay = true;
+  const btn = g('play-action').querySelector('button');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ 送信中...'; }
+
+  if(isHost) handlePlay(myId, cardNum);
+  else fbSendToHost({type:'play', cardNum});
+
+  selectedCardIdx = -1;
+  setTimeout(() => {
+    isSubmittingPlay = false;
+    if(btn) { btn.disabled = false; btn.textContent = '📤 このカードを出す'; }
+  }, 800);
+}
+
+// ============================================================
+// ROUND END / RESULT
+// ============================================================
+function renderRoundEnd() {
+  if(!gs || !gs.roundEndScores) return;
+  g('re-round').textContent = gs.roundNum;
+  const sl = g('re-scores');
+  sl.innerHTML = '';
+  gs.roundEndScores.forEach((p, idx) => {
+    const row = mk('div', 'score-row' + (p.id===myId?' is-me':''));
+    const rank = mk('div', 'score-rank');
+    rank.textContent = '#' + (idx+1);
+    row.appendChild(rank);
+    const name = mk('div', 'score-name');
+    name.textContent = p.name;
+    row.appendChild(name);
+    const cows = mk('div', 'score-cows');
+    cows.textContent = '🐂 ' + p.cows;
+    row.appendChild(cows);
+    sl.appendChild(row);
+  });
+  // 次のラウンドへ
+  if(isHost) {
+    g('btn-next-round').style.display = '';
+    g('re-waiting').style.display = 'none';
+  } else {
+    g('btn-next-round').style.display = 'none';
+    g('re-waiting').style.display = '';
+  }
+  // 進行中の状況メッセージ
+  const maxCow = Math.max(...gs.roundEndScores.map(p=>p.cows));
+  if(gs.gameMode === 'short') {
+    g('re-status').textContent = '⚡ ショートモードは1ラウンドで終了';
+  } else {
+    g('re-status').textContent = maxCow >= 66
+      ? '🏁 66点を超えた人がいます → ゲーム終了です'
+      : '最大牛: ' + maxCow + '点 / 66点に達したら終了';
+  }
+}
+
+function showResult() {
+  show('result');
+  _resetRematchUI();
+  if(!gs || !gs.roundEndScores) return; // gs.finalScores ではなく roundEndScores を使う（fsには finalScores があるが、gsに含めるのを忘れた場合のフォールバック）
+
+  // gs に finalScores があれば優先
+  const scores = gs.finalScores || gs.roundEndScores;
+  const sl = g('result-scores');
+  sl.innerHTML = '';
+  scores.forEach((p, idx) => {
+    const row = mk('div', 'score-row' + (p.id===myId?' is-me':'') + (idx===0?' winner':''));
+    const rank = mk('div', 'score-rank');
+    rank.textContent = idx === 0 ? '🏆' : '#' + (idx+1);
+    row.appendChild(rank);
+    const name = mk('div', 'score-name');
+    name.textContent = p.name;
+    row.appendChild(name);
+    const cows = mk('div', 'score-cows');
+    cows.textContent = '🐂 ' + p.cows;
+    row.appendChild(cows);
+    sl.appendChild(row);
+  });
+}
+
+// finalScores を pubFs に含める
+const _origPubFs = pubFs;
+pubFs = function(f) {
+  const result = _origPubFs(f);
+  if(f.finalScores) result.finalScores = f.finalScores.slice();
+  return result;
+};
+
+window.addEventListener('DOMContentLoaded', () => { showReconnectOption(); });
+
+// ゲーム中のページ離脱警告
+window.addEventListener('beforeunload', (e) => {
+  if(fs && (fs.phase === 'playing' || fs.phase === 'roundEnd')) {
+    e.preventDefault();
+    e.returnValue = 'ゲーム中です。本当にページを離れますか？';
+    return e.returnValue;
+  }
+});
+
+// ============================================================
+// SESSION SAVE / RESTORE
+// ============================================================
+const SESSION_KEY = 'pgSession_nm';
+function saveSession() {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      myId, myName, roomCode, fbRoom, isHost,
+      ts: Date.now()
+    }));
+  } catch(e) {}
+}
+function clearSession() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(Date.now() - s.ts > 3 * 60 * 60 * 1000) { clearSession(); return null; }
+    return s;
+  } catch(e) { return null; }
+}
+function showReconnectOption() {
+  const s = loadSession();
+  if(!s) return;
+  const btn = g('btn-reconnect');
+  if(!btn) return;
+  btn.style.display = '';
+  btn.textContent = `🔄 前のルームに戻る（🐂ニムト #${s.roomCode}）`;
+}
+async function reconnectToRoom() {
+  const s = loadSession();
+  if(!s) { setErr('セッションが見つかりません'); return; }
+  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
+  fbRoom = s.fbRoom; isHost = s.isHost;
+  setSt('再接続中...');
+  try {
+    const meta = await fbGet('meta');
+    if(!meta) {
+      clearSession();
+      setErr('ルームが見つかりません（終了済みの可能性があります）');
+      setSt(''); return;
+    }
+    fbListen();
+    if(isHost) {
+      const data = await fetch(`${fbUrl}/rooms/${fbRoom}.json`).then(r=>r.json()).catch(()=>null);
+      const savedGs = data?.broadcast?.msg?.s;
+      if(savedGs) {
+        gs = savedGs;
+        fs = JSON.parse(JSON.stringify(savedGs));
+        onGsUpdate(gs);
+      } else {
+        show('waiting');
+        const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
+        if(typeof refreshWait === 'function') refreshWait();
+      }
+    } else {
+      fbSendToHost({type:'join', name:myName, id:myId});
+      fbSendToHost({type:'reconnect', id:myId, name:myName});
+      setSt('接続しました！');
+      show('waiting');
+      const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
+      const bs = g('btn-start'); if(bs) bs.style.display = 'none';
+      let retries = 0;
+      const retry = setInterval(()=>{
+        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
+        fbSendToHost({type:'reconnect', id:myId, name:myName});
+        retries++;
+      }, 2000);
+    }
+    setErr(''); setSt('');
+    const br = g('btn-reconnect'); if(br) br.style.display = 'none';
+  } catch(e) {
+    setErr('再接続失敗: ' + (e.message||e));
+    setSt('');
+  }
+}
+function _hostReconnect(d, senderPid) {
+  if(!fs) return;
+  const rp = fs.players.find(p=>p.id===d.id);
+  if(fs.phase === 'waiting') {
+    if(!rp && fs.players.length < 10) {
+      fs.players.push({id:d.id, name:d.name, hand:[], cows:0});
+    }
+    bcast();
+  } else {
+    if(rp) {
+      bcast();
+      // 必要に応じてプライベート情報を再送
+      if(typeof _resendPrivate === 'function') _resendPrivate(d.id);
+    }
+  }
+}
+</script>
+</body>
+</html>
