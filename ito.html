@@ -285,6 +285,8 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
         <button class="btn btn-blue" onclick="joinRoom()">参加</button>
       </div>
+      <div class="divider"></div>
+      <button class="btn btn-green" onclick="startSoloMode()">🤖 ソロプレイ（BOTと対戦）</button>
     </div>
 
     <div id="lobby-status" class="status-txt"></div>
@@ -329,6 +331,13 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <!-- ホストのみの設定 -->
     <div id="host-settings" style="display:none;">
       <h3 style="margin-bottom:8px; font-size:0.9rem;">ゲーム設定（ホストのみ）</h3>
+      <div class="setting-row">
+        <label>🤖 BOTを追加</label>
+        <div style="display:flex; gap:6px;">
+          <button class="toggle-btn" onclick="addBot()">+ BOT追加</button>
+          <button class="toggle-btn" onclick="removeBot()">- BOT削除</button>
+        </div>
+      </div>
       <div class="setting-row">
         <label>❤️ ライフ数</label>
         <div class="toggle-group">
@@ -1039,6 +1048,178 @@ let myNumber = null; // 自分の数字
 let mySubmittedExpression = '';
 
 // ============================================================
+// BOT
+// ============================================================
+let botCounter = 0;
+let botActionTimers = {}; // botId -> timeoutId（重複防止）
+const BOT_NAMES = ['🤖アル', '🤖ベル', '🤖カイ', '🤖ドラ', '🤖エム', '🤖フウ', '🤖ジン', '🤖ハル', '🤖ナナ'];
+function genBotId() { return 'bot_' + Math.random().toString(36).slice(2,8); }
+
+function addBot() {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  if(fs.players.length >= 10) { setSt('満員（最大10人）'); return; }
+  // 未使用の名前を選択
+  const used = fs.players.map(p => p.name);
+  let botName = null;
+  for(const n of BOT_NAMES) {
+    if(!used.includes(n)) { botName = n; break; }
+  }
+  if(!botName) botName = '🤖BOT' + (++botCounter);
+  const botId = genBotId();
+  fs.players.push({id:botId, name:botName, number:null, expression:'', played:false, isBot:true});
+  bcast();
+}
+
+function removeBot() {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  // 最後に追加したBOTを削除
+  for(let i = fs.players.length-1; i >= 0; i--) {
+    if(fs.players[i].isBot) {
+      fs.players.splice(i, 1);
+      bcast();
+      return;
+    }
+  }
+}
+
+// BOTが「自分の数字」をどう表現するか（テーマに応じた言葉を選ぶ）
+// 中級レベル: 数字に応じた段階的な表現を返す
+function botGenerateExpression(num, theme, range) {
+  // 数字を1〜100スケールに正規化
+  const norm = Math.round((num / range) * 100);
+  // 各テーマで使う段階的表現
+  // 一般的な比較語ベース（テーマに依存しない）
+  const lowWords = ['ほぼ無', 'すごく少ない', 'ちょっとだけ', '小さい', '弱い'];
+  const midLowWords = ['普通より少なめ', 'やや弱い', '平均以下', '中の下'];
+  const midWords = ['普通', '中くらい', 'まあまあ', 'ちょうどいい'];
+  const midHighWords = ['普通より多い', 'やや強い', '中の上', 'まずまず多い'];
+  const highWords = ['多い', '大きい', '強い', 'かなり', 'たくさん'];
+  const veryHighWords = ['めっちゃ', '超', '最強', 'とんでもなく', 'マックス'];
+  
+  let pool;
+  if(norm <= 15) pool = lowWords;
+  else if(norm <= 35) pool = midLowWords;
+  else if(norm <= 55) pool = midWords;
+  else if(norm <= 75) pool = midHighWords;
+  else if(norm <= 90) pool = highWords;
+  else pool = veryHighWords;
+  
+  // テーマのlow/highの単語を使った表現も
+  const themeBase = theme && theme.text ? theme.text : '';
+  const lowExample = theme && theme.low ? theme.low : '';
+  const highExample = theme && theme.high ? theme.high : '';
+  
+  // テーマ依存の追加候補
+  const extra = [];
+  if(norm <= 20 && lowExample) extra.push(lowExample);
+  if(norm >= 80 && highExample) extra.push(highExample);
+  if(norm >= 35 && norm <= 65 && themeBase) extra.push('普通の' + themeBase);
+  
+  const all = [...pool, ...extra];
+  return all[Math.floor(Math.random() * all.length)];
+}
+
+// BOTが「今カードを出すべきか」判断する
+// 中級: 自分の数字が、まだ出していないプレイヤーの中で順序的に最も「先に出すべき」かを判定
+function botShouldPlay(botPlayer) {
+  if(botPlayer.played || botPlayer.number === null) return false;
+  if(!botPlayer.expression) return false; // 表現していなければ出せない
+  const order = fs.order || 'asc';
+  const myNum = botPlayer.number;
+  const notPlayed = fs.players.filter(p => !p.played && p.id !== botPlayer.id);
+  if(notPlayed.length === 0) return true;
+  // 全員が表現を出しているかチェック（出していない人がいるなら待つ）
+  const allExpressed = notPlayed.every(p => p.expression);
+  if(!allExpressed) return false;
+  
+  // BOTのみの場合や、誰も出さない状況を回避するため：
+  // 「自分以外のBOTで、自分より先に出すべき数字を持つ人」がいないなら出す
+  // 人間プレイヤーがいる場合はその数字は分からないので、確率的に判断
+  const range = fs.numberRange || 100;
+  
+  // 他のBOTの数字を確認できる（ホスト側ロジック）
+  const otherBots = notPlayed.filter(p => p.isBot);
+  const otherHumans = notPlayed.filter(p => !p.isBot);
+  
+  // 他のBOTの中で自分より「先に出すべき」数字がいるかチェック
+  let botBlocks = false;
+  for(const b of otherBots) {
+    if(order === 'asc') {
+      if(b.number < myNum) { botBlocks = true; break; }
+    } else {
+      if(b.number > myNum) { botBlocks = true; break; }
+    }
+  }
+  if(botBlocks) return false; // 他のBOTが先に出すべき
+  
+  // 他のBOTで自分より先のがいない場合、人間プレイヤーが居なければ出す
+  if(otherHumans.length === 0) return true;
+  
+  // 人間プレイヤーが居る場合、確率的に判断
+  // 自分の数字が小さい（昇順）/ 大きい（降順）ほど積極的に出す
+  let shouldPlay;
+  if(order === 'asc') {
+    // 自分の数字が、残り人数で割った範囲の「自分の位置」より小さいか
+    // 例: 4人残ってて自分が3番目に小さいと思うなら(3/5)*range以下なら出す
+    const threshold = (1 / (notPlayed.length + 1)) * range * 1.5; // やや積極的
+    shouldPlay = myNum <= threshold;
+  } else {
+    const threshold = range - (1 / (notPlayed.length + 1)) * range * 1.5;
+    shouldPlay = myNum >= threshold;
+  }
+  return shouldPlay;
+}
+
+// BOTの行動をスケジュール（ゲームフェーズ変化のたびに呼ぶ）
+function scheduleBotActions() {
+  if(!isHost || !fs || fs.phase !== 'playing') return;
+  for(const p of fs.players) {
+    if(!p.isBot) continue;
+    if(p.played) continue;
+    // 表現を未送信なら一定時間後に送信
+    if(!p.expression) {
+      if(botActionTimers[p.id+'_expr']) continue; // 既に予約済み
+      const delay = 1500 + Math.random() * 2500; // 1.5〜4秒
+      botActionTimers[p.id+'_expr'] = setTimeout(() => {
+        delete botActionTimers[p.id+'_expr'];
+        if(!fs || fs.phase !== 'playing') return;
+        const bot = fs.players.find(x => x.id === p.id);
+        if(!bot || bot.played || bot.expression) return;
+        const expr = botGenerateExpression(bot.number, fs.theme, fs.numberRange || 100);
+        handleExpression(bot.id, expr);
+        // handleExpression内でbcastされ、その中で再スケジュールされる
+      }, delay);
+    } else {
+      // 表現済み: 出すかどうか判断
+      if(botActionTimers[p.id+'_play']) continue;
+      const delay = 2000 + Math.random() * 3000; // 2〜5秒
+      botActionTimers[p.id+'_play'] = setTimeout(() => {
+        delete botActionTimers[p.id+'_play'];
+        if(!fs || fs.phase !== 'playing') return;
+        const bot = fs.players.find(x => x.id === p.id);
+        if(!bot || bot.played) return;
+        if(botShouldPlay(bot)) {
+          handlePlay(bot.id);
+          // handlePlay内でbcastされ再スケジュールされる
+        } else {
+          // 出さない判断：再評価のタイマーを設定（少し長めの間隔）
+          // 状態が変わらないと永遠に出さない可能性があるので、ランダム性で動かす
+          // ただし、無限再帰防止のためここでは再スケジュールしない
+          // 次回のbcast（他プレイヤーのアクション後）で再スケジュールされる
+        }
+      }, delay);
+    }
+  }
+}
+
+function clearBotTimers() {
+  for(const k in botActionTimers) {
+    clearTimeout(botActionTimers[k]);
+  }
+  botActionTimers = {};
+}
+
+// ============================================================
 // UTILS
 // ============================================================
 function g(id) { return document.getElementById(id); }
@@ -1077,6 +1258,29 @@ async function createRoom() {
   } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
 }
 
+// ソロモード（通信なし、ホスト＋BOT で遊ぶ）
+function startSoloMode() {
+  const name = g('in-name').value.trim() || 'プレイヤー';
+  myName = name; isHost = true;
+  roomCode = ''; fbRoom = ''; // 通信なし
+  myId = genId();
+  fs = initFs([{id:myId, name:myName}]);
+  gs = pubFs(fs);
+  // BOTを2体自動追加
+  for(let i = 0; i < 2; i++) {
+    const used = fs.players.map(p => p.name);
+    let botName = null;
+    for(const n of BOT_NAMES) {
+      if(!used.includes(n)) { botName = n; break; }
+    }
+    if(!botName) botName = '🤖BOT' + (i+1);
+    fs.players.push({id:'bot_'+i, name:botName, number:null, expression:'', played:false, isBot:true});
+  }
+  setErr(''); setSt('');
+  g('disp-code').textContent = 'ソロ';
+  show('waiting'); refreshWait(); bcast();
+}
+
 async function joinRoom() {
   if(!(await checkFbConfig())) return;
   const name = g('in-name').value.trim();
@@ -1108,6 +1312,7 @@ async function joinRoom() {
 }
 
 function leaveRoom() {
+  clearBotTimers();
   fbClose(); fs=null; gs=null; isHost=false;
   myNumber = null; mySubmittedExpression = '';
   show('lobby');
@@ -1165,6 +1370,7 @@ function pubFs(f) {
       hasNumber: p.number !== null,
       expression: p.expression,
       played: p.played,
+      isBot: !!p.isBot,
     })),
     theme: f.theme,
     lives: f.lives,
@@ -1187,11 +1393,18 @@ function bcast() {
   const me = fs.players.find(p => p.id === myId);
   if(me) myNumber = me.number;
   onGsUpdate(gs);
+  // BOTの行動をスケジュール
+  if(isHost && fs.phase === 'playing') {
+    scheduleBotActions();
+  } else if(isHost && fs.phase !== 'playing') {
+    clearBotTimers();
+  }
 }
 
 function sendPrivateNumbers() {
   fs.players.forEach(p => {
     if(p.id === myId) return; // ホスト自身は bcast() で更新
+    if(p.isBot) return; // BOTにはprivate送信不要
     if(p.number !== null) {
       fbSendTo(p.id, {type:'mynumber', number:p.number});
     }
@@ -1359,7 +1572,8 @@ function refreshWait() {
   gs.players.forEach(p => {
     const row = mk('div', 'player-row' + (p.id===myId?' is-me':''));
     const nameSpan = mk('span', 'player-name');
-    nameSpan.textContent = (p.id===myId?'👤 ':'👥 ') + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
+    const prefix = p.isBot ? '' : (p.id===myId?'👤 ':'👥 ');
+    nameSpan.textContent = prefix + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
     row.appendChild(nameSpan);
     list.appendChild(row);
   });

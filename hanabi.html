@@ -377,6 +377,8 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
         <button class="btn btn-blue" onclick="joinRoom()">参加</button>
       </div>
+      <div class="divider"></div>
+      <button class="btn btn-green" onclick="startSoloMode()">🤖 ソロプレイ（BOTと対戦）</button>
     </div>
 
     <div id="lobby-status" class="status-txt"></div>
@@ -417,6 +419,13 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         <div class="toggle-group">
           <button id="opt-color-5" class="toggle-btn active" onclick="setColorMode(5)">5色</button>
           <button id="opt-color-6" class="toggle-btn" onclick="setColorMode(6)">6色(難)</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <label>🤖 BOTを追加</label>
+        <div style="display:flex; gap:6px;">
+          <button class="toggle-btn" onclick="addBot()">+ BOT追加</button>
+          <button class="toggle-btn" onclick="removeBot()">- BOT削除</button>
         </div>
       </div>
     </div>
@@ -603,6 +612,237 @@ let currentAction = null; // 'hint' | 'play' | 'discard'
 let actionState = {}; // 選択中の状態
 
 // ============================================================
+// BOT
+// ============================================================
+let botActionTimer = null;
+const BOT_NAMES = ['🤖アル', '🤖ベル', '🤖カイ', '🤖ドラ', '🤖エム'];
+function genBotId() { return 'bot_' + Math.random().toString(36).slice(2,8); }
+
+function addBot() {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  if(fs.players.length >= 5) { setSt('満員（最大5人）'); return; }
+  const used = fs.players.map(p => p.name);
+  let botName = null;
+  for(const n of BOT_NAMES) {
+    if(!used.includes(n)) { botName = n; break; }
+  }
+  if(!botName) botName = '🤖BOT';
+  const botId = genBotId();
+  fs.players.push({id:botId, name:botName, hand:[], isBot:true});
+  bcast();
+}
+
+function removeBot() {
+  if(!isHost || !fs || fs.phase !== 'waiting') return;
+  for(let i = fs.players.length-1; i >= 0; i--) {
+    if(fs.players[i].isBot) {
+      fs.players.splice(i, 1);
+      bcast();
+      return;
+    }
+  }
+}
+
+// BOTの行動判断
+// 中級戦略：
+// 1. 手札のうち「ヒント情報で確実に出せる」カードがあれば出す
+// 2. 「ヒント情報で確実に捨てられる」カード（既に場に出ている数字や、ライフ的に不要な高い数字）があれば捨てる
+// 3. それ以外、ヒントトークンがあれば、他人の手札を見て「次に出せるカード」を教える
+// 4. ヒントトークンが0なら、なるべく安全に捨てる
+function botDecideAction(botPlayer) {
+  if(!fs || fs.phase !== 'playing') return null;
+  const hand = botPlayer.hand;
+  if(hand.length === 0) return null;
+  
+  // 各カードについて、ヒント情報からどれだけ確定しているか分析
+  const cardInfo = hand.map((c, idx) => {
+    const hintsNum = c.hintsNum || [];
+    const hintsColor = c.hintsColor || [];
+    const knownNum = hintsNum.find(h => !String(h).startsWith('!'));
+    const knownColor = hintsColor.find(h => !String(h).startsWith('!'));
+    return {
+      idx,
+      knownNum: knownNum || null,
+      knownColor: knownColor || null,
+      negNums: hintsNum.filter(h => String(h).startsWith('!')).map(h => parseInt(h.slice(1))),
+      negColors: hintsColor.filter(h => String(h).startsWith('!')).map(h => h.slice(1)),
+      actualColor: c.color,
+      actualNum: c.number,
+    };
+  });
+  
+  // 1. 「確実に出せる」カードを探す
+  // 色と数字が両方確定し、その色の次に必要な数字なら出す
+  // または、数字1で、その色の場が0なら出す（色不明でも数字1なら誰の色でも出せる場合がある）
+  for(const info of cardInfo) {
+    if(info.knownNum && info.knownColor) {
+      // 完全に分かっている
+      const next = (fs.fireworks[info.knownColor] || 0) + 1;
+      if(info.knownNum === next) return {action:'play', cardIdx:info.idx};
+    } else if(info.knownNum === 1) {
+      // 数字1で、まだ何かの色がfireworks[color]=0のままなら出せる可能性
+      // ただし、その色の場が既に0でない可能性もある
+      // 安全策：全色についてfireworks[color]=0かチェック
+      const colors = fs.colorMode === 6 ? COLORS_6 : COLORS_5;
+      const allColorsZero = colors.every(c => (fs.fireworks[c]||0) === 0);
+      const someColorsZero = colors.some(c => (fs.fireworks[c]||0) === 0);
+      if(allColorsZero) return {action:'play', cardIdx:info.idx};
+      // 否定情報から、可能性のある色を絞り込み
+      const possibleColors = colors.filter(c => !info.negColors.includes(c));
+      const allPossibleZero = possibleColors.every(c => (fs.fireworks[c]||0) === 0);
+      if(allPossibleZero && possibleColors.length > 0) return {action:'play', cardIdx:info.idx};
+    }
+  }
+  
+  // 2. 「確実に捨てられる」カードを探す
+  // 既に場に出ている数字（例：その色の場が3なら、数字1,2,3はもう不要）
+  // ただし、ヒントトークン満タンの場合は捨てられない
+  const canDiscard = fs.hintTokens < fs.maxHintTokens;
+  if(canDiscard) {
+    for(const info of cardInfo) {
+      if(info.knownNum && info.knownColor) {
+        const onBoard = fs.fireworks[info.knownColor] || 0;
+        if(info.knownNum <= onBoard) {
+          // もう不要
+          return {action:'discard', cardIdx:info.idx};
+        }
+      }
+    }
+  }
+  
+  // 3. ヒントを出す
+  if(fs.hintTokens > 0) {
+    // 他プレイヤーの手札を見て、出せるカードを持っている人にヒントを出す
+    for(const op of fs.players) {
+      if(op.id === botPlayer.id) continue;
+      for(let i = 0; i < op.hand.length; i++) {
+        const c = op.hand[i];
+        const hintsNum = c.hintsNum || [];
+        const hintsColor = c.hintsColor || [];
+        const onBoard = fs.fireworks[c.color] || 0;
+        if(c.number === onBoard + 1) {
+          // このカードは出せる
+          // まだヒントされていない情報を選ぶ
+          const hasNumHint = hintsNum.includes(c.number);
+          const hasColorHint = hintsColor.includes(c.color);
+          if(!hasNumHint) {
+            return {action:'hint', targetId:op.id, hintType:'number', hintValue:c.number};
+          } else if(!hasColorHint) {
+            return {action:'hint', targetId:op.id, hintType:'color', hintValue:c.color};
+          }
+        }
+      }
+    }
+    // 出せるカードを持っている人がいなければ、誰かの「1」を教える（汎用的に有用）
+    for(const op of fs.players) {
+      if(op.id === botPlayer.id) continue;
+      for(let i = 0; i < op.hand.length; i++) {
+        const c = op.hand[i];
+        const hintsNum = c.hintsNum || [];
+        if(c.number === 1 && !hintsNum.includes(1)) {
+          return {action:'hint', targetId:op.id, hintType:'number', hintValue:1};
+        }
+      }
+    }
+    // それでもなければ、5のヒント（重要なカード）を教える
+    for(const op of fs.players) {
+      if(op.id === botPlayer.id) continue;
+      for(let i = 0; i < op.hand.length; i++) {
+        const c = op.hand[i];
+        const hintsNum = c.hintsNum || [];
+        if(c.number === 5 && !hintsNum.includes(5)) {
+          return {action:'hint', targetId:op.id, hintType:'number', hintValue:5};
+        }
+      }
+    }
+    // 最後のフォールバック：誰かの最初のカードの色か数字をヒント
+    for(const op of fs.players) {
+      if(op.id === botPlayer.id) continue;
+      if(op.hand.length === 0) continue;
+      const c = op.hand[0];
+      const hintsNum = c.hintsNum || [];
+      const hintsColor = c.hintsColor || [];
+      if(!hintsNum.includes(c.number)) {
+        return {action:'hint', targetId:op.id, hintType:'number', hintValue:c.number};
+      }
+      if(!hintsColor.includes(c.color)) {
+        return {action:'hint', targetId:op.id, hintType:'color', hintValue:c.color};
+      }
+    }
+  }
+  
+  // 4. 仕方なく捨てる（ヒント情報が一番少ないカード）
+  // ヒントトークン満タンの場合は捨てられない → 仕方なくランダムにプレイ（リスク取る）
+  if(!canDiscard) {
+    // 一番無難そうなカード（ヒント情報がなく、数字1の可能性が高いカード）をプレイ
+    // 簡単化のため、最初のカードを出す（運任せ）
+    return {action:'play', cardIdx:0};
+  }
+  
+  // 最初のカードを捨てる（一番古い）
+  // ただし、ヒントで「重要かもしれない」情報があるカードは避ける
+  let safestIdx = 0;
+  let safestScore = -1;
+  for(let i = 0; i < hand.length; i++) {
+    const c = hand[i];
+    const hintsColor = c.hintsColor || [];
+    const hintsNum = c.hintsNum || [];
+    // ヒント情報が多いほど大切。少ないほど安全に捨てられる
+    const hintCount = (hintsColor.filter(h => !String(h).startsWith('!')).length) + 
+                      (hintsNum.filter(h => !String(h).startsWith('!')).length);
+    const safety = -hintCount;
+    if(safety > safestScore) {
+      safestScore = safety;
+      safestIdx = i;
+    }
+  }
+  return {action:'discard', cardIdx:safestIdx};
+}
+
+function scheduleBotTurn() {
+  if(!isHost || !fs || fs.phase !== 'playing') return;
+  if(botActionTimer) { clearTimeout(botActionTimer); botActionTimer = null; }
+  const cur = fs.players[fs.currentTurn];
+  if(!cur || !cur.isBot) return;
+  // 思考時間
+  const delay = 1500 + Math.random() * 2000;
+  botActionTimer = setTimeout(() => {
+    botActionTimer = null;
+    if(!fs || fs.phase !== 'playing') return;
+    const curNow = fs.players[fs.currentTurn];
+    if(!curNow || !curNow.isBot) return;
+    // 手札が0枚の場合（山札枯渇後）：直接ターンを進める
+    if(curNow.hand.length === 0) {
+      fs.log.push('🃏 ' + curNow.name + ' は手札がないためスキップ');
+      advanceTurn();
+      return;
+    }
+    const action = botDecideAction(curNow);
+    if(!action) {
+      // フォールバック: 最初のカードを捨てる
+      // ただし、ヒント満タンなら出す
+      if(fs.hintTokens >= fs.maxHintTokens) {
+        handlePlay(curNow.id, 0);
+      } else {
+        handleDiscard(curNow.id, 0);
+      }
+      return;
+    }
+    if(action.action === 'play') {
+      handlePlay(curNow.id, action.cardIdx);
+    } else if(action.action === 'discard') {
+      handleDiscard(curNow.id, action.cardIdx);
+    } else if(action.action === 'hint') {
+      handleHint(curNow.id, action.targetId, action.hintType, action.hintValue);
+    }
+  }, delay);
+}
+
+function clearBotTimers() {
+  if(botActionTimer) { clearTimeout(botActionTimer); botActionTimer = null; }
+}
+
+// ============================================================
 // UTILS
 // ============================================================
 function g(id) { return document.getElementById(id); }
@@ -642,6 +882,30 @@ async function createRoom() {
   } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
 }
 
+// ソロモード（通信なし、ホスト＋BOT で遊ぶ）
+function startSoloMode() {
+  const name = g('in-name').value.trim() || 'プレイヤー';
+  myName = name; isHost = true;
+  roomCode = ''; fbRoom = ''; // 通信なし
+  myId = genId();
+  fs = initFs([{id:myId, name:myName}]);
+  gs = pubFs(fs);
+  // BOTを2体自動追加（花火は2-5人、合計3人にする）
+  for(let i = 0; i < 2; i++) {
+    const used = fs.players.map(p => p.name);
+    let botName = null;
+    for(const n of BOT_NAMES) {
+      if(!used.includes(n)) { botName = n; break; }
+    }
+    if(!botName) botName = '🤖BOT' + (i+1);
+    fs.players.push({id:'bot_'+i, name:botName, hand:[], isBot:true});
+  }
+  setErr(''); setSt('');
+  g('disp-code').textContent = 'ソロ';
+  g('host-settings').style.display = '';
+  show('waiting'); refreshWait(); bcast();
+}
+
 async function joinRoom() {
   if(!(await checkFbConfig())) return;
   const name = g('in-name').value.trim();
@@ -674,6 +938,7 @@ async function joinRoom() {
 }
 
 function leaveRoom() {
+  clearBotTimers();
   fbClose(); fs=null; gs=null; isHost=false;
   myHandCards = null;
   try { clearSession(); } catch(e) {}
@@ -743,6 +1008,7 @@ function pubFs(f) {
     phase: f.phase,
     players: f.players.map(p => ({
       id: p.id, name: p.name,
+      isBot: !!p.isBot,
       // hand の中身は public で送る（各自の画面で「自分のもの」は隠して表示）
       hand: p.hand.map(c => ({
         cardId: c.cardId,
@@ -771,6 +1037,12 @@ function bcast() {
   gs = pubFs(fs);
   fbBroadcast({type:'gs', s:gs});
   onGsUpdate(gs);
+  // BOT行動スケジュール
+  if(isHost && fs && fs.phase === 'playing') {
+    scheduleBotTurn();
+  } else if(isHost) {
+    clearBotTimers();
+  }
 }
 
 // ============================================================
@@ -1131,7 +1403,8 @@ function refreshWait() {
   gs.players.forEach(p => {
     const row = mk('div', 'player-row' + (p.id===myId?' is-me':''));
     const nameSpan = mk('span', 'player-name');
-    nameSpan.textContent = (p.id===myId?'👤 ':'👥 ') + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
+    const prefix = p.isBot ? '' : (p.id===myId?'👤 ':'👥 ');
+    nameSpan.textContent = prefix + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
     row.appendChild(nameSpan);
     list.appendChild(row);
   });

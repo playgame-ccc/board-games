@@ -206,13 +206,15 @@ body{min-height:100vh;padding:10px;background:radial-gradient(circle at 30% 40%,
     <label class="label">プレイヤー名</label>
     <input type="text" id="in-name" class="input" maxlength="12" placeholder="名前を入力">
     <div class="spacer"></div>
-    <button class="btn btn-primary btn-block" onclick="ctCreateRoom()">🆕 部屋を作る（ホスト）</button>
+    <button class="btn btn-primary btn-block" onclick="ctCreateRoom()">🆕 部屋を作る(ホスト)</button>
     <div class="spacer"></div>
     <label class="label">既存の部屋に参加</label>
     <div class="input-row">
       <input type="text" id="in-code" class="input" maxlength="4" placeholder="4桁コード" inputmode="numeric">
       <button class="btn btn-amber" onclick="ctJoinRoom()">参加</button>
     </div>
+    <div class="spacer"></div>
+    <button class="btn btn-green btn-block" onclick="ctStartSoloMode()">🤖 ソロプレイ(BOTと対戦)</button>
     <div class="err" id="lobby-error"></div>
     <div class="small muted" id="lobby-status"></div>
   </div>
@@ -257,6 +259,12 @@ body{min-height:100vh;padding:10px;background:radial-gradient(circle at 30% 40%,
     <div class="row">
       <button class="btn btn-amber btn-sm" id="bd-fixed" onclick="ctSetBoard('fixed')">公式固定</button>
       <button class="btn btn-ghost btn-sm" id="bd-rand" onclick="ctSetBoard('random')">ランダム</button>
+    </div>
+    <div class="spacer"></div>
+    <label class="label">🤖 BOT</label>
+    <div class="row">
+      <button class="btn btn-ghost btn-sm" onclick="ctAddBot()">+ BOT追加</button>
+      <button class="btn btn-ghost btn-sm" onclick="ctRemoveBot()">- BOT削除</button>
     </div>
     <div class="spacer"></div>
     <button class="btn btn-green btn-block" onclick="ctStartGame()" id="btn-start">▶ ゲーム開始</button>
@@ -430,6 +438,490 @@ let uiSelectedEdgeId=null;    // 道配置用
 let uiDiscardSelection={};    // 手札捨て選択
 
 // ====================
+// BOT管理
+// ====================
+let ctBotActionTimer=null;
+const CT_BOT_NAMES=['🤖アル','🤖ベル','🤖カイ','🤖ドラ'];
+function ctGenBotId(){return 'bot_'+Math.random().toString(36).slice(2,8);}
+
+function ctAddBot(){
+  if(!isHost||!ctFs||ctFs.phase!=='waiting') return;
+  if(ctFs.players.length>=4){alert('最大4人');return;}
+  const used=ctFs.players.map(p=>p.name);
+  let botName=null;
+  for(const n of CT_BOT_NAMES){
+    if(!used.includes(n)){botName=n;break;}
+  }
+  if(!botName) botName='🤖BOT';
+  const botId=ctGenBotId();
+  ctFs.players.push({id:botId,name:botName,isHost:false,isBot:true});
+  assignColors(ctFs.players);
+  ctBcast();
+}
+
+function ctRemoveBot(){
+  if(!isHost||!ctFs||ctFs.phase!=='waiting') return;
+  for(let i=ctFs.players.length-1;i>=0;i--){
+    if(ctFs.players[i].isBot){
+      ctFs.players.splice(i,1);
+      assignColors(ctFs.players);
+      ctBcast();
+      return;
+    }
+  }
+}
+
+function ctClearBotTimers(){
+  if(ctBotActionTimer){clearTimeout(ctBotActionTimer);ctBotActionTimer=null;}
+}
+
+// 数字の点数（ドット数）。確率の高さ
+const CT_DOT_COUNT={2:1,3:2,4:3,5:4,6:5,8:5,9:4,10:3,11:2,12:1};
+
+// 頂点の価値を評価（隣接ヘックスの数値ドット合計と資源多様性）
+function ctEvaluateVertex(vid){
+  const hexes=VERTEX_HEXES[vid]||[];
+  let score=0;
+  const resources=new Set();
+  for(const hexId of hexes){
+    const h=ctFs.board.hexes[hexId];
+    if(!h||h.resource==='desert') continue;
+    score+=CT_DOT_COUNT[h.number]||0;
+    resources.add(h.resource);
+  }
+  // 多様性ボーナス
+  score+=resources.size*2;
+  return score;
+}
+
+// BOT: 初期配置の開拓地を選ぶ
+function ctBotChooseInitSettlement(botId){
+  let bestV=null,bestScore=-1;
+  for(const v of ALL_VERTICES){
+    if(!isValidBuildingSpot(v,'settlement',ctFs.board,botId,true)) continue;
+    const score=ctEvaluateVertex(v);
+    if(score>bestScore){
+      bestScore=score;
+      bestV=v;
+    }
+  }
+  return bestV;
+}
+
+// BOT: 初期配置の道を選ぶ（開拓地から、なるべく良い方向）
+function ctBotChooseInitRoad(botId,settlementVid){
+  const candidates=[];
+  for(const eid of VERTEX_EDGES[settlementVid]||[]){
+    if(!isValidRoadSpot(eid,ctFs.board,botId,settlementVid)) continue;
+    // 道の先の頂点を評価
+    const [v1,v2]=EDGE_VERTICES[eid];
+    const farV=(v1===settlementVid)?v2:v1;
+    const score=ctEvaluateVertex(farV);
+    candidates.push({eid,score});
+  }
+  if(candidates.length===0) return null;
+  candidates.sort((a,b)=>b.score-a.score);
+  return candidates[0].eid;
+}
+
+// BOT: 通常配置の開拓地を選ぶ
+function ctBotChooseSettlement(botId){
+  let bestV=null,bestScore=-1;
+  for(const v of ALL_VERTICES){
+    if(!isValidBuildingSpot(v,'settlement',ctFs.board,botId,false)) continue;
+    const score=ctEvaluateVertex(v);
+    if(score>bestScore){
+      bestScore=score;
+      bestV=v;
+    }
+  }
+  return bestV;
+}
+
+// BOT: 都市にする開拓地を選ぶ（価値の高い場所から）
+function ctBotChooseCityVertex(botId){
+  let bestV=null,bestScore=-1;
+  for(const vid in ctFs.board.buildings){
+    const b=ctFs.board.buildings[vid];
+    if(b.owner!==botId||b.type!=='settlement') continue;
+    const score=ctEvaluateVertex(vid);
+    if(score>bestScore){
+      bestScore=score;
+      bestV=vid;
+    }
+  }
+  return bestV;
+}
+
+// BOT: 道を建てる場所を選ぶ
+function ctBotChooseRoad(botId){
+  const candidates=[];
+  for(const eid of ALL_EDGES){
+    if(!isValidRoadSpot(eid,ctFs.board,botId,null)) continue;
+    // 道の先で開拓地が建てられる頂点があるか
+    const [v1,v2]=EDGE_VERTICES[eid];
+    let score=0;
+    for(const v of [v1,v2]){
+      if(isValidBuildingSpot(v,'settlement',ctFs.board,botId,false)){
+        score+=ctEvaluateVertex(v)*2; // 開拓地候補先は高評価
+      } else if(!ctFs.board.buildings[v]){
+        // まだ建てられないが、将来候補
+        score+=ctEvaluateVertex(v)*0.5;
+      }
+    }
+    candidates.push({eid,score});
+  }
+  if(candidates.length===0) return null;
+  candidates.sort((a,b)=>b.score-a.score);
+  return candidates[0].eid;
+}
+
+// BOT: 盗賊を移動する場所を選ぶ
+function ctBotChooseRobberHex(botId){
+  let bestHex=null,bestScore=-1;
+  for(const hexId in ctFs.board.hexes){
+    if(hexId===ctFs.board.robberHex) continue;
+    if(ctFs.board.hexes[hexId].resource==='desert') continue;
+    // この hex に隣接する建物（自分以外）の数とそのVPで評価
+    let score=0;
+    let hasEnemy=false;
+    let hasSelf=false;
+    for(const vid in ctFs.board.buildings){
+      const b=ctFs.board.buildings[vid];
+      if(!(VERTEX_HEXES[vid]||[]).includes(hexId)) continue;
+      if(b.owner===botId){hasSelf=true;continue;}
+      hasEnemy=true;
+      const op=ctFs.players.find(x=>x.id===b.owner);
+      if(op){
+        score+=(op.vp||0)*3;
+        score+=(b.type==='city'?5:2);
+      }
+    }
+    if(hasSelf) continue; // 自分のヘックスは避ける
+    if(!hasEnemy) continue;
+    // 高い数値（6,8）のヘックスを狙う
+    const h=ctFs.board.hexes[hexId];
+    score+=(CT_DOT_COUNT[h.number]||0)*2;
+    if(score>bestScore){
+      bestScore=score;
+      bestHex=hexId;
+    }
+  }
+  // 該当なしなら、盗賊以外の任意ヘックスを選ぶ
+  if(!bestHex){
+    for(const hexId in ctFs.board.hexes){
+      if(hexId===ctFs.board.robberHex) continue;
+      if(ctFs.board.hexes[hexId].resource==='desert') continue;
+      bestHex=hexId;break;
+    }
+  }
+  return bestHex;
+}
+
+// BOT: 手札捨て選択（重要でないものから捨てる：最も多い資源から）
+function ctBotChooseDiscard(botId,need){
+  const p=ctFs.players.find(x=>x.id===botId);
+  if(!p) return {};
+  const result={};
+  let remaining=need;
+  // 多い順に捨てる
+  const sorted=['wood','wheat','sheep','brick','ore'].sort((a,b)=>(p.hand[b]||0)-(p.hand[a]||0));
+  for(const r of sorted){
+    if(remaining<=0) break;
+    const take=Math.min(p.hand[r]||0,remaining);
+    if(take>0){
+      result[r]=take;
+      remaining-=take;
+    }
+  }
+  return result;
+}
+
+// BOT: ターン中のアクションを決める
+// 戻り値: {action, ...} または null（ターン終了）
+function ctBotDecideTurnAction(botId){
+  const p=ctFs.players.find(x=>x.id===botId);
+  if(!p) return null;
+  
+  // 騎士カードがあって、未使用なら使う（盗賊移動も含む）
+  if(!p.devUsedThisTurn){
+    for(const d of (p.devCards||[])){
+      if(d.type==='knight'&&!d.new&&!d.played){
+        return {action:'playDev',cardType:'knight'};
+      }
+    }
+  }
+  
+  // 都市建設可能？
+  if(p.hand.wheat>=2&&p.hand.ore>=3&&p.cityCount>0){
+    const v=ctBotChooseCityVertex(botId);
+    if(v) return {action:'city',vid:v};
+  }
+  // 開拓地建設可能？
+  if(p.hand.wood>=1&&p.hand.brick>=1&&p.hand.wheat>=1&&p.hand.sheep>=1&&p.settlementCount>0){
+    const v=ctBotChooseSettlement(botId);
+    if(v) return {action:'settlement',vid:v};
+  }
+  // 道建設（資源があれば積極的に建てる）
+  if(p.hand.wood>=1&&p.hand.brick>=1&&p.roadCount>0){
+    // 開拓地候補がない場合（自分の道の先端から建てられる位置がない）は道を伸ばす必要
+    const hasSettlementCandidate=Array.from(ALL_VERTICES).some(v=>isValidBuildingSpot(v,'settlement',ctFs.board,botId,false));
+    if(!hasSettlementCandidate){
+      const e=ctBotChooseRoad(botId);
+      if(e) return {action:'road',eid:e};
+    } else {
+      // 開拓地候補があっても、開拓地に必要な麦か羊が無いなら道を建てる方が良い
+      // 「いま開拓地が建てられない＆道なら建てられる」状況
+      const canBuildSettSoon=(p.hand.wheat>=1&&p.hand.sheep>=1);
+      if(!canBuildSettSoon){
+        // 麦か羊が無いので、開拓地を建てるまで時間がかかる → 道を伸ばす
+        const e=ctBotChooseRoad(botId);
+        if(e) return {action:'road',eid:e};
+      } else if(p.hand.wood>=2&&p.hand.brick>=2){
+        // 資源に余裕があれば道も建てる
+        const e=ctBotChooseRoad(botId);
+        if(e) return {action:'road',eid:e};
+      }
+    }
+  }
+  // 発展カード購入（資源が余り気味の時）
+  if(p.hand.wheat>=1&&p.hand.sheep>=1&&p.hand.ore>=1&&ctFs.devDeck.length>0){
+    const totalHand=Object.values(p.hand).reduce((a,b)=>a+b,0);
+    // 都市建設候補があるなら鉱石を温存
+    const hasCityCandidate=Object.values(ctFs.board.buildings).some(b=>b.owner===botId&&b.type==='settlement');
+    // 鉱石2以上＋麦1以上があるなら、都市候補があれば温存
+    if(hasCityCandidate&&p.hand.ore>=2&&p.hand.wheat>=1){
+      // 都市目標で温存
+    } else if(totalHand>=5){
+      return {action:'buyDev'};
+    } else if(totalHand>=3 && !hasCityCandidate){
+      // 都市候補がない場合は早めに発展カード
+      return {action:'buyDev'};
+    }
+  }
+  // 進歩カード使用
+  if(!p.devUsedThisTurn){
+    for(const d of (p.devCards||[])){
+      if(d.played||d.new) continue;
+      if(d.type==='roadBuilding'&&p.roadCount>=2){
+        // 2箇所以上に道を建てられる場所があるか確認
+        let buildable=0;
+        for(const eid of ALL_EDGES){
+          if(isValidRoadSpot(eid,ctFs.board,botId,null)){
+            buildable++;
+            if(buildable>=2) break;
+          }
+        }
+        if(buildable>=2){
+          return {action:'playDev',cardType:'roadBuilding'};
+        }
+      }
+      if(d.type==='monopoly'){
+        // 最も多く取れる資源を独占
+        const counts={};
+        for(const op of ctFs.players){
+          if(op.id===botId) continue;
+          for(const r of ['wood','wheat','sheep','brick','ore']){
+            counts[r]=(counts[r]||0)+(op.hand[r]||0);
+          }
+        }
+        let bestR='wood',bestC=0;
+        for(const r in counts){if(counts[r]>bestC){bestC=counts[r];bestR=r;}}
+        if(bestC>=2) return {action:'playDev',cardType:'monopoly',params:{resource:bestR}};
+      }
+      if(d.type==='yearOfPlenty'){
+        // 不足している資源2つ
+        const needs=[];
+        if(p.hand.wood<1) needs.push('wood');
+        if(p.hand.brick<1) needs.push('brick');
+        if(p.hand.wheat<1) needs.push('wheat');
+        if(p.hand.sheep<1) needs.push('sheep');
+        if(p.hand.ore<1) needs.push('ore');
+        const r1=needs[0]||'wood';
+        const r2=needs[1]||'wheat';
+        if(ctFs.bank[r1]>0&&ctFs.bank[r2]>0){
+          return {action:'playDev',cardType:'yearOfPlenty',params:{r1,r2}};
+        }
+      }
+    }
+  }
+  // 銀行取引（積極的に：手札3以上で偏りがあれば交換）
+  const total=Object.values(p.hand).reduce((a,b)=>a+b,0);
+  if(total>=3){
+    // 必要な資源を判定
+    // 開拓地に必要：wood, brick, wheat, sheep の不足
+    // 都市に必要：wheat, ore の不足
+    const hasCityCandidate=Object.values(ctFs.board.buildings).some(b=>b.owner===botId&&b.type==='settlement');
+    // 不足資源リスト
+    const needs=[];
+    if(hasCityCandidate&&p.cityCount>0){
+      // 都市目標
+      if(p.hand.wheat<2) needs.push('wheat');
+      if(p.hand.ore<3) needs.push('ore');
+    }
+    // 開拓地用
+    if(p.settlementCount>0){
+      if(p.hand.wood<1) needs.push('wood');
+      if(p.hand.brick<1) needs.push('brick');
+      if(p.hand.wheat<1) needs.push('wheat');
+      if(p.hand.sheep<1) needs.push('sheep');
+    }
+    
+    if(needs.length>0){
+      // 最も多い資源を最初の不足資源と交換
+      let maxR=null,maxCnt=0;
+      for(const r of ['wood','wheat','sheep','brick','ore']){
+        if(needs.includes(r)) continue; // 不足資源は出さない
+        if(p.hand[r]>maxCnt){maxCnt=p.hand[r];maxR=r;}
+      }
+      if(maxR){
+        let rate=4;
+        if((p.ports||[]).includes(maxR)) rate=2;
+        else if((p.ports||[]).includes('any')) rate=3;
+        if(maxCnt>=rate){
+          const targetR=needs[0];
+          if(targetR!==maxR){
+            return {action:'bankTrade',give:maxR,giveQty:rate,get:targetR};
+          }
+        }
+      }
+    }
+  }
+  return null; // ターン終了
+}
+
+// BOTの行動をスケジュール
+function ctScheduleBotAction(){
+  if(!isHost||!ctFs||ctFs.phase!=='playing') return;
+  ctClearBotTimers();
+  // 現在のフェーズを確認
+  const cur=ctFs.players[ctFs.currentPlayerIdx];
+  if(!cur) return;
+  
+  // 手札捨てフェーズ：BOTの手札捨てを実行
+  if(ctFs.subPhase==='discard'&&ctFs.discardRequired){
+    // BOTで捨てる必要があるプレイヤー
+    for(const pid in ctFs.discardRequired){
+      const p=ctFs.players.find(x=>x.id===pid);
+      if(p&&p.isBot){
+        const delay=1500+Math.random()*1500;
+        ctBotActionTimer=setTimeout(async()=>{
+          if(!ctFs||ctFs.subPhase!=='discard') return;
+          if(!ctFs.discardRequired||!ctFs.discardRequired[pid]) return;
+          const cards=ctBotChooseDiscard(pid,ctFs.discardRequired[pid]);
+          await ctHostDiscard(pid,cards);
+        },delay);
+        return;
+      }
+    }
+  }
+  
+  // 盗賊移動フェーズ：BOTが盗賊を移動
+  if(ctFs.subPhase==='robberMove'&&cur.isBot){
+    const delay=1500+Math.random()*1500;
+    ctBotActionTimer=setTimeout(async()=>{
+      if(!ctFs||ctFs.subPhase!=='robberMove') return;
+      const hexId=ctBotChooseRobberHex(cur.id);
+      if(hexId){
+        await ctHostMoveRobber(cur.id,hexId,null);
+        // pendingRobberyがあれば対象を選択
+        if(ctFs.pendingRobbery&&ctFs.pendingRobbery.candidates.length>0){
+          // 手札が最も多い相手を狙う
+          let bestTarget=null,bestCount=-1;
+          for(const tpid of ctFs.pendingRobbery.candidates){
+            const tp=ctFs.players.find(x=>x.id===tpid);
+            const c=tp?Object.values(tp.hand||{}).reduce((a,b)=>a+b,0):0;
+            if(c>bestCount){bestCount=c;bestTarget=tpid;}
+          }
+          if(bestTarget){
+            await ctHostMoveRobber(cur.id,hexId,bestTarget);
+          }
+        }
+      }
+    },delay);
+    return;
+  }
+  
+  if(!cur.isBot) return; // 人間の手番
+  
+  // 初期配置
+  if(ctFs.subPhase==='initSettlement'){
+    const delay=1500+Math.random()*1000;
+    ctBotActionTimer=setTimeout(async()=>{
+      if(!ctFs||ctFs.subPhase!=='initSettlement') return;
+      const v=ctBotChooseInitSettlement(cur.id);
+      if(v) await ctHostPlaceSettlement(cur.id,v);
+    },delay);
+    return;
+  }
+  if(ctFs.subPhase==='initRoad'){
+    const delay=1000+Math.random()*800;
+    ctBotActionTimer=setTimeout(async()=>{
+      if(!ctFs||ctFs.subPhase!=='initRoad') return;
+      const e=ctBotChooseInitRoad(cur.id,ctFs.lastInitSettlement);
+      if(e) await ctHostPlaceRoad(cur.id,e);
+    },delay);
+    return;
+  }
+  // サイコロ
+  if(ctFs.subPhase==='rollDice'){
+    const delay=1500+Math.random()*1000;
+    ctBotActionTimer=setTimeout(async()=>{
+      if(!ctFs||ctFs.subPhase!=='rollDice') return;
+      await ctHostRollDice(cur.id);
+    },delay);
+    return;
+  }
+  // 街道建設フェーズ（roadBuilding発展カード使用後）
+  if(ctFs.subPhase==='roadBuilding'){
+    const delay=1500+Math.random()*1000;
+    ctBotActionTimer=setTimeout(async()=>{
+      if(!ctFs||ctFs.subPhase!=='roadBuilding') return;
+      const e=ctBotChooseRoad(cur.id);
+      if(e){
+        await ctHostPlaceRoad(cur.id,e);
+      } else {
+        // 道が建てられる場所がない → 抜ける
+        ctFs.subPhase='turn';
+        await ctBcast();
+      }
+    },delay);
+    return;
+  }
+  // ターン中のアクション
+  if(ctFs.subPhase==='turn'){
+    const delay=1800+Math.random()*1500;
+    ctBotActionTimer=setTimeout(async()=>{
+      if(!ctFs||ctFs.subPhase!=='turn') return;
+      const curBot=ctFs.players[ctFs.currentPlayerIdx];
+      if(!curBot||!curBot.isBot) return;
+      const action=ctBotDecideTurnAction(curBot.id);
+      if(!action){
+        await ctHostEndTurn(curBot.id);
+        return;
+      }
+      if(action.action==='settlement'){
+        await ctHostSetBuildAction(curBot.id,'settlement');
+        await ctHostPlaceSettlement(curBot.id,action.vid);
+      } else if(action.action==='city'){
+        await ctHostSetBuildAction(curBot.id,'city');
+        await ctHostPlaceCity(curBot.id,action.vid);
+      } else if(action.action==='road'){
+        await ctHostSetBuildAction(curBot.id,'road');
+        await ctHostPlaceRoad(curBot.id,action.eid);
+      } else if(action.action==='buyDev'){
+        await ctHostBuyDev(curBot.id);
+      } else if(action.action==='playDev'){
+        await ctHostPlayDev(curBot.id,action.cardType,action.params);
+      } else if(action.action==='bankTrade'){
+        await ctHostBankTrade(curBot.id,action.give,action.giveQty,action.get);
+      }
+    },delay);
+    return;
+  }
+}
+
+// ====================
 // Firebase通信
 // ====================
 const FB_URL='https://playgame-3e7ba-default-rtdb.firebaseio.com';
@@ -438,22 +930,31 @@ let fbLastTs={};
 
 function fbPath(sub){return `${FB_URL}/rooms/${fbRoom}/${sub}.json`;}
 async function fbPut(sub,val){
+  if(!fbRoom) return;
   try{
     const r=await fetch(fbPath(sub),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)});
     if(!r.ok) console.warn('fbPut failed',sub,r.status);
   }catch(e){console.warn('fbPut error',sub,e);}
 }
 async function fbGet(sub){
+  if(!fbRoom) return null;
   try{
     const r=await fetch(fbPath(sub));
     return r.ok?await r.json():null;
   }catch(e){return null;}
 }
 async function fbDel(sub){
+  if(!fbRoom) return;
   try{await fetch(fbPath(sub),{method:'DELETE'});}catch(e){}
 }
-async function fbBcast(data){await fbPut('broadcast',{ts:Date.now(),data});}
-async function fbSendTo(pid,data){await fbPut('prv/'+pid,{ts:Date.now(),data});}
+async function fbBcast(data){
+  if(!fbRoom) return;
+  await fbPut('broadcast',{ts:Date.now(),data});
+}
+async function fbSendTo(pid,data){
+  if(!fbRoom) return;
+  await fbPut('prv/'+pid,{ts:Date.now(),data});
+}
 async function fbSendToHost(data){
   if(!fbRoom) return;
   const key=Date.now()+'_'+Math.random().toString(36).slice(2,6);
@@ -586,6 +1087,44 @@ async function ctCreateRoom(){
     clearSession();
   }
 }
+
+// ソロモード（通信なし、ホスト＋BOT2体）
+function ctStartSoloMode(){
+  const name=(g('in-name').value.trim())||'プレイヤー';
+  if(name.length>12){g('lobby-error').textContent='名前は12文字以内';return;}
+  g('lobby-error').textContent='';
+  myName=name;
+  myId=genId();
+  isHost=true;
+  roomCode='';
+  fbRoom=''; // 通信なし
+  ctFs={
+    phase:'waiting',
+    host:myId,
+    players:[{id:myId,name:myName,isHost:true,color:'p1'}],
+    victoryPoints:10,
+    boardMode:'fixed',
+    board:null,
+    currentPlayerIdx:0,
+    log:['🤖 ソロモード開始'],
+  };
+  // BOT2体追加（合計3人）
+  for(let i=0;i<2;i++){
+    const used=ctFs.players.map(p=>p.name);
+    let botName=null;
+    for(const n of CT_BOT_NAMES){
+      if(!used.includes(n)){botName=n;break;}
+    }
+    if(!botName) botName='🤖BOT'+(i+1);
+    ctFs.players.push({id:'bot_'+i,name:botName,isHost:false,isBot:true});
+  }
+  assignColors(ctFs.players);
+  ctBcast();
+  g('lobby-status').textContent='';
+  g('disp-code').textContent='ソロ';
+  show('waiting');
+  ctRenderWaiting();
+}
 async function ctJoinRoom(){
   const name=g('in-name').value.trim();
   const code=g('in-code').value.trim();
@@ -619,6 +1158,7 @@ async function ctJoinRoom(){
 function ctBackToLobby(){
   if(!isHost&&fbRoom){fbSendToHost({type:'leave',name:myName}).catch(()=>{});}
   fbStopPolling();
+  ctClearBotTimers();
   clearSession();
   myId='';myName='';isHost=false;roomCode='';fbRoom='';
   ctFs=null;ctPub=null;ctPrv=null;
@@ -1311,7 +1851,7 @@ async function ctBcast(){
     subPhase:ctFs.subPhase||null,
     host:ctFs.host,
     players:ctFs.players.map(p=>({
-      id:p.id,name:p.name,isHost:p.isHost,color:p.color,
+      id:p.id,name:p.name,isHost:p.isHost,color:p.color,isBot:!!p.isBot,
       vp:p.publicVp||0,  // 公開VP（勝利点カードを含まない）
       handCount:(p.hand?Object.values(p.hand).reduce((a,b)=>a+b,0):0),
       devCount:(p.devCards?p.devCards.filter(d=>!d.played).length:0),
@@ -1342,12 +1882,23 @@ async function ctBcast(){
     pub.winner=ctFs.winner;
   }
   await Promise.all([fbBcast(pub),fbSaveState()]);
+  // ソロモード時はonBroadcastを直接呼んで画面更新
+  if(!fbRoom){
+    onBroadcast(pub);
+  }
+  // BOT行動スケジュール
+  if(isHost&&ctFs&&ctFs.phase==='playing'){
+    ctScheduleBotAction();
+  } else if(isHost){
+    ctClearBotTimers();
+  }
 }
 
 // 各プレイヤーに秘密情報（手札・発展カード）を送信
 async function ctSendPrivates(){
   if(!isHost||!ctFs) return;
   for(const p of ctFs.players){
+    if(p.isBot) continue; // BOTは送信不要（ホスト側で直接参照）
     const prv={
       hand:p.hand||{wood:0,wheat:0,sheep:0,brick:0,ore:0},
       devCards:p.devCards||[],
@@ -2027,11 +2578,15 @@ async function ctHostMoveRobber(pid,hexId,targetPid){
   if(curPid!==pid) return;
   if(ctFs.subPhase!=='robberMove') return;
   if(!ctFs.board.hexes[hexId]) return;
-  if(hexId===ctFs.board.robberHex) return;
+  // pendingRobbery中（targetPid指定時）は既に盗賊が移動済みなのでスキップ可
+  if(!ctFs.pendingRobbery && hexId===ctFs.board.robberHex) return;
   
-  ctFs.board.robberHex=hexId;
-  const p=ctFs.players.find(x=>x.id===pid);
-  ctFs.log.push(`🦹 ${p.name} が盗賊を移動`);
+  // pendingRobbery中（targetPid指定）でなければ盗賊を移動
+  if(!ctFs.pendingRobbery){
+    ctFs.board.robberHex=hexId;
+    const p=ctFs.players.find(x=>x.id===pid);
+    ctFs.log.push(`🦹 ${p.name} が盗賊を移動`);
+  }
   
   // 対象ヘックスに隣接する建物を持つ他プレイヤーを特定
   const candidates=new Set();

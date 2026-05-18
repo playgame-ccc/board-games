@@ -168,13 +168,15 @@ body{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 30%,
     <label class="label">プレイヤー名</label>
     <input type="text" id="in-name" class="input" maxlength="12" placeholder="名前を入力">
     <div class="spacer"></div>
-    <button class="btn btn-primary btn-block" onclick="dcCreateRoom()">🆕 部屋を作る（ホスト）</button>
+    <button class="btn btn-primary btn-block" onclick="dcCreateRoom()">🆕 部屋を作る(ホスト)</button>
     <div class="spacer"></div>
     <label class="label">既存の部屋に参加</label>
     <div class="input-row">
       <input type="text" id="in-code" class="input" maxlength="4" placeholder="4桁コード" inputmode="numeric">
       <button class="btn btn-amber" onclick="dcJoinRoom()">参加</button>
     </div>
+    <div class="spacer"></div>
+    <button class="btn btn-green btn-block" onclick="dcStartSoloMode()">🤖 ソロプレイ(BOTと対戦)</button>
     <div class="err" id="lobby-error"></div>
     <div class="small muted" id="lobby-status"></div>
   </div>
@@ -212,6 +214,10 @@ body{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 30%,
     <div id="team-preview"></div>
     <div class="spacer"></div>
     <div id="host-controls" style="display:none;">
+      <div style="display:flex; gap:6px; margin-bottom:8px;">
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="dcAddBot()">🤖 +BOT追加</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="dcRemoveBot()">- BOT削除</button>
+      </div>
       <button class="btn btn-ghost btn-block btn-sm" onclick="dcShuffleTeams()">🔀 チームをシャッフル</button>
       <div class="spacer"></div>
       <button class="btn btn-green btn-block" onclick="dcStartGame()" id="btn-start">▶ ゲーム開始</button>
@@ -377,6 +383,247 @@ let dcLastBcastSeenAt=0;       // 最後にbroadcastを受信した時刻（ク�
 let dcPromoting=false;          // 昇格処理中フラグ（重複防止）
 
 // ====================
+// BOT管理
+// ====================
+let dcBotActionTimers={};      // botId+action → timeoutId（重複防止）
+const DC_BOT_NAMES=['🤖アル','🤖ベル','🤖カイ','🤖ドラ','🤖エム','🤖フウ'];
+function dcGenBotId(){return 'bot_'+Math.random().toString(36).slice(2,8);}
+
+function dcAddBot(){
+  if(!isHost||!dcFs||dcFs.phase!=='waiting') return;
+  if(dcFs.players.length>=8) {alert('最大8人');return;}
+  const used=dcFs.players.map(p=>p.name);
+  let botName=null;
+  for(const n of DC_BOT_NAMES){
+    if(!used.includes(n)){botName=n;break;}
+  }
+  if(!botName) botName='🤖BOT';
+  const botId=dcGenBotId();
+  dcFs.players.push({id:botId,name:botName,isHost:false,isBot:true});
+  dcAutoAssignTeams();
+  dcBcast();
+}
+
+function dcRemoveBot(){
+  if(!isHost||!dcFs||dcFs.phase!=='waiting') return;
+  for(let i=dcFs.players.length-1;i>=0;i--){
+    if(dcFs.players[i].isBot){
+      const removedId=dcFs.players[i].id;
+      dcFs.players.splice(i,1);
+      dcFs.teams.white=dcFs.teams.white.filter(id=>id!==removedId);
+      dcFs.teams.black=dcFs.teams.black.filter(id=>id!==removedId);
+      dcBcast();
+      return;
+    }
+  }
+}
+
+// BOTエンコーダー: 3つのコード番号に対応するキーワードから連想ヒントを生成
+// 中級戦略: キーワードの「一部」を取って「ヒントっぽい単語」を生成
+function dcBotGenerateHints(botId,team,codes){
+  const keywords=dcFs.keywords[team];
+  const hints=[];
+  for(let i=0;i<3;i++){
+    const num=codes[i];
+    const kw=keywords[num-1]; // 1-indexed
+    // 連想語生成: キーワードの最初の1文字＋末尾の1文字 で曖昧化
+    // または、簡易な「変形」
+    hints.push(dcSimpleAssociate(kw,i));
+  }
+  return hints;
+}
+
+function dcSimpleAssociate(word,idx){
+  // 中級レベルの連想：単語に固有のヒントを返す
+  // 単純な戦略: 単語そのものか、その一部を少し変えたもの
+  // 完全に同じだと丸見えなので、一部を抜く・略すなどで難しくする
+  const variants=[
+    word, // そのまま (60%)
+    word, 
+    word,
+    word.length>2?word.slice(0,Math.ceil(word.length*0.7)):word, // 短縮
+    word+'的', // 形容詞化
+  ];
+  return variants[Math.floor(Math.random()*variants.length)];
+}
+
+// BOT推測（自チーム）: ヒント3つと自チームのキーワード4つから番号順を推測
+// 中級戦略: 単純な文字列マッチング（共通文字が多いほうが対応すると判断）
+function dcBotGuessOwnCode(botId,team,hints){
+  const keywords=dcFs.keywords[team];
+  // 各ヒントについて、4つのキーワードのうちどれと最も近いかスコア計算
+  const scores=hints.map(hint=>{
+    return keywords.map(kw=>dcStringSimilarity(hint,kw));
+  });
+  // 貪欲法: 最高スコアのペアを順に割り当て
+  const used=new Set();
+  const guess=[];
+  for(let i=0;i<3;i++){
+    let bestKw=-1,bestScore=-1;
+    for(let k=0;k<4;k++){
+      if(used.has(k)) continue;
+      if(scores[i][k]>bestScore){
+        bestScore=scores[i][k];
+        bestKw=k;
+      }
+    }
+    if(bestKw<0){
+      // 残ったキーワードから適当に
+      for(let k=0;k<4;k++){
+        if(!used.has(k)){bestKw=k;break;}
+      }
+    }
+    used.add(bestKw);
+    guess.push(bestKw+1); // 1-indexed
+  }
+  return guess;
+}
+
+// BOT傍受（相手チーム）: 相手のヒントと自分が持っている履歴情報を使って推測
+// 中級戦略: ヒント履歴から相手のキーワード4つを推測し、今ラウンドのヒントと比較
+function dcBotGuessIntercept(botId,team,hints,history){
+  // 相手チームのヒント履歴: history[round][otherTeam].hints と codes
+  const otherTeam=team==='white'?'black':'white';
+  // 過去のヒントから、各番号(1-4)に対応する「過去のヒント語のセット」を蓄積
+  const numToHints={1:[],2:[],3:[],4:[]};
+  for(const h of history){
+    const data=h[otherTeam];
+    if(!data||!data.hints||!data.code) continue;
+    for(let i=0;i<3;i++){
+      const num=data.code[i];
+      if(numToHints[num]) numToHints[num].push(data.hints[i]);
+    }
+  }
+  // 今ラウンドのヒント3つそれぞれについて、過去ヒントとの類似度で番号を推測
+  // 貪欲法
+  const scores=hints.map(hint=>{
+    const s={};
+    for(let n=1;n<=4;n++){
+      let max=0;
+      for(const old of numToHints[n]){
+        max=Math.max(max,dcStringSimilarity(hint,old));
+      }
+      s[n]=max;
+    }
+    return s;
+  });
+  const used=new Set();
+  const guess=[];
+  for(let i=0;i<3;i++){
+    let bestN=-1,bestScore=-1;
+    for(let n=1;n<=4;n++){
+      if(used.has(n)) continue;
+      if(scores[i][n]>bestScore){
+        bestScore=scores[i][n];
+        bestN=n;
+      }
+    }
+    if(bestN<0){
+      // 履歴がない場合はランダム
+      for(let n=1;n<=4;n++){
+        if(!used.has(n)){bestN=n;break;}
+      }
+    }
+    used.add(bestN);
+    guess.push(bestN);
+  }
+  return guess;
+}
+
+// 文字列類似度（共通の文字数 / 合計文字数）
+function dcStringSimilarity(s1,s2){
+  if(!s1||!s2) return 0;
+  const set1=new Set(s1);
+  const set2=new Set(s2);
+  let common=0;
+  for(const c of set1) if(set2.has(c)) common++;
+  return common/Math.max(set1.size,set2.size,1);
+}
+
+// BOTのアクションをスケジュール
+function dcScheduleBotActions(){
+  if(!isHost||!dcFs||dcFs.phase==='waiting'||dcFs.phase==='gameover') return;
+  for(const p of dcFs.players){
+    if(!p.isBot) continue;
+    const team=dcFs.teams.white.includes(p.id)?'white':(dcFs.teams.black.includes(p.id)?'black':null);
+    if(!team) continue;
+    const isEncoder=(dcFs.encoders&&dcFs.encoders[team]===p.id);
+    
+    // ヒント送信フェーズ
+    if(dcFs.phase==='hint'&&isEncoder&&!dcFs.hintsSubmitted[team]){
+      const key=p.id+'_hint';
+      if(dcBotActionTimers[key]) continue;
+      const delay=2000+Math.random()*2500;
+      dcBotActionTimers[key]=setTimeout(async()=>{
+        delete dcBotActionTimers[key];
+        if(!dcFs||dcFs.phase!=='hint'||dcFs.hintsSubmitted[team]) return;
+        const hints=dcBotGenerateHints(p.id,team,dcFs.codes[team]);
+        await dcHostHandleHint(p.id,team,hints);
+        dcScheduleBotActions();
+      },delay);
+    }
+    
+    // 推測フェーズ
+    if(dcFs.phase==='guess'){
+      // 自チーム推測（エンコーダーでない人が代表で行う）
+      if(!isEncoder&&!dcFs.guessSubmitted[team]){
+        // 同じチームの推測担当を1人決める（最小IDのBOT、または何でも）
+        // 既に推測済みでないBOTで最初の1人だけが推測する
+        const teamBots=dcFs.teams[team].map(id=>dcFs.players.find(x=>x.id===id)).filter(x=>x&&x.isBot&&x.id!==dcFs.encoders[team]);
+        const teamHumans=dcFs.teams[team].map(id=>dcFs.players.find(x=>x.id===id)).filter(x=>x&&!x.isBot&&x.id!==dcFs.encoders[team]);
+        // 人間がいるなら人間が推測担当。BOTだけの場合は最初のBOTが担当
+        if(teamHumans.length===0&&teamBots.length>0&&teamBots[0].id===p.id){
+          const key=p.id+'_guessOwn';
+          if(!dcBotActionTimers[key]){
+            const delay=2500+Math.random()*2500;
+            dcBotActionTimers[key]=setTimeout(async()=>{
+              delete dcBotActionTimers[key];
+              if(!dcFs||dcFs.phase!=='guess'||dcFs.guessSubmitted[team]) return;
+              const hints=dcFs.currentHints[team];
+              if(!hints) return;
+              const guess=dcBotGuessOwnCode(p.id,team,hints);
+              await dcHostHandleGuess(p.id,team,guess,false);
+              dcScheduleBotActions();
+            },delay);
+          }
+        }
+      }
+      
+      // 傍受推測（相手チームのヒントから推測）- ラウンド2以降
+      const otherTeam=team==='white'?'black':'white';
+      const interceptKey=team+'Intercept';
+      if(dcFs.round>=2&&!dcFs.guessSubmitted[interceptKey]){
+        // 同じく、傍受担当はチームのBOTから最小IDが行う
+        const teamBots=dcFs.teams[team].map(id=>dcFs.players.find(x=>x.id===id)).filter(x=>x&&x.isBot);
+        const teamHumans=dcFs.teams[team].map(id=>dcFs.players.find(x=>x.id===id)).filter(x=>x&&!x.isBot);
+        if(teamHumans.length===0&&teamBots.length>0&&teamBots[0].id===p.id){
+          const key=p.id+'_guessInt';
+          if(!dcBotActionTimers[key]){
+            const delay=3000+Math.random()*2500;
+            dcBotActionTimers[key]=setTimeout(async()=>{
+              delete dcBotActionTimers[key];
+              if(!dcFs||dcFs.phase!=='guess'||dcFs.guessSubmitted[interceptKey]) return;
+              const hints=dcFs.currentHints[otherTeam];
+              if(!hints) return;
+              const guess=dcBotGuessIntercept(p.id,team,hints,dcFs.history||[]);
+              await dcHostHandleGuess(p.id,team,guess,true);
+              dcScheduleBotActions();
+            },delay);
+          }
+        }
+      }
+    }
+  }
+}
+
+function dcClearBotTimers(){
+  for(const k in dcBotActionTimers){
+    clearTimeout(dcBotActionTimers[k]);
+  }
+  dcBotActionTimers={};
+}
+
+// ====================
 // セッション保存・復元
 // ====================
 const SESSION_KEY='dc_session_v1';
@@ -408,25 +655,30 @@ let fbLastTs={};
 function fbPath(sub){return `${FB_URL}/rooms/${fbRoom}/${sub}.json`;}
 
 async function fbPut(sub,val){
+  if(!fbRoom) return;
   try{
     const r=await fetch(fbPath(sub),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)});
     if(!r.ok) console.warn('fbPut failed',sub,r.status);
   }catch(e){console.warn('fbPut error',sub,e);}
 }
 async function fbGet(sub){
+  if(!fbRoom) return null;
   try{
     const r=await fetch(fbPath(sub));
     return r.ok?await r.json():null;
   }catch(e){return null;}
 }
 async function fbDel(sub){
+  if(!fbRoom) return;
   try{await fetch(fbPath(sub),{method:'DELETE'});}catch(e){}
 }
 
 async function fbBcast(data){
+  if(!fbRoom) return;
   await fbPut('broadcast',{ts:Date.now(),data});
 }
 async function fbSendTo(pid,data){
+  if(!fbRoom) return;
   await fbPut('prv/'+pid,{ts:Date.now(),data});
 }
 async function fbSendToHost(data){
@@ -602,6 +854,45 @@ async function dcCreateRoom(){
   }
 }
 
+// ソロモード（通信なし、ホスト＋BOT3体）
+function dcStartSoloMode(){
+  const name=(g('in-name').value.trim())||'プレイヤー';
+  if(name.length>12){g('lobby-error').textContent='名前は12文字以内';return;}
+  g('lobby-error').textContent='';
+  myName=name;
+  myId=genId();
+  isHost=true;
+  roomCode='';
+  fbRoom=''; // 通信なし
+  dcFs={
+    phase:'waiting',
+    host:myId,
+    players:[{id:myId,name:myName,isHost:true}],
+    teams:{white:[],black:[]},
+    round:0,
+    scores:{white:{intercept:0,fail:0},black:{intercept:0,fail:0}},
+    keywords:{white:[],black:[]},
+    history:[],
+    log:['🤖 ソロモード開始'],
+  };
+  // BOT3体追加
+  for(let i=0;i<3;i++){
+    const used=dcFs.players.map(p=>p.name);
+    let botName=null;
+    for(const n of DC_BOT_NAMES){
+      if(!used.includes(n)){botName=n;break;}
+    }
+    if(!botName) botName='🤖BOT'+(i+1);
+    dcFs.players.push({id:'bot_'+i,name:botName,isHost:false,isBot:true});
+  }
+  dcAutoAssignTeams();
+  dcBcast(); // fbRoomが空なので通信スキップ
+  g('lobby-status').textContent='';
+  g('disp-code').textContent='ソロ';
+  show('waiting');
+  dcRenderWaiting();
+}
+
 async function dcJoinRoom(){
   const name=g('in-name').value.trim();
   const code=g('in-code').value.trim();
@@ -647,6 +938,7 @@ function dcBackToLobby(){
   // ホストが退出する場合：部屋は削除しない（残ったプレイヤーが昇格して続行できるように）
   // 状態（state）は残し、broadcastの更新が止まれば自動的にホスト移譲が発生する
   fbStopPolling();
+  dcClearBotTimers();
   clearSession();
   myId='';myName='';isHost=false;roomCode='';fbRoom='';
   dcFs=null;dcPub=null;dcPrv=null;
@@ -752,7 +1044,7 @@ async function dcBcast(){
   const pub={
     phase:dcFs.phase,
     host:dcFs.host,
-    players:dcFs.players.map(p=>({id:p.id,name:p.name,isHost:p.isHost})),
+    players:dcFs.players.map(p=>({id:p.id,name:p.name,isHost:p.isHost,isBot:!!p.isBot})),
     teams:{
       white:dcFs.teams.white.map(id=>{
         const p=dcFs.players.find(x=>x.id===id);
@@ -799,6 +1091,18 @@ async function dcBcast(){
   }
   // ブロードキャストと完全状態保存を並列で
   await Promise.all([fbBcast(pub),fbSaveState()]);
+  // ソロモード時はonBroadcastを直接呼んで画面更新
+  if(!fbRoom){
+    onBroadcast(pub);
+  }
+  // BOT行動スケジュール
+  if(isHost&&dcFs){
+    if(dcFs.phase==='hint'||dcFs.phase==='guess'){
+      dcScheduleBotActions();
+    } else {
+      dcClearBotTimers();
+    }
+  }
 }
 
 function onBroadcast(d){
@@ -1013,6 +1317,7 @@ async function dcStartRound(){
 async function dcSendPrivates(){
   if(!isHost||!dcFs) return;
   for(const p of dcFs.players){
+    if(p.isBot) continue; // BOTは送信不要（ホスト側で直接参照）
     const team=dcFs.teams.white.includes(p.id)?'white':(dcFs.teams.black.includes(p.id)?'black':null);
     if(!team) continue;
     const prv={
