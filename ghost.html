@@ -230,7 +230,7 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         <strong style="color:var(--blue);">勝利条件</strong>（3つのうちどれか）:<br>
         ① 相手の<strong style="color:var(--blue);">青</strong>を4個全部取る<br>
         ② 自分の<strong style="color:var(--red);">赤</strong>を4個全部取らせる<br>
-        ③ 自分の<strong style="color:var(--blue);">青</strong>を相手陣地の角から脱出させる
+        ③ 自分の<strong style="color:var(--blue);">青</strong>を盤面の<strong style="color:var(--gold);">四隅</strong>から外に脱出させる
       </p>
     </div>
 
@@ -266,7 +266,16 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         <div>🔵 青 <strong id="blue-count" style="color:var(--blue); font-size:1.2rem;">0</strong>/4</div>
         <div>🔴 赤 <strong id="red-count" style="color:var(--red); font-size:1.2rem;">0</strong>/4</div>
       </div>
-      <div style="font-size:0.75rem; color:var(--muted);">配置するマスをタップ → 色を選択 / もう一度タップで取り消し</div>
+      <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+        <button id="picker-blue" class="btn" onclick="pickColor('blue')" style="background:rgba(59,140,246,0.2); color:var(--blue); border:2px solid var(--blue); padding:8px 18px; font-size:0.95rem;">🔵 青を置く</button>
+        <button id="picker-red" class="btn" onclick="pickColor('red')" style="background:rgba(255,68,87,0.2); color:var(--red); border:2px solid transparent; padding:8px 18px; font-size:0.95rem;">🔴 赤を置く</button>
+        <button id="picker-erase" class="btn" onclick="pickColor('erase')" style="background:var(--surface); color:var(--muted); border:2px solid transparent; padding:8px 14px; font-size:0.85rem;">🗑 削除</button>
+      </div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:4px;">色を選んでからマスをタップ。「ランダム配置」もあります。</div>
+      <div style="display:flex; gap:6px; justify-content:center; margin-top:6px;">
+        <button class="btn btn-ghost" onclick="randomSetup()" style="padding:6px 12px; font-size:0.8rem;">🎲 ランダム配置</button>
+        <button class="btn btn-ghost" onclick="clearSetup()" style="padding:6px 12px; font-size:0.8rem;">↺ 全部クリア</button>
+      </div>
     </div>
     <div class="gh-board-wrap">
       <div id="setup-board" class="gh-board"></div>
@@ -407,7 +416,7 @@ let myId = genId(), myName = '';
 let isHost = false, isSolo = false, roomCode = '';
 let fs = null, gs = null;
 let myGhosts = []; // 自分のオバケ {row, col, color}
-let setupState = { selected: {} }; // {r_c: 'blue'|'red'}
+let setupState = { selected: {}, pickColor: 'blue' }; // {r_c: 'blue'|'red'}
 let selectedCell = null; // 自分の手番でクリック中のコマ
 let cpuAITimer = null;
 
@@ -480,7 +489,7 @@ async function joinRoom() {
 
 function leaveRoom() {
   fbClose(); fs=null; gs=null; isHost=false; isSolo=false;
-  myGhosts = []; setupState = { selected:{} }; selectedCell = null;
+  myGhosts = []; setupState = { selected:{}, pickColor:"blue" }; selectedCell = null;
   if(cpuAITimer) { clearTimeout(cpuAITimer); cpuAITimer = null; }
   show('lobby');
 }
@@ -693,17 +702,21 @@ function handleMove(actorId, from, to) {
 }
 
 // 脱出可能な移動か判定
-// players[0]（下側）の脱出口: (0,0) と (0,5) の更に上方向 (r=-1, c=0 or 5)
-// players[1]（上側）の脱出口: (5,0) と (5,5) の更に下方向 (r=6, c=0 or 5)
+// 盤面の四隅（0,0）（0,5）（5,0）（5,5）から、盤外（r=-1, r=6, c=-1, c=6）に出ればOK
 function checkEscapeMove(actorIdx, from, to) {
-  if(actorIdx === 0) {
-    // 下側プレイヤーは上に向かって脱出: (0,0) または (0,5) から (-1,0) or (-1,5)
-    if(from.row === 0 && (from.col === 0 || from.col === 5) && to.row === -1 && to.col === from.col) return true;
-  } else {
-    // 上側プレイヤーは下に向かって脱出: (5,0) または (5,5) から (6,0) or (6,5)
-    if(from.row === 5 && (from.col === 0 || from.col === 5) && to.row === 6 && to.col === from.col) return true;
-  }
-  return false;
+  // 4隅判定
+  const isCorner = (from.row === 0 || from.row === 5) && (from.col === 0 || from.col === 5);
+  if(!isCorner) return false;
+  // 隣接した盤外マスへの移動か（縦か横で1マス、対応する辺の方向）
+  // (0,0) → (-1,0) or (0,-1)
+  // (0,5) → (-1,5) or (0,6)
+  // (5,0) → (6,0) or (5,-1)
+  // (5,5) → (6,5) or (5,6)
+  const outRow = (from.row === 0 && to.row === -1 && to.col === from.col)
+              || (from.row === 5 && to.row === 6 && to.col === from.col);
+  const outCol = (from.col === 0 && to.col === -1 && to.row === from.row)
+              || (from.col === 5 && to.col === 6 && to.row === from.row);
+  return outRow || outCol;
 }
 
 // 勝利判定: 4個取った/取らせた
@@ -754,7 +767,7 @@ function onGsUpdate(s) {
   else if(s.phase === 'setup') {
     if(!g('screen-setup').classList.contains('active')) {
       show('setup');
-      setupState = { selected: {} };
+      setupState = { selected: {}, pickColor: "blue" };
       renderSetupBoard();
       updateSetupCounter();
     }
@@ -829,15 +842,48 @@ function renderSetupBoard() {
   }
 }
 
+function pickColor(color) {
+  setupState.pickColor = color;
+  // ボタンの見た目を更新
+  const blueBtn = g('picker-blue');
+  const redBtn = g('picker-red');
+  const eraseBtn = g('picker-erase');
+  blueBtn.style.borderColor = color==='blue' ? 'var(--blue)' : 'transparent';
+  redBtn.style.borderColor = color==='red' ? 'var(--red)' : 'transparent';
+  eraseBtn.style.borderColor = color==='erase' ? 'var(--muted)' : 'transparent';
+}
+
+function clearSetup() {
+  setupState.selected = {};
+  renderSetupBoard();
+  updateSetupCounter();
+}
+
+function randomSetup() {
+  // 自分の2列の全8マスにランダムに青4・赤4を配置
+  const myIdx = gs.players.findIndex(p => p.id === myId);
+  const myRows = myIdx === 0 ? [4,5] : [0,1];
+  const cells = [];
+  myRows.forEach(r => { for(let c=1;c<=4;c++) cells.push(r+'_'+c); });
+  // シャッフル
+  for(let i=cells.length-1;i>0;i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  setupState.selected = {};
+  cells.slice(0,4).forEach(k => setupState.selected[k] = 'blue');
+  cells.slice(4,8).forEach(k => setupState.selected[k] = 'red');
+  renderSetupBoard();
+  updateSetupCounter();
+}
+
 function onSetupCellClick(r, c) {
   const key = r + '_' + c;
-  const cur = setupState.selected[key];
-  if(cur === 'blue') {
-    setupState.selected[key] = 'red';
-  } else if(cur === 'red') {
+  const color = setupState.pickColor || 'blue';
+  if(color === 'erase') {
     delete setupState.selected[key];
   } else {
-    setupState.selected[key] = 'blue';
+    setupState.selected[key] = color;
   }
   // 制約チェック
   const counts = Object.values(setupState.selected).reduce((a, c) => {
@@ -848,7 +894,6 @@ function onSetupCellClick(r, c) {
     delete setupState.selected[key];
     alert('青は最大4個まで');
   } else if((counts.red||0) > 4) {
-    // 赤を選んで超えたら→青に戻す or 削除
     delete setupState.selected[key];
     alert('赤は最大4個まで');
   }
@@ -901,12 +946,16 @@ function renderPlayBoard() {
       // 範囲外（外周セル）
       if(rr===-1||rr===6||cc===-1||cc===6) {
         const e = mk('div', 'gh-corner');
-        // 脱出口の表示: 自分視点で奥（上）の左右に↗
-        if(rr === -1 && (cc === 0 || cc === 5)) {
+        // 脱出口の表示: 4つの角の外側（縦横どちらでも）に↗
+        const isEscapePort = (rr === -1 && (cc === 0 || cc === 5))
+                          || (rr === 6 && (cc === 0 || cc === 5))
+                          || (cc === -1 && (rr === 0 || rr === 5))
+                          || (cc === 6 && (rr === 0 || rr === 5));
+        if(isEscapePort) {
           e.textContent = '↗';
           e.style.color = 'var(--gold)';
         }
-        // 自分視点での「敵側脱出口」へ移動できるかチェック
+        // 自分視点での「脱出口」へ移動できるかチェック
         const canEscapeHere = canEscapeTo(rr, cc, flipped, myIdx);
         if(canEscapeHere && selectedCell) {
           e.classList.add('movable');
@@ -953,28 +1002,25 @@ function renderPlayBoard() {
 
 function canEscapeTo(rr, cc, flipped, myIdx) {
   if(!selectedCell) return false;
-  // 自分の脱出口: players[0] → 上 (r=-1, c=0 or 5)
-  //                players[1] → 下 (r=6, c=0 or 5)
-  if(myIdx === 0) {
-    // 視点で上側 (rr=-1) に脱出
-    if(rr === -1 && (cc === 0 || cc === 5)) {
-      // 選択中のコマがその列の(r=0)にいる必要がある
-      const targetRow = 0;
-      const targetCol = cc;
-      return selectedCell.row === targetRow && selectedCell.col === targetCol;
-    }
-  } else {
-    // myIdx === 1, flipped表示で「下側」だがボード座標的にはr=6
-    // 視点では rr=-1 が「上=敵側」だが、画面上は flipped 表示で逆
-    // 実は flipped で表示するので、myIdx===1 の場合も rr=-1 が敵側になる
-    if(rr === -1 && (cc === 0 || cc === 5)) {
-      // ボード座標: r=5 のうち c=反転
-      const targetRow = 5;
-      const targetCol = 5 - cc;
-      return selectedCell.row === targetRow && selectedCell.col === targetCol;
-    }
-  }
-  return false;
+  // 4隅から外への移動: 表示座標 → ボード座標変換
+  let r, c;
+  if(flipped) { r = 5 - rr; c = 5 - cc; }
+  else { r = rr; c = cc; }
+  // 外周セルへの移動: 隣の盤面コーナーから?
+  // 表示座標で外周セル (rr=-1,6 or cc=-1,6) のうち4隅の外側だけ
+  const isEscapePort = (rr === -1 && (cc === 0 || cc === 5))
+                    || (rr === 6 && (cc === 0 || cc === 5))
+                    || (cc === -1 && (rr === 0 || rr === 5))
+                    || (cc === 6 && (rr === 0 || rr === 5));
+  if(!isEscapePort) return false;
+  // 対応する盤面コーナーがselectedCellと一致するか
+  // 表示座標 (rr, cc) の外側 → 対応するボード座標の角を計算
+  let cornerRow, cornerCol;
+  if(rr === -1) { cornerRow = flipped ? 5 : 0; cornerCol = flipped ? 5 - cc : cc; }
+  else if(rr === 6) { cornerRow = flipped ? 0 : 5; cornerCol = flipped ? 5 - cc : cc; }
+  else if(cc === -1) { cornerRow = flipped ? 5 - rr : rr; cornerCol = flipped ? 5 : 0; }
+  else { cornerRow = flipped ? 5 - rr : rr; cornerCol = flipped ? 0 : 5; }
+  return selectedCell.row === cornerRow && selectedCell.col === cornerCol;
 }
 
 function onCellClick(r, c, flipped) {
@@ -1001,13 +1047,13 @@ function onCellClick(r, c, flipped) {
 
 function onEscapeClick(rr, cc, flipped, myIdx) {
   if(!selectedCell) return;
-  let to;
-  if(myIdx === 0) {
-    to = {row:-1, col:cc};
-  } else {
-    to = {row:6, col: 5 - cc};
-  }
-  submitMove({row:selectedCell.row, col:selectedCell.col}, to);
+  // 表示座標 → ボード座標 へ
+  let toRow, toCol;
+  if(rr === -1) { toRow = flipped ? 6 : -1; toCol = flipped ? 5 - cc : cc; }
+  else if(rr === 6) { toRow = flipped ? -1 : 6; toCol = flipped ? 5 - cc : cc; }
+  else if(cc === -1) { toRow = flipped ? 5 - rr : rr; toCol = flipped ? 6 : -1; }
+  else { toRow = flipped ? 5 - rr : rr; toCol = flipped ? -1 : 6; }
+  submitMove({row:selectedCell.row, col:selectedCell.col}, {row:toRow, col:toCol});
 }
 
 let isProcessingMove = false;

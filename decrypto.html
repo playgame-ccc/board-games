@@ -129,11 +129,6 @@ body{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 30%,
   .keywords-box{grid-template-columns:1fr;}
   .player-list{grid-template-columns:1fr;}
 }
-
-/* ── Rematch panel ── */
-.rematch-panel { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
-.rematch-status { font-family:var(--mono,monospace); font-size:0.85rem; color:var(--muted); }
-.rematch-voter-tag { font-family:var(--mono,monospace); font-size:0.78rem; padding:3px 10px; border-radius:12px; background:rgba(61,214,140,0.12); color:#3dd68c; border:1px solid rgba(61,214,140,0.3); }
 </style>
 </head>
 <body>
@@ -157,6 +152,17 @@ body{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 30%,
   <div class="header">
     <h1>🔐 デクリプト</h1>
   </div>
+  <!-- 復帰カード（前回のセッションがある場合のみ表示） -->
+  <div class="card" id="recover-card" style="display:none;border:2px solid var(--accent);">
+    <h2>🔄 前回のゲーム</h2>
+    <p class="small muted" id="recover-info"></p>
+    <div class="spacer"></div>
+    <div class="row">
+      <button class="btn btn-amber" style="flex:1;" onclick="dcRecoverSession()">🔁 復帰する</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="dcDismissRecover()">✕ 破棄</button>
+    </div>
+    <div class="err" id="recover-error"></div>
+  </div>
   <div class="card">
     <h2>👋 ようこそ</h2>
     <label class="label">プレイヤー名</label>
@@ -171,7 +177,6 @@ body{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 30%,
     </div>
     <div class="err" id="lobby-error"></div>
     <div class="small muted" id="lobby-status"></div>
-    <button id="btn-reconnect" class="btn btn-ghost btn-block" onclick="reconnectToRoom()" style="display:none; border-color:var(--accent); color:var(--accent); margin-top:8px;">🔄 前のルームに戻る</button>
   </div>
   <div class="card">
     <h3>🎯 ルール（簡易）</h3>
@@ -279,12 +284,10 @@ body{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 30%,
     <h3>📊 最終スコア</h3>
     <div id="result-score"></div>
   </div>
-  <div id="rematch-panel" class="rematch-panel">
-    <div id="rematch-status" class="rematch-status"></div>
-    <div id="rematch-voters" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
+  <div id="result-host-controls" style="display:none;">
+    <button class="btn btn-primary btn-block" onclick="dcRematch()">🔄 もう一度遊ぶ</button>
+    <div class="spacer"></div>
   </div>
-  <button id="btn-rematch" class="btn btn-primary btn-block" onclick="submitRematch()">🔄 もう一度遊ぶ（同じメンバーで再戦）</button>
-  <div class="spacer"></div>
   <button class="btn btn-ghost btn-block" onclick="dcBackToLobby()">退出</button>
 </div>
 
@@ -324,10 +327,31 @@ function checkPassword(){
   if(val==='ccc'){
     g('pw-error').textContent='';
     show('lobby');
+    updateRecoverCard();
   } else {
     g('pw-error').textContent='パスワードが違います';
     g('pw-input').value='';
   }
+}
+
+// 復帰カードの表示更新（ロビー表示時に呼ぶ）
+function updateRecoverCard(){
+  const s=loadSession();
+  const card=g('recover-card');
+  if(!s||!s.roomCode){
+    card.style.display='none';
+    return;
+  }
+  card.style.display='block';
+  const role=s.isHost?'ホスト':'参加者';
+  const ageMin=Math.floor((Date.now()-(s.savedAt||0))/60000);
+  g('recover-info').textContent=`部屋: ${s.roomCode} / 名前: ${s.name||s.myName} (${role}) - 約${ageMin}分前`;
+  g('recover-error').textContent='';
+}
+
+function dcDismissRecover(){
+  clearSession();
+  g('recover-card').style.display='none';
 }
 g('pw-input').addEventListener('keydown',e=>{if(e.key==='Enter')checkPassword();});
 g('in-name').addEventListener('keydown',e=>{
@@ -346,6 +370,33 @@ let dcPub=null;     // 全員が見る公開状態
 let dcPrv=null;     // 自分専用の秘密情報
 let dcGuess=[null,null,null]; // 推測中の数字
 let dcInterceptGuess=[null,null,null];
+
+// ホスト切断検知用
+const HOST_TIMEOUT_MS=12000;  // 12秒broadcastが更新されなければホスト不在判定
+let dcLastBcastSeenAt=0;       // 最後にbroadcastを受信した時刻（クライアント時刻）
+let dcPromoting=false;          // 昇格処理中フラグ（重複防止）
+
+// ====================
+// セッション保存・復元
+// ====================
+const SESSION_KEY='dc_session_v1';
+function saveSession(){
+  if(!fbRoom||!myId){clearSession();return;}
+  try{
+    localStorage.setItem(SESSION_KEY,JSON.stringify({
+      myId,myName,isHost,roomCode,fbRoom,savedAt:Date.now()
+    }));
+  }catch(e){}
+}
+function clearSession(){
+  try{localStorage.removeItem(SESSION_KEY);}catch(e){}
+}
+function loadSession(){
+  try{
+    const s=localStorage.getItem(SESSION_KEY);
+    return s?JSON.parse(s):null;
+  }catch(e){return null;}
+}
 
 // ====================
 // Firebase通信
@@ -385,9 +436,16 @@ async function fbSendToHost(data){
   await fbPut('host_in/'+myId+'/'+key,data);
 }
 
+// ホスト切断耐性のため、完全な状態を保存
+async function fbSaveState(){
+  if(!isHost||!dcFs) return;
+  await fbPut('state',dcFs);
+}
+
 function fbStartPolling(){
   fbStopPolling();
   fbLastTs={};
+  dcLastBcastSeenAt=Date.now(); // ポーリング開始時刻を記録
   fbPollTimer=setInterval(fbPoll,800);
   fbPoll();
 }
@@ -399,6 +457,7 @@ async function fbPoll(){
   const bc=await fbGet('broadcast');
   if(bc&&bc.ts&&bc.ts!==fbLastTs.broadcast){
     fbLastTs.broadcast=bc.ts;
+    dcLastBcastSeenAt=Date.now();
     onBroadcast(bc.data);
   }
   // private
@@ -423,6 +482,78 @@ async function fbPoll(){
         }
       }
     }
+  } else if(fbRoom && !dcPromoting){
+    // ゲスト: ホスト生存チェック
+    const elapsed=Date.now()-dcLastBcastSeenAt;
+    if(elapsed>HOST_TIMEOUT_MS){
+      await dcTryPromoteHost();
+    }
+  }
+}
+
+// ====================
+// ホスト自動昇格
+// ====================
+async function dcTryPromoteHost(){
+  if(dcPromoting||isHost) return;
+  dcPromoting=true;
+  try{
+    // 最新の状態を取得
+    const fs=await fbGet('state');
+    if(!fs||!fs.players||fs.players.length===0){
+      // 状態が取得できない or 部屋が空
+      return;
+    }
+    // 念のためbroadcastも再チェック（取得中にホストが復活していたら中止）
+    const bc=await fbGet('broadcast');
+    if(bc&&bc.ts && Date.now()-bc.ts<HOST_TIMEOUT_MS){
+      // ホスト復活
+      dcLastBcastSeenAt=Date.now();
+      return;
+    }
+    // 自分が新ホストとして適任か（残ったプレイヤーの中でmyIdが最小）
+    const aliveIds=fs.players.map(p=>p.id).sort();
+    if(aliveIds[0]!==myId){
+      // 自分は最小じゃないので、待つ
+      return;
+    }
+    // 自分が新ホストに昇格
+    isHost=true;
+    dcFs=fs;
+    dcFs.host=myId;
+    // プレイヤーリストのisHostフラグを更新
+    dcFs.players.forEach(p=>{p.isHost=(p.id===myId);});
+    dcFs.log=dcFs.log||[];
+    dcFs.log.push(`👑 ${myName} がホストを引き継ぎました`);
+    // 状態を再送信
+    await dcBcast();
+    saveSession();
+    // 画面更新
+    if(dcFs.phase==='waiting') dcRenderWaiting();
+    else if(dcFs.phase==='gameover') dcRenderResult();
+    else dcRenderGame();
+    
+    // フェーズに応じた継続処理
+    if(dcFs.phase==='reveal'){
+      // reveal で止まっていた場合、次ラウンドへ進む（残り時間 or 3秒後）
+      const remain=Math.max(0,(dcFs.revealEndAt||0)-Date.now());
+      const wait=Math.min(Math.max(remain,3000),8000); // 3〜8秒
+      setTimeout(async()=>{
+        if(!isHost||!dcFs) return;
+        if(dcFs.phase!=='reveal') return;
+        await dcAdvanceAfterReveal();
+      },wait);
+    } else if(dcFs.phase==='hint' || dcFs.phase==='guess'){
+      // hint/guess は通常通り入力を受けるだけなので追加処理不要
+      // 各プレイヤーがプライベート情報を持っているはず（旧ホストから送信済み）
+      // ただし、自分（新ホスト）がprivate情報を持っていない可能性があるので再送信
+      await dcSendPrivates();
+    }
+  }catch(e){
+    console.warn('dcTryPromoteHost failed',e);
+    isHost=false; // 昇格失敗
+  }finally{
+    dcPromoting=false;
   }
 }
 
@@ -457,16 +588,17 @@ async function dcCreateRoom(){
     dcAutoAssignTeams();
     await dcBcast();
     fbStartPolling();
+    saveSession(); // 復帰用にセッション保存
     g('lobby-status').textContent='';
     g('disp-code').textContent=roomCode;
     show('waiting');
     dcRenderWaiting();
-    saveSession();
   }catch(e){
     g('lobby-error').textContent='接続失敗: '+e.message;
     g('lobby-status').textContent='';
     // 失敗したらmyId・fbRoomもクリア
     myId='';myName='';isHost=false;roomCode='';fbRoom='';dcFs=null;
+    clearSession();
   }
 }
 
@@ -495,14 +627,15 @@ async function dcJoinRoom(){
     }
     await fbSendToHost({type:'join',name:myName,id:myId});
     fbStartPolling();
+    saveSession(); // 復帰用にセッション保存
     g('lobby-status').textContent='';
     g('disp-code').textContent=roomCode;
     show('waiting');
-    saveSession();
   }catch(e){
     g('lobby-error').textContent='接続失敗: '+e.message;
     g('lobby-status').textContent='';
     myId='';myName='';roomCode='';fbRoom='';
+    clearSession();
   }
 }
 
@@ -511,17 +644,104 @@ function dcBackToLobby(){
   if(!isHost && fbRoom) {
     fbSendToHost({type:'leave',name:myName}).catch(()=>{});
   }
+  // ホストが退出する場合：部屋は削除しない（残ったプレイヤーが昇格して続行できるように）
+  // 状態（state）は残し、broadcastの更新が止まれば自動的にホスト移譲が発生する
   fbStopPolling();
-  if(isHost) fbDel('');
-  try { clearSession(); } catch(e) {}
+  clearSession();
   myId='';myName='';isHost=false;roomCode='';fbRoom='';
   dcFs=null;dcPub=null;dcPrv=null;
   dcGuess=[null,null,null];
   dcInterceptGuess=[null,null,null];
   dcHintInputs=['','',''];
   dcLastSig=null;
+  dcLastBcastSeenAt=0;
+  dcPromoting=false;
   show('lobby');
   g('in-code').value='';
+  updateRecoverCard();
+}
+
+// セッション復帰
+async function dcRecoverSession(){
+  const s=loadSession();
+  if(!s||!s.roomCode){
+    g('recover-error').textContent='復帰できるセッションがありません';
+    return;
+  }
+  g('recover-error').textContent='復帰中…';
+  // 古い状態をクリーンアップ
+  fbStopPolling();
+  myId=s.myId;myName=s.myName;isHost=!!s.isHost;
+  roomCode=s.roomCode;fbRoom=s.fbRoom;
+  dcFs=null;dcPub=null;dcPrv=null;
+  dcGuess=[null,null,null];dcInterceptGuess=[null,null,null];
+  dcHintInputs=['','',''];dcLastSig=null;
+  dcPromoting=false;
+  
+  try{
+    // broadcastの状態を確認
+    const bc=await fbGet('broadcast');
+    if(!bc){
+      g('recover-error').textContent='部屋が見つかりません（削除されたか期限切れ）';
+      clearSession();
+      myId='';myName='';isHost=false;roomCode='';fbRoom='';
+      setTimeout(()=>updateRecoverCard(),100);
+      return;
+    }
+    const now=Date.now();
+    const bcAlive=bc.ts && (now-bc.ts)<HOST_TIMEOUT_MS;
+    
+    if(s.isHost && !bcAlive){
+      // 元ホストとして復帰（broadcast停止中 = 自分が唯一のホスト候補）
+      const fs=await fbGet('state');
+      if(!fs){
+        g('recover-error').textContent='ゲーム状態が取得できません';
+        clearSession();
+        myId='';myName='';isHost=false;roomCode='';fbRoom='';
+        setTimeout(()=>updateRecoverCard(),100);
+        return;
+      }
+      isHost=true;
+      dcFs=fs;
+      dcFs.host=myId;
+      // プレイヤーリストのisHostフラグを更新
+      dcFs.players.forEach(p=>{p.isHost=(p.id===myId);});
+      dcFs.log=dcFs.log||[];
+      dcFs.log.push(`🔁 ${myName} がホストとして復帰しました`);
+      await dcBcast();
+      saveSession();
+      // フェーズに応じた継続処理
+      if(dcFs.phase==='reveal'){
+        const remain=Math.max(0,(dcFs.revealEndAt||0)-Date.now());
+        const wait=Math.min(Math.max(remain,3000),8000);
+        setTimeout(async()=>{
+          if(!isHost||!dcFs) return;
+          if(dcFs.phase!=='reveal') return;
+          await dcAdvanceAfterReveal();
+        },wait);
+      } else if(dcFs.phase==='hint'||dcFs.phase==='guess'){
+        // private情報の再配布（プレイヤーがリロードした場合などに必要）
+        await dcSendPrivates();
+      }
+    } else {
+      // ゲストとして復帰、または別の人がホストになっている可能性
+      isHost=false;
+      saveSession();
+    }
+    
+    // ポーリング開始
+    fbStartPolling();
+    dcLastBcastSeenAt=Date.now();
+    g('disp-code').textContent=roomCode;
+    show('waiting'); // 初期表示。broadcastで適切な画面に遷移
+    g('recover-error').textContent='';
+    g('recover-card').style.display='none';
+  }catch(e){
+    g('recover-error').textContent='復帰失敗: '+e.message;
+    clearSession();
+    myId='';myName='';isHost=false;roomCode='';fbRoom='';
+    setTimeout(()=>updateRecoverCard(),100);
+  }
 }
 
 // ====================
@@ -576,9 +796,9 @@ async function dcBcast(){
   if(dcFs.phase==='gameover'){
     pub.winner=dcFs.winner;
     pub.keywords=dcFs.keywords;
-    pub.rematchVoters=dcFs.rematchVoters||[];
   }
-  await fbBcast(pub);
+  // ブロードキャストと完全状態保存を並列で
+  await Promise.all([fbBcast(pub),fbSaveState()]);
 }
 
 function onBroadcast(d){
@@ -590,7 +810,6 @@ function onBroadcast(d){
   } else if(d.phase==='gameover'){
     show('result');
     dcRenderResult();
-    _renderRematchPanel(d.rematchVoters||[], d.players||[]);
   } else {
     if(!g('screen-game').classList.contains('active')) show('game');
     dcRenderGame();
@@ -638,10 +857,6 @@ async function onHostMsg(pid,msg){
     dcFs.teams.black=dcFs.teams.black.filter(id=>id!==pid);
     dcFs.log.push(`👋 ${msg.name||'プレイヤー'} が退出しました`);
     await dcBcast();
-  } else if(msg.type==='rematch'){
-    await _hostRematch(pid);
-  } else if(msg.type==='reconnect'){
-    await _hostReconnectDc(msg, pid);
   }
 }
 
@@ -923,43 +1138,46 @@ async function dcResolveRound(){
   
   await dcBcast();
   
-  // 勝敗判定
+  // ラウンド終了から次へ進む（または勝敗確定）
+  // 8秒後に進行。タイマーはJSのsetTimeoutなのでホスト切断時は新ホストが引き継ぎ実行
+  dcFs.revealEndAt=Date.now()+8000;
+  setTimeout(async()=>{
+    if(!isHost||!dcFs) return;
+    // 既にフェーズが変わっていたら何もしない（重複防止）
+    if(dcFs.phase!=='reveal') return;
+    await dcAdvanceAfterReveal();
+  },8000);
+}
+
+// reveal フェーズ後の進行処理（gameover or 次ラウンド）
+async function dcAdvanceAfterReveal(){
+  if(!isHost||!dcFs) return;
+  if(dcFs.phase!=='reveal') return;
   const winner=dcCheckWinner();
   if(winner){
-    setTimeout(async()=>{
-      if(!dcFs) return; // ホスト退出時
-      dcFs.phase='gameover';
-      dcFs.winner=winner;
-      dcFs.rematchVoters=[];
-      dcFs.log.push(`🏁 ${winner==='draw'?'引き分け':(winner==='white'?'白チーム':'黒チーム')+'の勝利！'}`);
-      await dcBcast();
-    },8000); // 結果表示時間
+    dcFs.phase='gameover';
+    dcFs.winner=winner;
+    dcFs.log.push(`🏁 ${winner==='draw'?'引き分け':(winner==='white'?'白チーム':'黒チーム')+'の勝利！'}`);
+    await dcBcast();
     return;
   }
-  
-  // 次のラウンドへ
-  setTimeout(async()=>{
-    if(!dcFs) return; // ホスト退出時
-    if(dcFs.round>=8){
-      // 8ラウンド終了 → 強制終了、トークン数で判定
-      const w=dcFs.scores.white;
-      const b=dcFs.scores.black;
-      // 公式：傍受多い方 → 失敗少ない方 → 引き分け
-      let result='draw';
-      if(w.intercept!==b.intercept) result=w.intercept>b.intercept?'white':'black';
-      else if(w.fail!==b.fail) result=w.fail<b.fail?'white':'black';
-      dcFs.phase='gameover';
-      dcFs.winner=result;
-      dcFs.rematchVoters=[];
-      dcFs.log.push(`🏁 8ラウンド終了 - ${result==='draw'?'引き分け':(result==='white'?'白':'黒')+'チームの勝利'}`);
-      await dcBcast();
-      return;
-    }
-    dcFs.round++;
-    dcFs.encoderIdx.white++;
-    dcFs.encoderIdx.black++;
-    await dcStartRound();
-  },8000);
+  if(dcFs.round>=8){
+    // 8ラウンド終了 → 強制終了、トークン数で判定
+    const w=dcFs.scores.white;
+    const b=dcFs.scores.black;
+    let result='draw';
+    if(w.intercept!==b.intercept) result=w.intercept>b.intercept?'white':'black';
+    else if(w.fail!==b.fail) result=w.fail<b.fail?'white':'black';
+    dcFs.phase='gameover';
+    dcFs.winner=result;
+    dcFs.log.push(`🏁 8ラウンド終了 - ${result==='draw'?'引き分け':(result==='white'?'白':'黒')+'チームの勝利'}`);
+    await dcBcast();
+    return;
+  }
+  dcFs.round++;
+  dcFs.encoderIdx.white++;
+  dcFs.encoderIdx.black++;
+  await dcStartRound();
 }
 
 function dcCheckWinner(){
@@ -1452,65 +1670,12 @@ function dcRenderResult(){
       <span class="small">傍受 ${b.intercept} / 失敗 ${b.fail}</span>
     </div>
   `;
+  g('result-host-controls').style.display=isHost?'block':'none';
 }
 
-// ============================================================
-// REMATCH (voting)
-// ============================================================
-function _renderRematchPanel(voterIds, players) {
-  const st = g('rematch-status'), vl = g('rematch-voters');
-  if(!st || !vl) return;
-  const total = (players||[]).length;
-  const validIds = (voterIds||[]).filter(id => (players||[]).some(p => p.id === id));
-  st.textContent = `再戦希望: ${validIds.length} / ${total} 人`;
-  vl.innerHTML = '';
-  validIds.forEach(id => {
-    const p = (players||[]).find(pp => pp.id === id);
-    if(!p) return;
-    const t = document.createElement('span');
-    t.className = 'rematch-voter-tag';
-    t.textContent = '✅ ' + p.name;
-    vl.appendChild(t);
-  });
-  // ボタン状態の更新（自分が投票済みなら無効化）
-  const btn = g('btn-rematch');
-  if(btn) {
-    const myVoted = validIds.includes(myId);
-    if(myVoted) { btn.disabled = true; btn.textContent = '⏳ 他のプレイヤーを待っています...'; }
-    else { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
-  }
-}
-
-async function submitRematch() {
-  const btn = g('btn-rematch');
-  if(btn) { btn.disabled = true; btn.textContent = '⏳ 他のプレイヤーを待っています...'; }
-  if(isHost) {
-    await _hostRematch(myId);
-  } else {
-    await fbSendToHost({type:'rematch', id:myId, name:myName});
-  }
-}
-
-async function _hostRematch(pid) {
-  if(!isHost || !dcFs) return;
-  if(dcFs.phase !== 'gameover') return;
-  if(!dcFs.rematchVoters) dcFs.rematchVoters = [];
-  const player = dcFs.players.find(p => p.id === pid);
-  if(!player) return;
-  // 退出済みプレイヤーIDを除去
-  dcFs.rematchVoters = dcFs.rematchVoters.filter(id => dcFs.players.some(p => p.id === id));
-  if(dcFs.rematchVoters.includes(pid)) return;
-  dcFs.rematchVoters.push(pid);
-  if(dcFs.rematchVoters.length >= dcFs.players.length) {
-    await _actualRestart();
-  } else {
-    await dcBcast();
-  }
-}
-
-async function _actualRestart() {
-  if(!isHost || !dcFs) return;
-  dcFs.rematchVoters = [];
+async function dcRematch(){
+  if(!isHost||!dcFs) return;
+  if(dcFs.phase!=='gameover') return; // 終了画面でのみ
   dcFs.phase='waiting';
   dcFs.round=0;
   dcFs.history=[];
@@ -1527,9 +1692,6 @@ async function _actualRestart() {
   dcFs.log.push('🔄 再戦準備中');
   await dcBcast();
 }
-
-// 互換用エイリアス
-async function dcRematch(){ await submitRematch(); }
 
 // ====================
 // 単語リスト（プレースホルダー、後で5000語以上に置き換え）
@@ -1711,135 +1873,6 @@ const DC_WORDS=[
 '鼠','鼻','鼻づまり','鼻水','鼻紙','鼻血','龍'
 ];
 // === DC_WORDS_END ===
-
-// ============================================================
-// SESSION SAVE / RESTORE
-// ============================================================
-const SESSION_KEY = 'pgSession_dc';
-function saveSession() {
-  try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-      myId, myName, roomCode, fbRoom, isHost,
-      ts: Date.now()
-    }));
-  } catch(e) {}
-}
-function clearSession() {
-  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
-}
-function loadSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if(!raw) return null;
-    const s = JSON.parse(raw);
-    if(Date.now() - s.ts > 3 * 60 * 60 * 1000) { clearSession(); return null; }
-    return s;
-  } catch(e) { return null; }
-}
-function showReconnectOption() {
-  const s = loadSession();
-  if(!s) return;
-  const btn = g('btn-reconnect');
-  if(!btn) return;
-  btn.style.display = '';
-  btn.textContent = `🔄 前のルームに戻る（🔐デクリプト #${s.roomCode}）`;
-}
-async function reconnectToRoom() {
-  const s = loadSession();
-  if(!s) { g('lobby-error').textContent='セッションが見つかりません'; return; }
-  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
-  fbRoom = s.fbRoom; isHost = s.isHost;
-  g('lobby-status').textContent='再接続中…';
-  try {
-    const bc = await fbGet('broadcast');
-    if(!bc) {
-      clearSession();
-      g('lobby-error').textContent='ルームが見つかりません（終了済みの可能性があります）';
-      g('lobby-status').textContent='';
-      return;
-    }
-    fbStartPolling();
-    if(isHost) {
-      // ホスト復帰: 既存の dcFs を broadcast から復元
-      const data = await fetch(`${fbUrl}/rooms/${fbRoom}.json`).then(r=>r.json()).catch(()=>null);
-      const pub = data?.broadcast;
-      if(pub) {
-        dcPub = pub;
-        // 内部状態を broadcast から構築（不完全だが基本動作可能）
-        dcFs = {
-          phase: pub.phase || 'waiting',
-          host: myId,
-          players: pub.players || [{id:myId, name:myName, isHost:true}],
-          teams: pub.teams || {white:[], black:[]},
-          round: pub.round || 0,
-          scores: pub.scores || {white:{intercept:0,fail:0},black:{intercept:0,fail:0}},
-          keywords: pub.keywords || {white:[], black:[]},
-          history: pub.history || [],
-          log: pub.log || ['🔄 再接続しました'],
-          rematchVoters: pub.rematchVoters || [],
-        };
-        if(pub.phase === 'waiting') {
-          show('waiting');
-          g('disp-code').textContent = roomCode;
-          dcRenderWaiting();
-        } else if(pub.phase === 'gameover') {
-          show('result');
-          dcRenderResult();
-        } else {
-          show('game');
-          dcRenderGame();
-        }
-      }
-    } else {
-      // ゲスト復帰
-      await fbSendToHost({type:'join', name:myName, id:myId});
-      await fbSendToHost({type:'reconnect', id:myId, name:myName});
-      g('disp-code').textContent = roomCode;
-      show('waiting');
-      let retries = 0;
-      const retry = setInterval(()=>{
-        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
-        fbSendToHost({type:'reconnect', id:myId, name:myName}).catch(()=>{});
-        retries++;
-      }, 2000);
-    }
-    g('lobby-error').textContent='';
-    g('lobby-status').textContent='';
-    const br = g('btn-reconnect'); if(br) br.style.display = 'none';
-  } catch(e) {
-    g('lobby-error').textContent='再接続失敗: ' + (e.message||e);
-    g('lobby-status').textContent='';
-  }
-}
-async function _hostReconnectDc(msg, pid) {
-  if(!dcFs) return;
-  const rp = dcFs.players.find(p=>p.id===msg.id);
-  if(dcFs.phase === 'waiting') {
-    if(!rp && dcFs.players.length < 8) {
-      dcFs.players.push({id:msg.id, name:msg.name, isHost:false});
-    }
-    await dcBcast();
-  } else {
-    if(rp) {
-      // ゲーム中: state を再送 + チーム所属のprivateを再送
-      await dcBcast();
-      // 自チームのキーワードなどを再送
-      const team = dcFs.teams.white.includes(msg.id) ? 'white'
-                 : dcFs.teams.black.includes(msg.id) ? 'black' : null;
-      if(team) {
-        const prv = {
-          team,
-          keywords: dcFs.keywords[team] || [],
-        };
-        await fbSendTo(msg.id, prv);
-      }
-    }
-  }
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  showReconnectOption();
-});
 
 </script>
 </body>

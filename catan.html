@@ -1,0 +1,3180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>🏝️ カタン</title>
+<style>
+:root{
+  --bg:#0d1219; --bg2:#141a26; --surface:#1c2333; --surface2:#252e44;
+  --text:#e7ecf8; --muted:#8d96b3; --line:#2a3052;
+  --accent:#ffb020; --green:#3dd68c; --red:#f04866; --blue:#5b8def;
+  /* タイル色 */
+  --t-wood:#3a6b1f; --t-wheat:#e6c34a; --t-sheep:#90c75a;
+  --t-brick:#c9532b; --t-ore:#6b7280; --t-desert:#d4b896;
+  --t-sea:#1f4a7a;
+  /* プレイヤー色 */
+  --p1:#e74c3c; --p2:#3498db; --p3:#f1c40f; --p4:#9b59b6;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;font-size:14px;}
+body{min-height:100vh;padding:10px;background:radial-gradient(circle at 30% 40%,#1a2245 0%,var(--bg) 70%);}
+.app{max-width:900px;margin:0 auto;}
+.screen{display:none;}
+.screen.active{display:block;}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;}
+.card h2{font-size:1.05rem;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.card h3{font-size:0.95rem;margin-bottom:8px;color:var(--muted);}
+.btn{display:inline-block;padding:9px 14px;border:none;border-radius:10px;font-size:0.92rem;font-weight:600;cursor:pointer;transition:transform 0.1s,filter 0.1s;color:#fff;background:var(--surface2);font-family:inherit;}
+.btn:hover{filter:brightness(1.15);}
+.btn:active{transform:scale(0.97);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-primary{background:linear-gradient(135deg,#5b8def 0%,#3a5fcf 100%);}
+.btn-amber{background:linear-gradient(135deg,var(--accent) 0%,#cc8810 100%);color:#1a1206;}
+.btn-green{background:linear-gradient(135deg,var(--green) 0%,#2da870 100%);}
+.btn-red{background:linear-gradient(135deg,var(--red) 0%,#b8364f 100%);}
+.btn-ghost{background:transparent;border:1px solid var(--line);}
+.btn-block{display:block;width:100%;}
+.btn-sm{padding:5px 9px;font-size:0.8rem;}
+.input{width:100%;padding:10px 13px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:0.92rem;outline:none;font-family:inherit;}
+.input:focus{border-color:var(--blue);}
+.input-row{display:flex;gap:8px;margin-bottom:10px;}
+.label{display:block;font-size:0.8rem;color:var(--muted);margin-bottom:4px;}
+.err{color:var(--red);font-size:0.82rem;margin-top:6px;min-height:1em;}
+.hint{padding:8px 11px;background:rgba(91,141,239,0.1);border-left:3px solid var(--blue);border-radius:6px;font-size:0.85rem;margin:6px 0;}
+.hint.wait{background:rgba(141,150,179,0.1);border-left-color:var(--muted);}
+.hint.my{background:rgba(255,176,32,0.12);border-left-color:var(--accent);}
+.hint.ok{background:rgba(61,214,140,0.12);border-left-color:var(--green);}
+.hint.ng{background:rgba(240,72,102,0.12);border-left-color:var(--red);}
+.row{display:flex;gap:8px;flex-wrap:wrap;}
+.center{text-align:center;}
+.muted{color:var(--muted);}
+.small{font-size:0.82rem;}
+.bold{font-weight:700;}
+.spacer{height:8px;}
+
+/* ヘッダー */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.header h1{font-size:1.2rem;}
+
+/* 部屋コード */
+.code-display{font-size:2rem;font-weight:900;letter-spacing:0.1em;color:var(--accent);text-align:center;padding:12px;background:var(--surface2);border-radius:10px;margin:8px 0;}
+
+/* プレイヤーリスト */
+.player-list-single{display:flex;flex-direction:column;gap:6px;}
+.player-item{padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:0.9rem;display:flex;justify-content:space-between;align-items:center;}
+.player-item .role-tag{font-size:0.74rem;color:var(--muted);background:var(--bg2);padding:2px 6px;border-radius:6px;}
+.player-item.me{background:rgba(91,141,239,0.15);}
+
+/* ゲーム盤面 */
+.board-wrap{background:var(--t-sea);border-radius:14px;padding:8px;margin:8px 0;overflow:auto;display:flex;justify-content:center;}
+.board-svg{display:block;}
+.hex-tile{stroke:#222;stroke-width:0.5;cursor:default;}
+.hex-tile.wood{fill:var(--t-wood);}
+.hex-tile.wheat{fill:var(--t-wheat);}
+.hex-tile.sheep{fill:var(--t-sheep);}
+.hex-tile.brick{fill:var(--t-brick);}
+.hex-tile.ore{fill:var(--t-ore);}
+.hex-tile.desert{fill:var(--t-desert);}
+.hex-tile.sea{fill:var(--t-sea);}
+.hex-num{fill:#fdf6e3;font-size:14px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none;}
+.hex-num.hot{fill:#ff5040;}
+.hex-num-bg{fill:#fdf6e3;stroke:#444;stroke-width:0.5;}
+.hex-dots{font-size:8px;fill:#222;text-anchor:middle;}
+.hex-dots.hot{fill:#ff5040;}
+.robber{fill:#000;stroke:#fff;stroke-width:1;pointer-events:none;}
+
+/* 頂点・辺（クリック可能） */
+.vertex-spot{fill:transparent;stroke:transparent;cursor:pointer;}
+.vertex-spot.placeable{fill:rgba(255,255,255,0.5);stroke:#fff;stroke-width:1;animation:pulse 1.2s infinite;}
+.vertex-spot.placeable:hover{fill:rgba(255,255,255,0.9);}
+.edge-spot{stroke:transparent;stroke-width:8;cursor:pointer;fill:none;}
+.edge-spot.placeable{stroke:rgba(255,255,255,0.6);animation:pulse 1.2s infinite;}
+.edge-spot.placeable:hover{stroke:rgba(255,255,255,0.95);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+
+/* 建物 */
+.settlement{stroke:#222;stroke-width:1;}
+.city{stroke:#222;stroke-width:1;}
+.road{stroke-width:5;stroke-linecap:round;}
+.road.p1{stroke:var(--p1);}
+.road.p2{stroke:var(--p2);}
+.road.p3{stroke:var(--p3);}
+.road.p4{stroke:var(--p4);}
+.settlement.p1, .city.p1{fill:var(--p1);}
+.settlement.p2, .city.p2{fill:var(--p2);}
+.settlement.p3, .city.p3{fill:var(--p3);}
+.settlement.p4, .city.p4{fill:var(--p4);}
+
+/* 港 */
+.port{font-size:10px;fill:#fff;text-anchor:middle;dominant-baseline:central;font-weight:700;pointer-events:none;}
+.port-line{stroke:#fff;stroke-width:1;stroke-dasharray:2,2;}
+.port-bg{fill:rgba(0,0,0,0.5);stroke:#fff;stroke-width:0.5;}
+
+/* プレイヤーパネル */
+.player-panel{padding:8px;background:var(--surface2);border-radius:10px;margin-bottom:6px;border-left:4px solid var(--muted);}
+.player-panel.p1{border-left-color:var(--p1);}
+.player-panel.p2{border-left-color:var(--p2);}
+.player-panel.p3{border-left-color:var(--p3);}
+.player-panel.p4{border-left-color:var(--p4);}
+.player-panel.current{box-shadow:0 0 0 2px var(--accent);}
+.player-panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.player-name{font-weight:700;font-size:0.95rem;}
+.player-stats{display:flex;gap:8px;font-size:0.78rem;color:var(--muted);flex-wrap:wrap;}
+.stat-tag{padding:1px 5px;background:var(--bg2);border-radius:4px;}
+
+/* 自分の手札 */
+.hand-box{padding:8px;background:var(--surface);border-radius:10px;}
+.hand-row{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0;}
+.res-card{display:flex;flex-direction:column;align-items:center;padding:4px 8px;border-radius:6px;min-width:48px;font-size:0.75rem;color:#fff;cursor:pointer;border:2px solid transparent;}
+.res-card.selected{border-color:var(--accent);}
+.res-card.wood{background:var(--t-wood);}
+.res-card.wheat{background:var(--t-wheat);color:#3a2a00;}
+.res-card.sheep{background:var(--t-sheep);color:#1f3a0a;}
+.res-card.brick{background:var(--t-brick);}
+.res-card.ore{background:var(--t-ore);}
+.res-card .count{font-size:1.1rem;font-weight:700;}
+.res-card.unowned{opacity:0.3;}
+
+/* 発展カード */
+.dev-card{display:inline-block;padding:4px 8px;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border-radius:6px;font-size:0.78rem;margin:2px;cursor:pointer;border:2px solid transparent;}
+.dev-card.selected{border-color:var(--accent);}
+.dev-card.disabled{opacity:0.5;cursor:not-allowed;}
+.dev-card.new{opacity:0.6;}
+
+/* ダイス */
+.dice-box{display:flex;justify-content:center;gap:10px;margin:6px 0;}
+.dice{width:40px;height:40px;background:#fff;color:#222;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;box-shadow:0 2px 4px rgba(0,0,0,0.3);}
+
+/* アクションパネル */
+.action-panel{padding:8px;background:var(--surface2);border-radius:10px;margin:6px 0;}
+.action-row{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0;}
+
+/* モーダル */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;z-index:100;padding:14px;}
+.modal-bg.show{display:flex;}
+.modal-box{background:var(--surface);border-radius:14px;padding:18px;max-width:520px;width:100%;border:1px solid var(--line);max-height:92vh;overflow-y:auto;}
+
+/* ログ */
+.log-box{max-height:140px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;font-size:0.78rem;}
+.log-line{padding:2px 0;border-bottom:1px solid var(--line);}
+.log-line:last-child{border-bottom:none;}
+
+/* 取引 */
+.trade-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:3px 0;}
+.trade-num{width:28px;text-align:center;font-weight:700;}
+
+@media(max-width:480px){
+  .dice{width:34px;height:34px;font-size:1.2rem;}
+  .res-card{min-width:42px;font-size:0.7rem;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- パスワード画面 -->
+<div class="screen active" id="screen-password">
+  <div class="card center">
+    <h2>🏝️ カタン</h2>
+    <p class="muted small">パスワードを入力してください</p>
+    <div class="spacer"></div>
+    <input type="password" id="pw-input" class="input" placeholder="パスワード" autocomplete="off">
+    <div class="spacer"></div>
+    <button class="btn btn-primary btn-block" onclick="checkPassword()">入室</button>
+    <div class="err" id="pw-error"></div>
+  </div>
+</div>
+
+<!-- ロビー画面 -->
+<div class="screen" id="screen-lobby">
+  <div class="header">
+    <h1>🏝️ カタン</h1>
+  </div>
+  <div class="card" id="recover-card" style="display:none;border:2px solid var(--accent);">
+    <h2>🔄 前回のゲーム</h2>
+    <p class="small muted" id="recover-info"></p>
+    <div class="spacer"></div>
+    <div class="row">
+      <button class="btn btn-amber" style="flex:1;" onclick="ctRecoverSession()">🔁 復帰する</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="ctDismissRecover()">✕ 破棄</button>
+    </div>
+    <div class="err" id="recover-error"></div>
+  </div>
+  <div class="card">
+    <h2>👋 ようこそ</h2>
+    <label class="label">プレイヤー名</label>
+    <input type="text" id="in-name" class="input" maxlength="12" placeholder="名前を入力">
+    <div class="spacer"></div>
+    <button class="btn btn-primary btn-block" onclick="ctCreateRoom()">🆕 部屋を作る（ホスト）</button>
+    <div class="spacer"></div>
+    <label class="label">既存の部屋に参加</label>
+    <div class="input-row">
+      <input type="text" id="in-code" class="input" maxlength="4" placeholder="4桁コード" inputmode="numeric">
+      <button class="btn btn-amber" onclick="ctJoinRoom()">参加</button>
+    </div>
+    <div class="err" id="lobby-error"></div>
+    <div class="small muted" id="lobby-status"></div>
+  </div>
+  <div class="card">
+    <h3>🎯 ルール（簡易）</h3>
+    <ul class="small muted" style="padding-left:20px;line-height:1.6;">
+      <li>3〜4人プレイ。指定した勝利点（8/10/12）に最初に到達したプレイヤーの勝利</li>
+      <li>サイコロで出た数字に隣接する開拓地・都市から資源を獲得</li>
+      <li>資源を組み合わせて道・開拓地・都市・発展カードを建設・購入</li>
+      <li>7が出たら：手札8枚以上のプレイヤーは半数を捨て、盗賊を移動して資源を奪う</li>
+      <li>最長交易路（5本以上）：+2点、最大騎士力（3枚以上の騎士使用）：+2点</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 待機画面 -->
+<div class="screen" id="screen-waiting">
+  <div class="header">
+    <h1>🏝️ カタン</h1>
+    <button class="btn btn-ghost btn-sm" onclick="ctBackToLobby()">退出</button>
+  </div>
+  <div class="card center">
+    <h3>部屋コード</h3>
+    <div class="code-display" id="disp-code">----</div>
+    <p class="small muted">この4桁を友達に伝えて参加してもらってください</p>
+  </div>
+  <div class="card">
+    <h2>👥 参加者 <span class="small muted" id="player-count"></span></h2>
+    <div id="waiting-players" class="player-list-single"></div>
+  </div>
+  <div class="card" id="host-options" style="display:none;">
+    <h3>⚙️ ゲーム設定（ホストのみ）</h3>
+    <div class="spacer"></div>
+    <label class="label">勝利点</label>
+    <div class="row">
+      <button class="btn btn-ghost btn-sm" id="vp-8" onclick="ctSetVP(8)">8点</button>
+      <button class="btn btn-amber btn-sm" id="vp-10" onclick="ctSetVP(10)">10点（公式）</button>
+      <button class="btn btn-ghost btn-sm" id="vp-12" onclick="ctSetVP(12)">12点</button>
+    </div>
+    <div class="spacer"></div>
+    <label class="label">盤面</label>
+    <div class="row">
+      <button class="btn btn-amber btn-sm" id="bd-fixed" onclick="ctSetBoard('fixed')">公式固定</button>
+      <button class="btn btn-ghost btn-sm" id="bd-rand" onclick="ctSetBoard('random')">ランダム</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-green btn-block" onclick="ctStartGame()" id="btn-start">▶ ゲーム開始</button>
+  </div>
+  <div class="card" id="wait-host-message" style="display:none;">
+    <div class="hint wait">ホストの開始を待っています…</div>
+  </div>
+</div>
+
+<!-- ゲーム画面 -->
+<div class="screen" id="screen-game">
+  <div class="header">
+    <h1>🏝️ カタン</h1>
+    <div class="small muted" id="phase-info"></div>
+  </div>
+  <!-- 現手番表示 -->
+  <div class="action-panel" id="turn-banner"></div>
+  <!-- 盤面 -->
+  <div class="board-wrap" id="board-wrap"></div>
+  <!-- アクションエリア -->
+  <div id="action-area"></div>
+  <!-- 自分のステータス -->
+  <div class="card">
+    <h3>🎒 あなたの手札</h3>
+    <div id="my-hand"></div>
+  </div>
+  <!-- 全プレイヤー -->
+  <div class="card">
+    <h3>👥 プレイヤー</h3>
+    <div id="players-panel"></div>
+  </div>
+  <!-- ログ -->
+  <div class="card">
+    <h3>📋 ログ</h3>
+    <div class="log-box" id="log-box"></div>
+  </div>
+  <button class="btn btn-ghost btn-sm btn-block" onclick="ctBackToLobby()" style="margin-top:8px;">退出</button>
+</div>
+
+<!-- 結果画面 -->
+<div class="screen" id="screen-result">
+  <div class="header">
+    <h1>🏝️ カタン</h1>
+  </div>
+  <div class="card center" id="result-card">
+    <h2 id="result-title"></h2>
+    <p id="result-subtitle"></p>
+  </div>
+  <div class="card">
+    <h3>🏆 最終結果</h3>
+    <div id="result-players"></div>
+  </div>
+  <div id="result-host-controls" style="display:none;">
+    <button class="btn btn-primary btn-block" onclick="ctRematch()">🔄 もう一度遊ぶ</button>
+    <div class="spacer"></div>
+  </div>
+  <button class="btn btn-ghost btn-block" onclick="ctBackToLobby()">退出</button>
+</div>
+
+<!-- モーダル: 手札捨て、取引、盗賊移動など -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+</div>
+<script>
+// ====================
+// 基盤関数
+// ====================
+function g(id){return document.getElementById(id);}
+function show(screenName){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=g('screen-'+screenName);
+  if(el) el.classList.add('active');
+}
+function mk(tag,cls,text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined) e.textContent=text;
+  return e;
+}
+function mkSVG(tag,attrs){
+  const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  if(attrs){
+    for(const k in attrs){e.setAttribute(k,attrs[k]);}
+  }
+  return e;
+}
+function genId(){return Math.random().toString(36).slice(2,10);}
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function showModal(content){
+  const mb=g('modal-box');
+  mb.innerHTML='';
+  if(typeof content==='string') mb.innerHTML=content;
+  else mb.appendChild(content);
+  g('modal-bg').classList.add('show');
+}
+function hideModal(){g('modal-bg').classList.remove('show');}
+
+// ====================
+// パスワード
+// ====================
+function checkPassword(){
+  const val=g('pw-input').value.trim().toLowerCase();
+  if(val==='ccc'){
+    g('pw-error').textContent='';
+    show('lobby');
+    updateRecoverCard();
+  } else {
+    g('pw-error').textContent='パスワードが違います';
+    g('pw-input').value='';
+  }
+}
+function updateRecoverCard(){
+  const s=loadSession();
+  const card=g('recover-card');
+  if(!s||!s.roomCode){card.style.display='none';return;}
+  card.style.display='block';
+  const role=s.isHost?'ホスト':'参加者';
+  const ageMin=Math.floor((Date.now()-(s.savedAt||0))/60000);
+  g('recover-info').textContent=`部屋: ${s.roomCode} / 名前: ${s.myName} (${role}) - 約${ageMin}分前`;
+  g('recover-error').textContent='';
+}
+function ctDismissRecover(){
+  clearSession();
+  g('recover-card').style.display='none';
+}
+g('pw-input').addEventListener('keydown',e=>{if(e.key==='Enter')checkPassword();});
+g('in-name').addEventListener('keydown',e=>{if(e.key==='Enter') g('in-code').focus();});
+g('in-code').addEventListener('keydown',e=>{if(e.key==='Enter') ctJoinRoom();});
+
+// ====================
+// セッション保存・復元
+// ====================
+const SESSION_KEY='ct_session_v1';
+function saveSession(){
+  if(!fbRoom||!myId){clearSession();return;}
+  try{
+    localStorage.setItem(SESSION_KEY,JSON.stringify({myId,myName,isHost,roomCode,fbRoom,savedAt:Date.now()}));
+  }catch(e){}
+}
+function clearSession(){try{localStorage.removeItem(SESSION_KEY);}catch(e){}}
+function loadSession(){
+  try{const s=localStorage.getItem(SESSION_KEY);return s?JSON.parse(s):null;}catch(e){return null;}
+}
+
+// ====================
+// 状態
+// ====================
+let myId='',myName='',isHost=false,roomCode='',fbRoom='';
+let ctFs=null;   // ホストの完全状態
+let ctPub=null;  // 公開状態
+let ctPrv=null;  // プレイヤー専用秘密情報
+
+// ホスト切断検知
+const HOST_TIMEOUT_MS=12000;
+let ctLastBcastSeenAt=0;
+let ctPromoting=false;
+
+// UI状態
+let uiSelectedHexId=null;     // 盗賊配置用
+let uiSelectedVertexId=null;  // 建物配置用
+let uiSelectedEdgeId=null;    // 道配置用
+let uiDiscardSelection={};    // 手札捨て選択
+
+// ====================
+// Firebase通信
+// ====================
+const FB_URL='https://playgame-3e7ba-default-rtdb.firebaseio.com';
+let fbPollTimer=null;
+let fbLastTs={};
+
+function fbPath(sub){return `${FB_URL}/rooms/${fbRoom}/${sub}.json`;}
+async function fbPut(sub,val){
+  try{
+    const r=await fetch(fbPath(sub),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)});
+    if(!r.ok) console.warn('fbPut failed',sub,r.status);
+  }catch(e){console.warn('fbPut error',sub,e);}
+}
+async function fbGet(sub){
+  try{
+    const r=await fetch(fbPath(sub));
+    return r.ok?await r.json():null;
+  }catch(e){return null;}
+}
+async function fbDel(sub){
+  try{await fetch(fbPath(sub),{method:'DELETE'});}catch(e){}
+}
+async function fbBcast(data){await fbPut('broadcast',{ts:Date.now(),data});}
+async function fbSendTo(pid,data){await fbPut('prv/'+pid,{ts:Date.now(),data});}
+async function fbSendToHost(data){
+  if(!fbRoom) return;
+  const key=Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  await fbPut('host_in/'+myId+'/'+key,data);
+}
+async function fbSaveState(){
+  if(!isHost||!ctFs) return;
+  await fbPut('state',ctFs);
+}
+function fbStartPolling(){
+  fbStopPolling();
+  fbLastTs={};
+  ctLastBcastSeenAt=Date.now();
+  fbPollTimer=setInterval(fbPoll,1000);
+  fbPoll();
+}
+function fbStopPolling(){
+  if(fbPollTimer){clearInterval(fbPollTimer);fbPollTimer=null;}
+}
+async function fbPoll(){
+  const bc=await fbGet('broadcast');
+  if(bc&&bc.ts&&bc.ts!==fbLastTs.broadcast){
+    fbLastTs.broadcast=bc.ts;
+    ctLastBcastSeenAt=Date.now();
+    onBroadcast(bc.data);
+  }
+  const prv=await fbGet('prv/'+myId);
+  if(prv&&prv.ts&&prv.ts!==fbLastTs.prv){
+    fbLastTs.prv=prv.ts;
+    onPrivate(prv.data);
+  }
+  if(isHost){
+    const hostIn=await fbGet('host_in');
+    if(hostIn){
+      for(const pid in hostIn){
+        for(const tsKey in hostIn[pid]){
+          const ts=parseInt(tsKey);
+          const key='hin_'+pid+'_'+tsKey;
+          if(!fbLastTs[key]){
+            fbLastTs[key]=ts;
+            onHostMsg(pid,hostIn[pid][tsKey]);
+            await fbDel('host_in/'+pid+'/'+tsKey);
+          }
+        }
+      }
+    }
+  } else if(fbRoom&&!ctPromoting){
+    const elapsed=Date.now()-ctLastBcastSeenAt;
+    if(elapsed>HOST_TIMEOUT_MS){
+      await ctTryPromoteHost();
+    }
+  }
+}
+
+// ====================
+// ホスト自動昇格
+// ====================
+async function ctTryPromoteHost(){
+  if(ctPromoting||isHost) return;
+  ctPromoting=true;
+  try{
+    const fs=await fbGet('state');
+    if(!fs||!fs.players||fs.players.length===0) return;
+    // 自分がプレイヤーリストに含まれていなければ昇格しない
+    if(!fs.players.find(p=>p.id===myId)) return;
+    const bc=await fbGet('broadcast');
+    if(bc&&bc.ts&&Date.now()-bc.ts<HOST_TIMEOUT_MS){
+      ctLastBcastSeenAt=Date.now();
+      return;
+    }
+    const aliveIds=fs.players.map(p=>p.id).sort();
+    if(aliveIds[0]!==myId) return;
+    isHost=true;
+    ctFs=fs;
+    ctFs.host=myId;
+    ctFs.players.forEach(p=>{p.isHost=(p.id===myId);});
+    ctFs.log=ctFs.log||[];
+    ctFs.log.push(`👑 ${myName} がホストを引き継ぎました`);
+    await ctBcast();
+    saveSession();
+    // 各プレイヤーへ秘密情報を再配布
+    await ctSendPrivates();
+    if(ctFs.phase==='waiting') ctRenderWaiting();
+    else if(ctFs.phase==='gameover') ctRenderResult();
+    else ctRenderGame();
+  }catch(e){
+    console.warn('promote failed',e);
+    isHost=false;
+  }finally{
+    ctPromoting=false;
+  }
+}
+// ====================
+// 部屋作成・参加
+// ====================
+async function ctCreateRoom(){
+  const name=g('in-name').value.trim();
+  if(!name){g('lobby-error').textContent='名前を入力してください';return;}
+  if(name.length>12){g('lobby-error').textContent='名前は12文字以内';return;}
+  g('lobby-error').textContent='';
+  myName=name;
+  myId=genId();
+  isHost=true;
+  roomCode=Math.floor(1000+Math.random()*9000).toString();
+  fbRoom='CT-'+roomCode;
+  g('lobby-status').textContent='接続中…';
+  try{
+    await fbDel('');
+    ctFs={
+      phase:'waiting',
+      host:myId,
+      players:[{id:myId,name:myName,isHost:true,color:'p1'}],
+      victoryPoints:10,
+      boardMode:'fixed',
+      board:null,
+      currentPlayerIdx:0,
+      log:['🆕 部屋を作成しました'],
+    };
+    await ctBcast();
+    fbStartPolling();
+    saveSession();
+    g('lobby-status').textContent='';
+    g('disp-code').textContent=roomCode;
+    show('waiting');
+    ctRenderWaiting();
+  }catch(e){
+    g('lobby-error').textContent='接続失敗: '+e.message;
+    g('lobby-status').textContent='';
+    myId='';myName='';isHost=false;roomCode='';fbRoom='';ctFs=null;
+    clearSession();
+  }
+}
+async function ctJoinRoom(){
+  const name=g('in-name').value.trim();
+  const code=g('in-code').value.trim();
+  if(!name){g('lobby-error').textContent='名前を入力してください';return;}
+  if(name.length>12){g('lobby-error').textContent='名前は12文字以内';return;}
+  if(!/^\d{4}$/.test(code)){g('lobby-error').textContent='4桁の数字を入力してください';return;}
+  g('lobby-error').textContent='';
+  myName=name;myId=genId();isHost=false;roomCode=code;fbRoom='CT-'+code;
+  g('lobby-status').textContent='接続中…';
+  try{
+    const bc=await fbGet('broadcast');
+    if(!bc){
+      g('lobby-error').textContent='その番号の部屋が見つかりません';
+      g('lobby-status').textContent='';
+      myId='';myName='';roomCode='';fbRoom='';
+      return;
+    }
+    await fbSendToHost({type:'join',name:myName,id:myId});
+    fbStartPolling();
+    saveSession();
+    g('lobby-status').textContent='';
+    g('disp-code').textContent=roomCode;
+    show('waiting');
+  }catch(e){
+    g('lobby-error').textContent='接続失敗: '+e.message;
+    g('lobby-status').textContent='';
+    myId='';myName='';roomCode='';fbRoom='';
+    clearSession();
+  }
+}
+function ctBackToLobby(){
+  if(!isHost&&fbRoom){fbSendToHost({type:'leave',name:myName}).catch(()=>{});}
+  fbStopPolling();
+  clearSession();
+  myId='';myName='';isHost=false;roomCode='';fbRoom='';
+  ctFs=null;ctPub=null;ctPrv=null;
+  uiSelectedHexId=null;uiSelectedVertexId=null;uiSelectedEdgeId=null;
+  uiDiscardSelection={};
+  ctLastBcastSeenAt=0;ctPromoting=false;
+  show('lobby');
+  g('in-code').value='';
+  updateRecoverCard();
+}
+async function ctRecoverSession(){
+  const s=loadSession();
+  if(!s||!s.roomCode){g('recover-error').textContent='復帰できるセッションがありません';return;}
+  g('recover-error').textContent='復帰中…';
+  fbStopPolling();
+  myId=s.myId;myName=s.myName;isHost=!!s.isHost;roomCode=s.roomCode;fbRoom=s.fbRoom;
+  ctFs=null;ctPub=null;ctPrv=null;
+  ctPromoting=false;
+  try{
+    const bc=await fbGet('broadcast');
+    if(!bc){
+      g('recover-error').textContent='部屋が見つかりません';
+      clearSession();
+      myId='';myName='';isHost=false;roomCode='';fbRoom='';
+      setTimeout(()=>updateRecoverCard(),100);
+      return;
+    }
+    const bcAlive=bc.ts&&(Date.now()-bc.ts)<HOST_TIMEOUT_MS;
+    if(s.isHost&&!bcAlive){
+      const fs=await fbGet('state');
+      if(!fs){
+        g('recover-error').textContent='ゲーム状態が取得できません';
+        clearSession();
+        myId='';myName='';isHost=false;roomCode='';fbRoom='';
+        setTimeout(()=>updateRecoverCard(),100);
+        return;
+      }
+      isHost=true;
+      ctFs=fs;
+      ctFs.host=myId;
+      ctFs.players.forEach(p=>{p.isHost=(p.id===myId);});
+      ctFs.log=ctFs.log||[];
+      ctFs.log.push(`🔁 ${myName} がホストとして復帰`);
+      await ctBcast();
+      saveSession();
+      await ctSendPrivates();
+    } else {
+      isHost=false;
+      saveSession();
+    }
+    fbStartPolling();
+    ctLastBcastSeenAt=Date.now();
+    g('disp-code').textContent=roomCode;
+    show('waiting');
+    g('recover-error').textContent='';
+    g('recover-card').style.display='none';
+  }catch(e){
+    g('recover-error').textContent='復帰失敗: '+e.message;
+    clearSession();
+    myId='';myName='';isHost=false;roomCode='';fbRoom='';
+    setTimeout(()=>updateRecoverCard(),100);
+  }
+}
+
+// ====================
+// ゲーム設定
+// ====================
+async function ctSetVP(vp){
+  if(!isHost||!ctFs||ctFs.phase!=='waiting') return;
+  ctFs.victoryPoints=vp;
+  await ctBcast();
+}
+async function ctSetBoard(mode){
+  if(!isHost||!ctFs||ctFs.phase!=='waiting') return;
+  ctFs.boardMode=mode;
+  await ctBcast();
+}
+
+// ====================
+// 盤面データ
+// ====================
+// 19ヘックスのaxial座標
+const HEX_COORDS=(()=>{
+  const list=[];
+  for(let r=-2;r<=2;r++){
+    let qmin,qmax;
+    if(r===-2){qmin=0;qmax=2;}
+    else if(r===-1){qmin=-1;qmax=2;}
+    else if(r===0){qmin=-2;qmax=2;}
+    else if(r===1){qmin=-2;qmax=1;}
+    else {qmin=-2;qmax=0;}
+    for(let q=qmin;q<=qmax;q++) list.push([q,r]);
+  }
+  return list;
+})();
+
+// edge方向と隣接ヘックスのオフセット (pointy-top)
+// edge 0=右上, 1=右, 2=右下, 3=左下, 4=左, 5=左上
+const HEX_NEIGHBORS=[
+  [1,-1], // 右上
+  [1,0],  // 右
+  [0,1],  // 右下
+  [-1,1], // 左下
+  [-1,0], // 左
+  [0,-1], // 左上
+];
+
+// corner i は edge (i-1+6)%6 と edge i の間にある
+// corner 0 (真上) → 左上(5)と右上(0)の間 → 隣接ヘックスは neighbor[5]とneighbor[0]
+// corner 1 (右上) → 右上(0)と右(1)の間
+// 等々
+const CORNER_NEIGHBORS=[
+  [5,0], // corner 0
+  [0,1], // corner 1
+  [1,2], // corner 2
+  [2,3], // corner 3
+  [3,4], // corner 4
+  [4,5], // corner 5
+];
+
+function getVertexId(q,r,corner){
+  const [n1,n2]=CORNER_NEIGHBORS[corner];
+  const [dq1,dr1]=HEX_NEIGHBORS[n1];
+  const [dq2,dr2]=HEX_NEIGHBORS[n2];
+  const cands=[
+    [q,r,corner],
+    [q+dq1,r+dr1,(corner+2)%6],
+    [q+dq2,r+dr2,(corner+4)%6],
+  ];
+  cands.sort((a,b)=>{
+    if(a[0]!==b[0]) return a[0]-b[0];
+    if(a[1]!==b[1]) return a[1]-b[1];
+    return a[2]-b[2];
+  });
+  return cands[0].join(',');
+}
+function getEdgeId(q,r,edge){
+  const [dq,dr]=HEX_NEIGHBORS[edge];
+  const cand1=[q,r,edge];
+  const cand2=[q+dq,r+dr,(edge+3)%6];
+  // 小さい方
+  if(cand1[0]!==cand2[0]) return (cand1[0]<cand2[0]?cand1:cand2).join(',');
+  if(cand1[1]!==cand2[1]) return (cand1[1]<cand2[1]?cand1:cand2).join(',');
+  return (cand1[2]<cand2[2]?cand1:cand2).join(',');
+}
+
+// 全頂点・全辺の事前計算
+let ALL_VERTICES=null, ALL_EDGES=null;
+let VERTEX_EDGES=null;    // vertex_id -> [edge_id]
+let VERTEX_NEIGHBORS=null;// vertex_id -> [vertex_id]（道で繋がる隣接頂点）
+let EDGE_VERTICES=null;   // edge_id -> [vertex_id, vertex_id]
+let EDGE_EDGES=null;      // edge_id -> [edge_id]（端を共有する辺）
+let VERTEX_HEXES=null;    // vertex_id -> [hex_id]（隣接ヘックス）
+
+function initBoardTopology(){
+  if(ALL_VERTICES) return;
+  const hexSet=new Set(HEX_COORDS.map(h=>h[0]+','+h[1]));
+  ALL_VERTICES=new Set();
+  ALL_EDGES=new Set();
+  VERTEX_EDGES={};
+  VERTEX_NEIGHBORS={};
+  EDGE_VERTICES={};
+  EDGE_EDGES={};
+  VERTEX_HEXES={};
+  // 頂点・辺を列挙
+  for(const [q,r] of HEX_COORDS){
+    for(let c=0;c<6;c++){
+      const v=getVertexId(q,r,c);
+      ALL_VERTICES.add(v);
+    }
+    for(let e=0;e<6;e++){
+      const ed=getEdgeId(q,r,e);
+      ALL_EDGES.add(ed);
+    }
+  }
+  // 各ヘックスから、頂点と辺の対応を計算
+  // pointy-top: edge i は corner i と corner i+1 を結ぶ
+  for(const [q,r] of HEX_COORDS){
+    const hexId=q+','+r;
+    const verts=[];
+    const edges=[];
+    for(let c=0;c<6;c++) verts.push(getVertexId(q,r,c));
+    for(let e=0;e<6;e++) edges.push(getEdgeId(q,r,e));
+    // 頂点→ヘックス
+    for(const v of verts){
+      if(!VERTEX_HEXES[v]) VERTEX_HEXES[v]=[];
+      if(!VERTEX_HEXES[v].includes(hexId)) VERTEX_HEXES[v].push(hexId);
+    }
+    // 辺→頂点  (edge i は corner i と corner i+1)
+    for(let e=0;e<6;e++){
+      const ed=edges[e];
+      const v1=verts[e],v2=verts[(e+1)%6];
+      if(!EDGE_VERTICES[ed]){
+        EDGE_VERTICES[ed]=[v1,v2];
+      }
+    }
+    // 頂点→辺 (corner i は edge i-1 と edge i)
+    for(let c=0;c<6;c++){
+      const v=verts[c];
+      const e1=edges[(c+5)%6], e2=edges[c];
+      if(!VERTEX_EDGES[v]) VERTEX_EDGES[v]=new Set();
+      VERTEX_EDGES[v].add(e1);
+      VERTEX_EDGES[v].add(e2);
+    }
+  }
+  // Set → Arrayに変換
+  for(const v in VERTEX_EDGES) VERTEX_EDGES[v]=Array.from(VERTEX_EDGES[v]);
+  // 頂点の隣接頂点（辺で繋がる）
+  for(const v in VERTEX_EDGES){
+    const neighbors=new Set();
+    for(const e of VERTEX_EDGES[v]){
+      const [v1,v2]=EDGE_VERTICES[e];
+      if(v1!==v) neighbors.add(v1);
+      if(v2!==v) neighbors.add(v2);
+    }
+    VERTEX_NEIGHBORS[v]=Array.from(neighbors);
+  }
+  // 辺の隣接辺（頂点共有）
+  for(const ed in EDGE_VERTICES){
+    const [v1,v2]=EDGE_VERTICES[ed];
+    const adj=new Set();
+    for(const e2 of (VERTEX_EDGES[v1]||[])) if(e2!==ed) adj.add(e2);
+    for(const e2 of (VERTEX_EDGES[v2]||[])) if(e2!==ed) adj.add(e2);
+    EDGE_EDGES[ed]=Array.from(adj);
+  }
+}
+
+// 公式タイル構成
+const OFFICIAL_TILES=['wood','wood','wood','wood','wheat','wheat','wheat','wheat','sheep','sheep','sheep','sheep','brick','brick','brick','ore','ore','ore','desert'];
+const OFFICIAL_NUMBERS=[5,2,6,3,8,10,9,12,11,4,8,10,9,4,5,6,3,11];
+
+// 公式港データ（修正後の HEX_NEIGHBORS に整合）
+// edge: 0=右上, 1=右, 2=右下, 3=左下, 4=左, 5=左上
+// 公式の港配置: 外周を時計回りに、約2辺ごとに9個
+const OFFICIAL_PORTS_DATA=[
+  {type:'any',  hex:'0,-2',  edges:[5]}, // 上端、汎用3:1
+  {type:'wheat',hex:'2,-2',  edges:[0]}, // 右上、麦2:1
+  {type:'ore',  hex:'2,-1',  edges:[1]}, // 右、鉱石2:1
+  {type:'any',  hex:'2,0',   edges:[1]}, // 右下、汎用3:1
+  {type:'sheep',hex:'1,1',   edges:[2]}, // 下、羊2:1
+  {type:'any',  hex:'-1,2',  edges:[3]}, // 下左、汎用3:1
+  {type:'brick',hex:'-2,2',  edges:[3]}, // 左下、レンガ2:1
+  {type:'wood', hex:'-2,0',  edges:[4]}, // 左、木材2:1
+  {type:'any',  hex:'-1,-1', edges:[5]}, // 左上、汎用3:1
+];
+
+function makeBoard(mode){
+  initBoardTopology();
+  let tiles,numbers;
+  if(mode==='random'){
+    tiles=shuffle(OFFICIAL_TILES);
+    numbers=shuffle(OFFICIAL_NUMBERS);
+  } else {
+    // 公式固定（簡易版：タイルと数値を所定の順に配置）
+    tiles=OFFICIAL_TILES.slice();
+    numbers=OFFICIAL_NUMBERS.slice();
+  }
+  // 砂漠ヘックスには数値なし
+  const hexes={};
+  let numIdx=0;
+  for(let i=0;i<HEX_COORDS.length;i++){
+    const [q,r]=HEX_COORDS[i];
+    const hexId=q+','+r;
+    const resource=tiles[i];
+    let number=null;
+    if(resource!=='desert'){
+      number=numbers[numIdx++];
+    }
+    hexes[hexId]={q,r,resource,number};
+  }
+  // 盗賊は砂漠ヘックスに初期配置
+  let robberHex=null;
+  for(const h in hexes){
+    if(hexes[h].resource==='desert'){robberHex=h;break;}
+  }
+  // 港データ
+  const ports=[];
+  for(const pd of OFFICIAL_PORTS_DATA){
+    const [q,r]=pd.hex.split(',').map(Number);
+    for(const e of pd.edges){
+      // この辺の両端の頂点に港を付与
+      const eid=getEdgeId(q,r,e);
+      const verts=EDGE_VERTICES[eid];
+      if(verts){
+        ports.push({type:pd.type,vertices:verts,hex:pd.hex,edge:e});
+      }
+    }
+  }
+  return {hexes,robberHex,ports};
+}
+
+// ====================
+// プレイヤー色割り当て
+// ====================
+const PLAYER_COLORS=['p1','p2','p3','p4'];
+function assignColors(players){
+  for(let i=0;i<players.length;i++){
+    players[i].color=PLAYER_COLORS[i]||'p1';
+  }
+}
+// ====================
+// 盤面描画（SVG）
+// ====================
+// pointy-top hex のサイズ
+const HEX_SIZE=40; // 半径（中心から角まで）
+// pointy-top: width = sqrt(3)*size, height = 2*size
+// 横間隔 = sqrt(3)*size, 縦間隔 = 1.5*size
+const HEX_W=Math.sqrt(3)*HEX_SIZE;
+const HEX_H=2*HEX_SIZE;
+
+// axial座標 (q,r) → ピクセル (x,y)
+function hexToPixel(q,r){
+  // pointy-top
+  const x=HEX_SIZE*Math.sqrt(3)*(q+r/2);
+  const y=HEX_SIZE*1.5*r;
+  return [x,y];
+}
+
+// cornerのオフセット（中心からの相対位置）
+// pointy-top: corner 0=真上, 1=右上, 2=右下, 3=真下, 4=左下, 5=左上
+function cornerOffset(corner){
+  const angles=[-90,-30,30,90,150,210]; // 度
+  const rad=angles[corner]*Math.PI/180;
+  return [HEX_SIZE*Math.cos(rad), HEX_SIZE*Math.sin(rad)];
+}
+
+// 頂点ID → ピクセル座標
+function vertexToPixel(vid){
+  const parts=vid.split(',');
+  const q=parseInt(parts[0]),r=parseInt(parts[1]),corner=parseInt(parts[2]);
+  const [cx,cy]=hexToPixel(q,r);
+  const [ox,oy]=cornerOffset(corner);
+  return [cx+ox,cy+oy];
+}
+
+// 辺ID → 中点と両端
+function edgeToPixel(eid){
+  const parts=eid.split(',');
+  const q=parseInt(parts[0]),r=parseInt(parts[1]),edge=parseInt(parts[2]);
+  // edge i は corner i と corner (i+1)%6 を結ぶ
+  const [cx,cy]=hexToPixel(q,r);
+  const [ox1,oy1]=cornerOffset(edge);
+  const [ox2,oy2]=cornerOffset((edge+1)%6);
+  return {
+    x1:cx+ox1, y1:cy+oy1,
+    x2:cx+ox2, y2:cy+oy2,
+    mx:(cx+ox1+cx+ox2)/2,
+    my:(cy+oy1+cy+oy2)/2,
+  };
+}
+
+// 数値チップに点の数（確率指標）
+const DOT_COUNT={2:1,3:2,4:3,5:4,6:5,8:5,9:4,10:3,11:2,12:1};
+
+function renderBoard(){
+  initBoardTopology();
+  const wrap=g('board-wrap');
+  wrap.innerHTML='';
+  if(!ctPub||!ctPub.board) return;
+  const board=ctPub.board;
+  
+  // SVGの外接矩形を計算
+  const padding=50;
+  let xmin=Infinity,xmax=-Infinity,ymin=Infinity,ymax=-Infinity;
+  for(const hexId in board.hexes){
+    const [q,r]=hexId.split(',').map(Number);
+    const [x,y]=hexToPixel(q,r);
+    xmin=Math.min(xmin,x-HEX_W/2);
+    xmax=Math.max(xmax,x+HEX_W/2);
+    ymin=Math.min(ymin,y-HEX_H/2);
+    ymax=Math.max(ymax,y+HEX_H/2);
+  }
+  const W=xmax-xmin+padding*2;
+  const H=ymax-ymin+padding*2;
+  const offsetX=-xmin+padding;
+  const offsetY=-ymin+padding;
+  
+  const svg=mkSVG('svg',{
+    'class':'board-svg',
+    'width':Math.min(W,window.innerWidth-30),
+    'height':H*Math.min(W,window.innerWidth-30)/W,
+    'viewBox':`0 0 ${W} ${H}`,
+  });
+  
+  // ヘックスタイル描画
+  for(const hexId in board.hexes){
+    const h=board.hexes[hexId];
+    const [x,y]=hexToPixel(h.q,h.r);
+    const cx=x+offsetX,cy=y+offsetY;
+    // 六角形のパス
+    const pts=[];
+    for(let i=0;i<6;i++){
+      const [ox,oy]=cornerOffset(i);
+      pts.push(`${cx+ox},${cy+oy}`);
+    }
+    const hex=mkSVG('polygon',{
+      'class':'hex-tile '+h.resource,
+      'points':pts.join(' '),
+    });
+    svg.appendChild(hex);
+    // 数値チップ
+    if(h.number){
+      const isHot=(h.number===6||h.number===8);
+      const bg=mkSVG('circle',{
+        'class':'hex-num-bg',
+        'cx':cx,'cy':cy,'r':13
+      });
+      svg.appendChild(bg);
+      const txt=mkSVG('text',{
+        'class':'hex-num'+(isHot?' hot':''),
+        'x':cx,'y':cy-2,
+      });
+      txt.textContent=h.number;
+      svg.appendChild(txt);
+      // ドット
+      const dots=DOT_COUNT[h.number]||0;
+      const dotTxt=mkSVG('text',{
+        'class':'hex-dots'+(isHot?' hot':''),
+        'x':cx,'y':cy+8,
+      });
+      dotTxt.textContent='•'.repeat(dots);
+      svg.appendChild(dotTxt);
+    }
+    // 盗賊
+    if(board.robberHex===hexId){
+      const rob=mkSVG('circle',{
+        'class':'robber',
+        'cx':cx+12,'cy':cy-12,'r':6
+      });
+      svg.appendChild(rob);
+    }
+  }
+  
+  // 港の描画
+  if(board.ports){
+    for(const port of board.ports){
+      // 港の頂点ペア
+      const [v1,v2]=port.vertices;
+      const [px1,py1]=vertexToPixel(v1);
+      const [px2,py2]=vertexToPixel(v2);
+      // 中点を計算し、海側に少しオフセット
+      const mx=(px1+px2)/2+offsetX;
+      const my=(py1+py2)/2+offsetY;
+      // 該当ヘックスの中心
+      const [q,r]=port.hex.split(',').map(Number);
+      const [hcx,hcy]=hexToPixel(q,r);
+      const hx=hcx+offsetX,hy=hcy+offsetY;
+      // 港のマーカー位置（中点からヘックス中心と反対方向に18px）
+      const dx=mx-hx,dy=my-hy;
+      const len=Math.sqrt(dx*dx+dy*dy)||1;
+      const portX=mx+dx/len*18;
+      const portY=my+dy/len*18;
+      // 港マーカー
+      const portBg=mkSVG('circle',{
+        'class':'port-bg',
+        'cx':portX,'cy':portY,'r':14
+      });
+      svg.appendChild(portBg);
+      const portTxt=mkSVG('text',{
+        'class':'port',
+        'x':portX,'y':portY,
+      });
+      portTxt.textContent=portLabel(port.type);
+      svg.appendChild(portTxt);
+      // 港から両頂点に線
+      const l1=mkSVG('line',{
+        'class':'port-line',
+        'x1':px1+offsetX,'y1':py1+offsetY,
+        'x2':portX,'y2':portY
+      });
+      svg.appendChild(l1);
+      const l2=mkSVG('line',{
+        'class':'port-line',
+        'x1':px2+offsetX,'y1':py2+offsetY,
+        'x2':portX,'y2':portY
+      });
+      svg.appendChild(l2);
+    }
+  }
+  
+  // 道を描画
+  if(board.roads){
+    for(const eid in board.roads){
+      const owner=board.roads[eid];
+      const player=ctPub.players.find(p=>p.id===owner);
+      if(!player) continue;
+      const e=edgeToPixel(eid);
+      const road=mkSVG('line',{
+        'class':'road '+player.color,
+        'x1':e.x1+offsetX,'y1':e.y1+offsetY,
+        'x2':e.x2+offsetX,'y2':e.y2+offsetY,
+      });
+      svg.appendChild(road);
+    }
+  }
+  
+  // 建物を描画
+  if(board.buildings){
+    for(const vid in board.buildings){
+      const b=board.buildings[vid];
+      const player=ctPub.players.find(p=>p.id===b.owner);
+      if(!player) continue;
+      const [px,py]=vertexToPixel(vid);
+      if(b.type==='settlement'){
+        const settlement=mkSVG('polygon',{
+          'class':'settlement '+player.color,
+          'points':`${px+offsetX-8},${py+offsetY+5} ${px+offsetX-8},${py+offsetY-3} ${px+offsetX},${py+offsetY-10} ${px+offsetX+8},${py+offsetY-3} ${px+offsetX+8},${py+offsetY+5}`,
+        });
+        svg.appendChild(settlement);
+      } else if(b.type==='city'){
+        const city=mkSVG('polygon',{
+          'class':'city '+player.color,
+          'points':`${px+offsetX-10},${py+offsetY+6} ${px+offsetX-10},${py+offsetY-4} ${px+offsetX-3},${py+offsetY-4} ${px+offsetX-3},${py+offsetY-10} ${px+offsetX+10},${py+offsetY-10} ${px+offsetX+10},${py+offsetY+6}`,
+        });
+        svg.appendChild(city);
+      }
+    }
+  }
+  
+  // 配置可能ハイライト（フェーズに応じて）
+  renderPlacementSpots(svg,offsetX,offsetY,board);
+  
+  wrap.appendChild(svg);
+}
+
+function portLabel(t){
+  if(t==='any') return '3:1';
+  return '2:1';
+}
+
+function renderPlacementSpots(svg,offsetX,offsetY,board){
+  // 現在の状態に応じて、頂点・辺・ヘックスのクリック可能スポットを表示
+  if(!ctPrv) return;
+  const myTurn=ctPub.currentPlayerIdx>=0 && ctPub.players[ctPub.currentPlayerIdx]?.id===myId;
+  
+  // ヘックスのクリック（盗賊配置用）
+  if(ctPub.subPhase==='robberMove' && myTurn){
+    for(const hexId in board.hexes){
+      if(hexId===board.robberHex) continue;
+      const [q,r]=hexId.split(',').map(Number);
+      const [x,y]=hexToPixel(q,r);
+      const c=mkSVG('circle',{
+        'class':'vertex-spot placeable',
+        'cx':x+offsetX,'cy':y+offsetY,'r':18
+      });
+      c.dataset.hex=hexId;
+      c.onclick=()=>ctClickHex(hexId);
+      svg.appendChild(c);
+    }
+    return;
+  }
+  
+  // 頂点のクリック（建物配置）
+  const allowSettlement=myTurn && (
+    (ctPub.subPhase==='initSettlement') ||
+    (ctPub.subPhase==='turn' && ctPub.buildAction==='settlement')
+  );
+  const allowCity=myTurn && ctPub.subPhase==='turn' && ctPub.buildAction==='city';
+  
+  if(allowSettlement||allowCity){
+    for(const vid of ALL_VERTICES){
+      if(!isValidBuildingSpot(vid,allowCity?'city':'settlement',board,myId,ctPub.subPhase==='initSettlement')) continue;
+      const [px,py]=vertexToPixel(vid);
+      const c=mkSVG('circle',{
+        'class':'vertex-spot placeable',
+        'cx':px+offsetX,'cy':py+offsetY,'r':10
+      });
+      c.dataset.vid=vid;
+      c.onclick=()=>ctClickVertex(vid);
+      svg.appendChild(c);
+    }
+  }
+  
+  // 辺のクリック（道配置）
+  const allowRoad=myTurn && (
+    (ctPub.subPhase==='initRoad') ||
+    (ctPub.subPhase==='turn' && ctPub.buildAction==='road') ||
+    (ctPub.subPhase==='roadBuilding')
+  );
+  if(allowRoad){
+    for(const eid of ALL_EDGES){
+      if(!isValidRoadSpot(eid,board,myId,ctPub.subPhase==='initRoad'?ctPub.lastInitSettlement:null)) continue;
+      const e=edgeToPixel(eid);
+      const line=mkSVG('line',{
+        'class':'edge-spot placeable',
+        'x1':e.x1+offsetX,'y1':e.y1+offsetY,
+        'x2':e.x2+offsetX,'y2':e.y2+offsetY
+      });
+      line.dataset.eid=eid;
+      line.onclick=()=>ctClickEdge(eid);
+      svg.appendChild(line);
+    }
+  }
+}
+
+// ====================
+// 配置妥当性チェック
+// ====================
+// 開拓地：他の建物から2辺以上離れている、自分の道に隣接（初期配置時を除く）
+function isValidBuildingSpot(vid,type,board,playerId,isInitial){
+  const buildings=board.buildings||{};
+  const roads=board.roads||{};
+  
+  if(type==='city'){
+    // 都市：自分の開拓地の場所のみ
+    const b=buildings[vid];
+    return b && b.owner===playerId && b.type==='settlement';
+  }
+  
+  // 開拓地：そこに何も建っていない
+  if(buildings[vid]) return false;
+  // 隣接頂点（1辺先）に建物がない（距離2ルール）
+  for(const n of VERTEX_NEIGHBORS[vid]){
+    if(buildings[n]) return false;
+  }
+  // 初期配置でない場合、自分の道に隣接していなければならない
+  if(!isInitial){
+    let hasOwnRoad=false;
+    for(const eid of VERTEX_EDGES[vid]){
+      if(roads[eid]===playerId){hasOwnRoad=true;break;}
+    }
+    if(!hasOwnRoad) return false;
+  }
+  return true;
+}
+
+// 道：他の道がない、自分の建物または自分の道に隣接（初期配置時は直前の開拓地に隣接）
+function isValidRoadSpot(eid,board,playerId,initSettlementVid){
+  const roads=board.roads||{};
+  const buildings=board.buildings||{};
+  if(roads[eid]) return false; // すでに道がある
+  
+  const [v1,v2]=EDGE_VERTICES[eid];
+  
+  // 初期配置中：直前の開拓地に隣接する必要
+  if(initSettlementVid){
+    return (v1===initSettlementVid || v2===initSettlementVid);
+  }
+  
+  // 通常：両端の頂点のどちらかに、自分の建物または自分の道がある
+  for(const v of [v1,v2]){
+    const b=buildings[v];
+    // 自分の建物
+    if(b && b.owner===playerId) return true;
+    // 相手の建物がある頂点では、そこから道を伸ばせない（公式：相手の建物で道は途切れる）
+    if(b && b.owner!==playerId) continue;
+    // 自分の道
+    for(const e2 of VERTEX_EDGES[v]){
+      if(e2!==eid && roads[e2]===playerId) return true;
+    }
+  }
+  return false;
+}
+// ====================
+// ブロードキャスト
+// ====================
+
+// 全プレイヤーのVPを再計算（公開値）
+// 通常時: 開拓地・都市・最長交易路・最大騎士力のみ公開
+// ゲーム終了時: 勝利点カードも含めて公開
+function recomputeAllVP(){
+  if(!ctFs||!ctFs.board) return;
+  const isGameOver=(ctFs.phase==='gameover');
+  for(const p of ctFs.players){
+    let vp=0;
+    for(const vid in ctFs.board.buildings){
+      const b=ctFs.board.buildings[vid];
+      if(b.owner===p.id) vp+=(b.type==='city'?2:1);
+    }
+    if(ctFs.longestRoadOwner===p.id) vp+=2;
+    if(ctFs.largestArmyOwner===p.id) vp+=2;
+    // 内部vpは勝利点カード込み
+    let totalVp=vp;
+    if(p.devCards){
+      for(const d of p.devCards) if(d.type==='vp') totalVp++;
+    }
+    p.vp=totalVp;
+    // 公開vpはゲーム終了時のみ勝利点カード込み
+    p.publicVp=isGameOver?totalVp:vp;
+  }
+}
+
+async function ctBcast(){
+  if(!isHost||!ctFs) return;
+  // 全VP再計算
+  recomputeAllVP();
+  // 公開状態を構築
+  const pub={
+    phase:ctFs.phase,
+    subPhase:ctFs.subPhase||null,
+    host:ctFs.host,
+    players:ctFs.players.map(p=>({
+      id:p.id,name:p.name,isHost:p.isHost,color:p.color,
+      vp:p.publicVp||0,  // 公開VP（勝利点カードを含まない）
+      handCount:(p.hand?Object.values(p.hand).reduce((a,b)=>a+b,0):0),
+      devCount:(p.devCards?p.devCards.filter(d=>!d.played).length:0),
+      knightsPlayed:p.knightsPlayed||0,
+      roads:p.roadCount||0,
+      settlements:p.settlementCount||0,
+      cities:p.cityCount||0,
+    })),
+    victoryPoints:ctFs.victoryPoints,
+    boardMode:ctFs.boardMode,
+    board:ctFs.board,
+    currentPlayerIdx:ctFs.currentPlayerIdx||0,
+    dice:ctFs.dice||null,
+    log:(ctFs.log||[]).slice(-50),
+    longestRoadOwner:ctFs.longestRoadOwner||null,
+    longestRoadLength:ctFs.longestRoadLength||0,
+    largestArmyOwner:ctFs.largestArmyOwner||null,
+    largestArmySize:ctFs.largestArmySize||0,
+    buildAction:ctFs.buildAction||null,
+    lastInitSettlement:ctFs.lastInitSettlement||null,
+    initOrder:ctFs.initOrder||null,
+    initOrderIdx:ctFs.initOrderIdx||0,
+    tradeOffer:ctFs.tradeOffer||null,
+    discardRequired:ctFs.discardRequired||null,
+    pendingRobbery:ctFs.pendingRobbery||null,
+  };
+  if(ctFs.phase==='gameover'){
+    pub.winner=ctFs.winner;
+  }
+  await Promise.all([fbBcast(pub),fbSaveState()]);
+}
+
+// 各プレイヤーに秘密情報（手札・発展カード）を送信
+async function ctSendPrivates(){
+  if(!isHost||!ctFs) return;
+  for(const p of ctFs.players){
+    const prv={
+      hand:p.hand||{wood:0,wheat:0,sheep:0,brick:0,ore:0},
+      devCards:p.devCards||[],
+      ports:p.ports||[], // このプレイヤーが利用可能な港リスト
+      trueVP:p.vp||0,    // 自分の本当のVP（勝利点カード込み）
+    };
+    await fbSendTo(p.id,prv);
+  }
+}
+
+function onBroadcast(d){
+  ctPub=d;
+  if(d.phase==='waiting'){
+    if(!g('screen-waiting').classList.contains('active')) show('waiting');
+    ctRenderWaiting();
+  } else if(d.phase==='gameover'){
+    show('result');
+    ctRenderResult();
+  } else if(d.phase==='playing'){
+    if(!g('screen-game').classList.contains('active')) show('game');
+    ctRenderGame();
+  }
+}
+function onPrivate(d){
+  if(d&&d.rejected){
+    alert('参加できませんでした: '+(d.reason||'不明'));
+    ctBackToLobby();
+    return;
+  }
+  ctPrv=d;
+  if(g('screen-game').classList.contains('active')) ctRenderGame();
+}
+
+// ====================
+// ホストメッセージ処理
+// ====================
+async function onHostMsg(pid,msg){
+  if(!isHost||!ctFs) return;
+  if(msg.type==='join'){
+    if(ctFs.phase!=='waiting'){
+      await fbSendTo(pid,{rejected:true,reason:'ゲーム中のため参加できません'});
+      return;
+    }
+    if(ctFs.players.length>=4){
+      await fbSendTo(pid,{rejected:true,reason:'部屋が満員です'});
+      return;
+    }
+    if(!ctFs.players.find(p=>p.id===pid)){
+      ctFs.players.push({id:pid,name:msg.name,isHost:false});
+      assignColors(ctFs.players);
+      ctFs.log.push(`👋 ${msg.name} が参加`);
+      await ctBcast();
+    }
+  } else if(msg.type==='leave'){
+    if(ctFs.phase==='waiting'){
+      ctFs.players=ctFs.players.filter(p=>p.id!==pid);
+      assignColors(ctFs.players);
+      ctFs.log.push(`👋 ${msg.name||'?'} が退出`);
+      await ctBcast();
+    }
+    // ゲーム中は無視（残ったプレイヤーはBOT扱いでスキップ）
+  } else if(msg.type==='startGame'){
+    if(pid!==ctFs.host) return;
+    await ctStartGameInternal();
+  } else if(msg.type==='setVP'){
+    if(pid!==ctFs.host||ctFs.phase!=='waiting') return;
+    ctFs.victoryPoints=msg.vp;
+    await ctBcast();
+  } else if(msg.type==='setBoard'){
+    if(pid!==ctFs.host||ctFs.phase!=='waiting') return;
+    ctFs.boardMode=msg.mode;
+    await ctBcast();
+  } else if(msg.type==='placeSettlement'){
+    await ctHostPlaceSettlement(pid,msg.vid);
+  } else if(msg.type==='placeCity'){
+    await ctHostPlaceCity(pid,msg.vid);
+  } else if(msg.type==='placeRoad'){
+    await ctHostPlaceRoad(pid,msg.eid);
+  } else if(msg.type==='rollDice'){
+    await ctHostRollDice(pid);
+  } else if(msg.type==='endTurn'){
+    await ctHostEndTurn(pid);
+  } else if(msg.type==='buyDev'){
+    await ctHostBuyDev(pid);
+  } else if(msg.type==='playDev'){
+    await ctHostPlayDev(pid,msg.cardType,msg.params);
+  } else if(msg.type==='setBuildAction'){
+    await ctHostSetBuildAction(pid,msg.action);
+  } else if(msg.type==='moveRobber'){
+    await ctHostMoveRobber(pid,msg.hexId,msg.targetPid);
+  } else if(msg.type==='discard'){
+    await ctHostDiscard(pid,msg.cards);
+  } else if(msg.type==='bankTrade'){
+    await ctHostBankTrade(pid,msg.give,msg.giveQty,msg.get);
+  } else if(msg.type==='offerTrade'){
+    await ctHostOfferTrade(pid,msg.give,msg.want,msg.targetPid);
+  } else if(msg.type==='respondTrade'){
+    await ctHostRespondTrade(pid,msg.accept);
+  } else if(msg.type==='cancelTrade'){
+    await ctHostCancelTrade(pid);
+  } else if(msg.type==='rematch'){
+    if(pid===ctFs.host) await ctHostRematch();
+  }
+}
+
+// ====================
+// ゲーム開始
+// ====================
+async function ctStartGameInternal(){
+  if(!isHost||!ctFs) return;
+  if(ctFs.phase!=='waiting') return;
+  if(ctFs.players.length<3){
+    alert('3人以上必要です');
+    return;
+  }
+  if(ctFs.players.length>4){
+    alert('最大4人です');
+    return;
+  }
+  // 盤面生成
+  ctFs.board=makeBoard(ctFs.boardMode);
+  ctFs.board.buildings={};
+  ctFs.board.roads={};
+  // プレイヤー初期化
+  for(const p of ctFs.players){
+    p.hand={wood:0,wheat:0,sheep:0,brick:0,ore:0};
+    p.devCards=[];
+    p.ports=[];
+    p.vp=0;
+    p.knightsPlayed=0;
+    p.roadCount=15; // 残り
+    p.settlementCount=5;
+    p.cityCount=4;
+    p.devUsedThisTurn=false;
+  }
+  // 発展カードデッキを作成（公式: 騎士14, 進歩3種類×2=6, 勝利点5）
+  ctFs.devDeck=shuffle([
+    ...Array(14).fill('knight'),
+    'roadBuilding','roadBuilding',
+    'monopoly','monopoly',
+    'yearOfPlenty','yearOfPlenty',
+    'vp','vp','vp','vp','vp',
+  ]);
+  // 銀行（資源プール）：各19枚
+  ctFs.bank={wood:19,wheat:19,sheep:19,brick:19,ore:19};
+  // 手番順を決定
+  ctFs.currentPlayerIdx=0;
+  // 初期配置順：1巡目時計回り、2巡目逆順
+  ctFs.initOrder=[];
+  const n=ctFs.players.length;
+  for(let i=0;i<n;i++) ctFs.initOrder.push({idx:i,phase:1});
+  for(let i=n-1;i>=0;i--) ctFs.initOrder.push({idx:i,phase:2});
+  ctFs.initOrderIdx=0;
+  ctFs.subPhase='initSettlement';
+  ctFs.lastInitSettlement=null;
+  ctFs.currentPlayerIdx=ctFs.initOrder[0].idx;
+  ctFs.phase='playing';
+  ctFs.log.push(`▶ ゲーム開始（勝利点${ctFs.victoryPoints}点）`);
+  ctFs.log.push(`📍 初期配置開始：${ctFs.players[ctFs.currentPlayerIdx].name} さんから`);
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+// ====================
+// 初期配置：開拓地配置
+// ====================
+async function ctHostPlaceSettlement(pid,vid){
+  if(!isHost||!ctFs) return;
+  if(ctFs.phase!=='playing') return;
+  // 現在の手番か
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  
+  if(ctFs.subPhase==='initSettlement'){
+    // 初期配置の開拓地
+    if(!isValidBuildingSpot(vid,'settlement',ctFs.board,pid,true)) return;
+    ctFs.board.buildings[vid]={owner:pid,type:'settlement'};
+    const p=ctFs.players.find(x=>x.id===pid);
+    p.settlementCount--;
+    p.vp++;
+    // 港チェック
+    checkPortAccess(p,vid);
+    ctFs.lastInitSettlement=vid;
+    ctFs.subPhase='initRoad';
+    ctFs.log.push(`🏠 ${p.name} が開拓地を配置`);
+    await ctBcast();
+    return;
+  }
+  
+  if(ctFs.subPhase==='turn' && ctFs.buildAction==='settlement'){
+    // 通常ターン中の開拓地建設
+    const p=ctFs.players.find(x=>x.id===pid);
+    if(!isValidBuildingSpot(vid,'settlement',ctFs.board,pid,false)) return;
+    // 資源確認: wood, brick, wheat, sheep
+    if(p.hand.wood<1||p.hand.brick<1||p.hand.wheat<1||p.hand.sheep<1) return;
+    if(p.settlementCount<=0) return;
+    p.hand.wood--;p.hand.brick--;p.hand.wheat--;p.hand.sheep--;
+    ctFs.bank.wood++;ctFs.bank.brick++;ctFs.bank.wheat++;ctFs.bank.sheep++;
+    ctFs.board.buildings[vid]={owner:pid,type:'settlement'};
+    p.settlementCount--;
+    p.vp++;
+    checkPortAccess(p,vid);
+    ctFs.buildAction=null;
+    ctFs.log.push(`🏠 ${p.name} が開拓地を建設`);
+    // 最長交易路を再計算（道が切断される可能性）
+    recomputeLongestRoad();
+    // 勝利チェック
+    if(checkVictory(p)){
+      await ctEndGame(pid);
+      return;
+    }
+    await ctBcast();
+    await ctSendPrivates();
+    return;
+  }
+}
+
+function checkPortAccess(player,vid){
+  if(!ctFs.board.ports) return;
+  for(const port of ctFs.board.ports){
+    if(port.vertices.includes(vid)){
+      if(!player.ports.includes(port.type)){
+        player.ports.push(port.type);
+      }
+    }
+  }
+}
+
+// ====================
+// 初期配置：道配置
+// ====================
+async function ctHostPlaceRoad(pid,eid){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  const p=ctFs.players.find(x=>x.id===pid);
+  
+  if(ctFs.subPhase==='initRoad'){
+    if(!isValidRoadSpot(eid,ctFs.board,pid,ctFs.lastInitSettlement)) return;
+    ctFs.board.roads[eid]=pid;
+    p.roadCount--;
+    ctFs.log.push(`🛤️ ${p.name} が道を配置`);
+    
+    // 2巡目だったら、配置した開拓地のヘックスから初期資源を配る
+    const curEntry=ctFs.initOrder[ctFs.initOrderIdx];
+    if(curEntry.phase===2){
+      // 2巡目の開拓地が ctFs.lastInitSettlement
+      const v=ctFs.lastInitSettlement;
+      for(const hexId of VERTEX_HEXES[v]||[]){
+        const hex=ctFs.board.hexes[hexId];
+        if(hex&&hex.resource!=='desert'){
+          if(ctFs.bank[hex.resource]>0){
+            p.hand[hex.resource]++;
+            ctFs.bank[hex.resource]--;
+          }
+        }
+      }
+      ctFs.log.push(`🎁 ${p.name} が初期資源を取得`);
+    }
+    
+    // 次の手番へ
+    ctFs.initOrderIdx++;
+    if(ctFs.initOrderIdx>=ctFs.initOrder.length){
+      // 初期配置完了 → 本ゲーム開始
+      ctFs.subPhase='rollDice';
+      ctFs.currentPlayerIdx=0;
+      ctFs.lastInitSettlement=null;
+      ctFs.log.push(`🎲 初期配置完了！本ゲーム開始`);
+    } else {
+      const nextEntry=ctFs.initOrder[ctFs.initOrderIdx];
+      ctFs.currentPlayerIdx=nextEntry.idx;
+      ctFs.subPhase='initSettlement';
+      ctFs.lastInitSettlement=null;
+    }
+    
+    await ctBcast();
+    await ctSendPrivates();
+    return;
+  }
+  
+  if(ctFs.subPhase==='turn' && ctFs.buildAction==='road'){
+    if(!isValidRoadSpot(eid,ctFs.board,pid,null)) return;
+    if(p.hand.wood<1||p.hand.brick<1) return;
+    if(p.roadCount<=0) return;
+    p.hand.wood--;p.hand.brick--;
+    ctFs.bank.wood++;ctFs.bank.brick++;
+    ctFs.board.roads[eid]=pid;
+    p.roadCount--;
+    ctFs.buildAction=null;
+    ctFs.log.push(`🛤️ ${p.name} が道を建設`);
+    recomputeLongestRoad();
+    if(checkVictory(p)){
+      await ctEndGame(pid);
+      return;
+    }
+    await ctBcast();
+    await ctSendPrivates();
+    return;
+  }
+  
+  if(ctFs.subPhase==='roadBuilding'){
+    // 進歩カード「街道建設」: 2本まで道を建てる
+    if(!isValidRoadSpot(eid,ctFs.board,pid,null)) return;
+    if(p.roadCount<=0) return;
+    ctFs.board.roads[eid]=pid;
+    p.roadCount--;
+    ctFs.roadBuildingCount=(ctFs.roadBuildingCount||0)+1;
+    ctFs.log.push(`🛤️ ${p.name} が街道建設で道を建設`);
+    if(ctFs.roadBuildingCount>=2 || p.roadCount<=0){
+      ctFs.subPhase='turn';
+      ctFs.roadBuildingCount=0;
+    }
+    recomputeLongestRoad();
+    if(checkVictory(p)){
+      await ctEndGame(pid);
+      return;
+    }
+    await ctBcast();
+    await ctSendPrivates();
+    return;
+  }
+}
+
+// ====================
+// 都市配置（通常ターン）
+// ====================
+async function ctHostPlaceCity(pid,vid){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  if(ctFs.subPhase!=='turn'||ctFs.buildAction!=='city') return;
+  const p=ctFs.players.find(x=>x.id===pid);
+  if(!isValidBuildingSpot(vid,'city',ctFs.board,pid,false)) return;
+  if(p.hand.wheat<2||p.hand.ore<3) return;
+  if(p.cityCount<=0) return;
+  p.hand.wheat-=2;p.hand.ore-=3;
+  ctFs.bank.wheat+=2;ctFs.bank.ore+=3;
+  ctFs.board.buildings[vid]={owner:pid,type:'city'};
+  p.settlementCount++;  // 開拓地が戻る
+  p.cityCount--;
+  p.vp++; // 開拓地から都市にしてvp+1
+  ctFs.buildAction=null;
+  ctFs.log.push(`🏛️ ${p.name} が都市を建設`);
+  if(checkVictory(p)){
+    await ctEndGame(pid);
+    return;
+  }
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+// ====================
+// ビルドアクション設定（建設モードON/OFF）
+// ====================
+async function ctHostSetBuildAction(pid,action){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  if(ctFs.subPhase!=='turn') return;
+  // action: 'road'|'settlement'|'city'|null
+  ctFs.buildAction=action;
+  await ctBcast();
+}
+
+// ====================
+// サイコロ
+// ====================
+async function ctHostRollDice(pid){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  if(ctFs.subPhase!=='rollDice') return;
+  const d1=1+Math.floor(Math.random()*6);
+  const d2=1+Math.floor(Math.random()*6);
+  const sum=d1+d2;
+  ctFs.dice={d1,d2,sum};
+  const p=ctFs.players[ctFs.currentPlayerIdx];
+  ctFs.log.push(`🎲 ${p.name} がサイコロを振る: ${d1}+${d2}=${sum}`);
+  
+  if(sum===7){
+    // 7：手札捨て→盗賊移動
+    // 手札8枚以上のプレイヤーが捨てる必要
+    ctFs.discardRequired={};
+    for(const pl of ctFs.players){
+      const total=Object.values(pl.hand).reduce((a,b)=>a+b,0);
+      if(total>=8){
+        ctFs.discardRequired[pl.id]=Math.floor(total/2);
+      }
+    }
+    if(Object.keys(ctFs.discardRequired).length>0){
+      ctFs.subPhase='discard';
+      ctFs.log.push(`⚠️ 手札8枚以上のプレイヤーは半数を捨てる必要があります`);
+    } else {
+      ctFs.subPhase='robberMove';
+      ctFs.discardRequired=null;
+      ctFs.log.push(`🦹 ${p.name} は盗賊を移動してください`);
+    }
+  } else {
+    // 通常のサイコロ：資源収集
+    distributeResources(sum);
+    ctFs.subPhase='turn';
+    ctFs.buildAction=null;
+  }
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+function distributeResources(num){
+  // 数値numのヘックスに隣接する建物の所有者に資源を配る
+  // 盗賊がいるヘックスからは出ない
+  const robber=ctFs.board.robberHex;
+  // まず必要量を集計
+  const needs={}; // pid -> resource -> count
+  for(const hexId in ctFs.board.hexes){
+    const h=ctFs.board.hexes[hexId];
+    if(h.number!==num) continue;
+    if(hexId===robber) continue;
+    if(h.resource==='desert') continue;
+    // このヘックスに隣接する建物を探す
+    for(const vid in ctFs.board.buildings){
+      const b=ctFs.board.buildings[vid];
+      const hexes=VERTEX_HEXES[vid]||[];
+      if(!hexes.includes(hexId)) continue;
+      const amount=(b.type==='city'?2:1);
+      if(!needs[b.owner]) needs[b.owner]={};
+      if(!needs[b.owner][h.resource]) needs[b.owner][h.resource]=0;
+      needs[b.owner][h.resource]+=amount;
+    }
+  }
+  // 銀行に十分な資源があるかチェック（公式: 不足なら全員受け取れない）
+  for(const res of ['wood','wheat','sheep','brick','ore']){
+    let totalNeed=0;
+    for(const pid in needs){
+      totalNeed+=(needs[pid][res]||0);
+    }
+    if(totalNeed>ctFs.bank[res]){
+      // 1人のみ受け取る場合は配る、複数なら全員0
+      const receivers=Object.keys(needs).filter(pid=>needs[pid][res]>0);
+      if(receivers.length===1){
+        const pid=receivers[0];
+        needs[pid][res]=ctFs.bank[res]; // 全部渡す
+      } else {
+        for(const pid in needs) needs[pid][res]=0;
+        ctFs.log.push(`⚠️ 銀行の${resourceName(res)}が不足、誰も受け取れません`);
+      }
+    }
+  }
+  // 配布
+  for(const pid in needs){
+    const p=ctFs.players.find(x=>x.id===pid);
+    if(!p) continue;
+    const parts=[];
+    for(const res of ['wood','wheat','sheep','brick','ore']){
+      const amt=needs[pid][res]||0;
+      if(amt>0){
+        p.hand[res]+=amt;
+        ctFs.bank[res]-=amt;
+        parts.push(`${resourceName(res)}×${amt}`);
+      }
+    }
+    if(parts.length>0) ctFs.log.push(`📥 ${p.name}: ${parts.join(', ')}`);
+  }
+}
+
+function resourceName(r){
+  return {wood:'🌲',wheat:'🌾',sheep:'🐑',brick:'🧱',ore:'⛰️'}[r]||r;
+}
+
+// ====================
+// ターン終了
+// ====================
+async function ctHostEndTurn(pid){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  if(ctFs.subPhase!=='turn') return;
+  // 新しい発展カード（このターンで購入したもの）を「使用可能」に
+  const p=ctFs.players[ctFs.currentPlayerIdx];
+  if(p.devCards){
+    for(const d of p.devCards){
+      if(d.new) d.new=false;
+    }
+  }
+  p.devUsedThisTurn=false;
+  ctFs.buildAction=null;
+  ctFs.tradeOffer=null;
+  // 次のプレイヤー
+  ctFs.currentPlayerIdx=(ctFs.currentPlayerIdx+1)%ctFs.players.length;
+  ctFs.subPhase='rollDice';
+  ctFs.dice=null;
+  ctFs.log.push(`🔄 ${ctFs.players[ctFs.currentPlayerIdx].name} のターン`);
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+// ====================
+// 勝利判定
+// ====================
+function checkVictory(player){
+  // 勝利点 = 開拓地数 + 都市数*2 + 最長交易路ボーナス2 + 最大騎士力ボーナス2 + 勝利点カード
+  let vp=0;
+  for(const vid in ctFs.board.buildings){
+    const b=ctFs.board.buildings[vid];
+    if(b.owner===player.id){
+      vp+=(b.type==='city'?2:1);
+    }
+  }
+  if(ctFs.longestRoadOwner===player.id) vp+=2;
+  if(ctFs.largestArmyOwner===player.id) vp+=2;
+  // 勝利点カード
+  if(player.devCards){
+    for(const d of player.devCards){
+      if(d.type==='vp') vp++;
+    }
+  }
+  player.vp=vp;
+  return vp>=ctFs.victoryPoints;
+}
+
+async function ctEndGame(winnerId){
+  ctFs.phase='gameover';
+  ctFs.winner=winnerId;
+  // 全員のVPを最終確定
+  for(const p of ctFs.players){
+    let vp=0;
+    for(const vid in ctFs.board.buildings){
+      const b=ctFs.board.buildings[vid];
+      if(b.owner===p.id) vp+=(b.type==='city'?2:1);
+    }
+    if(ctFs.longestRoadOwner===p.id) vp+=2;
+    if(ctFs.largestArmyOwner===p.id) vp+=2;
+    if(p.devCards){
+      for(const d of p.devCards){if(d.type==='vp') vp++;}
+    }
+    p.vp=vp;
+  }
+  const winner=ctFs.players.find(p=>p.id===winnerId);
+  ctFs.log.push(`🏁 ${winner.name} の勝利！`);
+  await ctBcast();
+}
+// ====================
+// 発展カード購入
+// ====================
+async function ctHostBuyDev(pid){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  if(ctFs.subPhase!=='turn') return;
+  const p=ctFs.players.find(x=>x.id===pid);
+  if(p.hand.wheat<1||p.hand.sheep<1||p.hand.ore<1) return;
+  if(ctFs.devDeck.length===0) return;
+  p.hand.wheat--;p.hand.sheep--;p.hand.ore--;
+  ctFs.bank.wheat++;ctFs.bank.sheep++;ctFs.bank.ore++;
+  const cardType=ctFs.devDeck.shift();
+  p.devCards.push({type:cardType,new:true,played:false});
+  ctFs.log.push(`📜 ${p.name} が発展カードを購入`);
+  // 勝利点カードは即座にvp加算（公式：購入と同時に得点になるが10点到達まで非公開）
+  if(cardType==='vp'){
+    if(checkVictory(p)){
+      await ctEndGame(pid);
+      return;
+    }
+  }
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+// ====================
+// 発展カード使用
+// ====================
+async function ctHostPlayDev(pid,cardType,params){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  // 同一ターン中に2枚は使えない
+  const p=ctFs.players.find(x=>x.id===pid);
+  if(p.devUsedThisTurn) return;
+  // 該当カードを保持していて、newではない（前ターン以前に購入）必要
+  const cardIdx=p.devCards.findIndex(d=>d.type===cardType&&!d.new&&!d.played);
+  if(cardIdx<0) return;
+  // 騎士は rollDice 直前でも使える、その他は turn 中のみ
+  if(cardType==='knight'){
+    if(ctFs.subPhase!=='rollDice' && ctFs.subPhase!=='turn') return;
+  } else {
+    if(ctFs.subPhase!=='turn') return;
+  }
+  // 使用処理
+  if(cardType==='knight'){
+    p.devCards[cardIdx].played=true;
+    p.knightsPlayed++;
+    p.devUsedThisTurn=true;
+    ctFs.log.push(`⚔️ ${p.name} が騎士カードを使用`);
+    // 最大騎士力チェック
+    recomputeLargestArmy();
+    // 盗賊移動前のフェーズを保存（rollDice 中だった場合、戻る）
+    ctFs.preRobberPhase=ctFs.subPhase;
+    // 盗賊移動フェーズに入る
+    ctFs.subPhase='robberMove';
+    if(checkVictory(p)){
+      await ctEndGame(pid);
+      return;
+    }
+  } else if(cardType==='roadBuilding'){
+    p.devCards[cardIdx].played=true;
+    p.devUsedThisTurn=true;
+    ctFs.log.push(`🛤️ ${p.name} が街道建設カードを使用`);
+    ctFs.subPhase='roadBuilding';
+    ctFs.roadBuildingCount=0;
+  } else if(cardType==='monopoly'){
+    if(!params||!params.resource) return;
+    p.devCards[cardIdx].played=true;
+    p.devUsedThisTurn=true;
+    const res=params.resource;
+    let total=0;
+    for(const op of ctFs.players){
+      if(op.id===pid) continue;
+      total+=op.hand[res];
+      op.hand[res]=0;
+    }
+    p.hand[res]+=total;
+    ctFs.log.push(`💰 ${p.name} が独占で${resourceName(res)}×${total}を獲得`);
+  } else if(cardType==='yearOfPlenty'){
+    if(!params||!params.r1) return;
+    const r1=params.r1,r2=params.r2||params.r1;
+    // 銀行に資源があるか
+    const need={};
+    need[r1]=(need[r1]||0)+1;
+    need[r2]=(need[r2]||0)+1;
+    for(const r in need){
+      if(ctFs.bank[r]<need[r]) return;
+    }
+    p.devCards[cardIdx].played=true;
+    p.devUsedThisTurn=true;
+    for(const r in need){
+      p.hand[r]+=need[r];
+      ctFs.bank[r]-=need[r];
+    }
+    ctFs.log.push(`🎁 ${p.name} が発展で${resourceName(r1)}+${resourceName(r2)}を獲得`);
+  } else {
+    return;
+  }
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+// ====================
+// 最大騎士力
+// ====================
+function recomputeLargestArmy(){
+  // 3枚以上騎士を使った中で最多のプレイヤーが「最大騎士力」
+  let maxKnights=2; // 3以上で取得
+  let owner=ctFs.largestArmyOwner||null;
+  for(const p of ctFs.players){
+    if(p.knightsPlayed>maxKnights){
+      maxKnights=p.knightsPlayed;
+      owner=p.id;
+    }
+  }
+  if(owner!==ctFs.largestArmyOwner){
+    const newOwner=ctFs.players.find(p=>p.id===owner);
+    if(newOwner){
+      ctFs.largestArmyOwner=owner;
+      ctFs.largestArmySize=maxKnights;
+      ctFs.log.push(`🏆 ${newOwner.name} が最大騎士力を獲得（${maxKnights}枚）`);
+    }
+  } else if(owner){
+    ctFs.largestArmySize=ctFs.players.find(p=>p.id===owner).knightsPlayed;
+  }
+}
+
+// ====================
+// 盗賊移動
+// ====================
+async function ctHostMoveRobber(pid,hexId,targetPid){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  if(ctFs.subPhase!=='robberMove') return;
+  if(!ctFs.board.hexes[hexId]) return;
+  if(hexId===ctFs.board.robberHex) return;
+  
+  ctFs.board.robberHex=hexId;
+  const p=ctFs.players.find(x=>x.id===pid);
+  ctFs.log.push(`🦹 ${p.name} が盗賊を移動`);
+  
+  // 対象ヘックスに隣接する建物を持つ他プレイヤーを特定
+  const candidates=new Set();
+  for(const vid in ctFs.board.buildings){
+    const b=ctFs.board.buildings[vid];
+    if(b.owner===pid) continue;
+    const hexes=VERTEX_HEXES[vid]||[];
+    if(hexes.includes(hexId)){
+      // 手札がある相手のみ
+      const op=ctFs.players.find(x=>x.id===b.owner);
+      if(op){
+        const total=Object.values(op.hand).reduce((a,b)=>a+b,0);
+        if(total>0) candidates.add(b.owner);
+      }
+    }
+  }
+  
+  if(candidates.size===0){
+    // 奪う対象なし
+    ctFs.subPhase=ctFs.preRobberPhase||'turn';
+    ctFs.preRobberPhase=null;
+    ctFs.buildAction=null;
+    ctFs.log.push(`💨 奪う相手がいません`);
+    await ctBcast();
+    return;
+  }
+  
+  if(candidates.size===1){
+    // 自動で対象決定
+    const targetId=Array.from(candidates)[0];
+    await stealFromPlayer(pid,targetId);
+    return;
+  }
+  
+  // 複数候補：プレイヤーが選択する必要
+  if(targetPid && candidates.has(targetPid)){
+    await stealFromPlayer(pid,targetPid);
+    return;
+  }
+  
+  // 選択待ち
+  ctFs.pendingRobbery={candidates:Array.from(candidates)};
+  await ctBcast();
+}
+
+async function stealFromPlayer(robberPid,targetPid){
+  const robber=ctFs.players.find(p=>p.id===robberPid);
+  const target=ctFs.players.find(p=>p.id===targetPid);
+  if(!target) return;
+  // ランダムに1枚奪う
+  const cards=[];
+  for(const r of ['wood','wheat','sheep','brick','ore']){
+    for(let i=0;i<target.hand[r];i++) cards.push(r);
+  }
+  if(cards.length===0){
+    ctFs.subPhase=ctFs.preRobberPhase||'turn';
+    ctFs.preRobberPhase=null;
+    ctFs.pendingRobbery=null;
+    await ctBcast();
+    return;
+  }
+  const stolen=cards[Math.floor(Math.random()*cards.length)];
+  target.hand[stolen]--;
+  robber.hand[stolen]++;
+  ctFs.log.push(`💰 ${robber.name} が ${target.name} から1枚奪取`);
+  ctFs.subPhase=ctFs.preRobberPhase||'turn';
+  ctFs.preRobberPhase=null;
+  ctFs.pendingRobbery=null;
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+// ====================
+// 手札捨て（7が出た時）
+// ====================
+async function ctHostDiscard(pid,cards){
+  if(!isHost||!ctFs) return;
+  if(ctFs.subPhase!=='discard') return;
+  if(!ctFs.discardRequired || ctFs.discardRequired[pid]===undefined) return;
+  const need=ctFs.discardRequired[pid];
+  // cards: {wood:n,wheat:n,...}
+  let total=0;
+  for(const r in cards) total+=cards[r]||0;
+  if(total!==need) return;
+  const p=ctFs.players.find(x=>x.id===pid);
+  // 手札確認
+  for(const r in cards){
+    if(p.hand[r]<cards[r]) return;
+  }
+  // 捨てる
+  for(const r in cards){
+    p.hand[r]-=cards[r];
+    ctFs.bank[r]+=cards[r];
+  }
+  ctFs.log.push(`🗑️ ${p.name} が手札${need}枚を捨てた`);
+  delete ctFs.discardRequired[pid];
+  if(Object.keys(ctFs.discardRequired).length===0){
+    // 全員捨て終わった → 盗賊移動
+    ctFs.subPhase='robberMove';
+    ctFs.discardRequired=null;
+    const curP=ctFs.players[ctFs.currentPlayerIdx];
+    ctFs.log.push(`🦹 ${curP.name} は盗賊を移動してください`);
+  }
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+// ====================
+// 銀行/港との取引
+// ====================
+async function ctHostBankTrade(pid,give,giveQty,get){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  if(ctFs.subPhase!=='turn') return;
+  const p=ctFs.players.find(x=>x.id===pid);
+  if(p.hand[give]<giveQty) return;
+  if(ctFs.bank[get]<1) return;
+  // 必要な交換レート確認
+  let rate=4;
+  if(p.ports.includes(give)) rate=2;
+  else if(p.ports.includes('any')) rate=3;
+  if(giveQty!==rate) return;
+  p.hand[give]-=giveQty;
+  ctFs.bank[give]+=giveQty;
+  p.hand[get]++;
+  ctFs.bank[get]--;
+  ctFs.log.push(`🔄 ${p.name} が${resourceName(give)}×${giveQty}→${resourceName(get)}×1を交換`);
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+// ====================
+// プレイヤー間取引
+// ====================
+async function ctHostOfferTrade(pid,give,want,targetPid){
+  if(!isHost||!ctFs) return;
+  const curPid=ctFs.players[ctFs.currentPlayerIdx].id;
+  if(curPid!==pid) return;
+  if(ctFs.subPhase!=='turn') return;
+  const p=ctFs.players.find(x=>x.id===pid);
+  // giveのリソースを所持しているか
+  for(const r in give){
+    if(p.hand[r]<give[r]) return;
+  }
+  // オファー作成
+  ctFs.tradeOffer={
+    from:pid,
+    give,want,
+    targetPid:targetPid||null, // null=全員
+    responses:{}, // pid -> 'accept' or null
+  };
+  const targetName=targetPid?(ctFs.players.find(x=>x.id===targetPid)?.name||'?'):'全員';
+  ctFs.log.push(`💱 ${p.name} → ${targetName} に取引オファー`);
+  await ctBcast();
+}
+
+async function ctHostRespondTrade(pid,accept){
+  if(!isHost||!ctFs) return;
+  if(!ctFs.tradeOffer) return;
+  const offer=ctFs.tradeOffer;
+  if(offer.from===pid) return; // 自分には反応できない
+  if(offer.targetPid && offer.targetPid!==pid) return;
+  
+  if(!accept){
+    offer.responses[pid]='decline';
+    await ctBcast();
+    return;
+  }
+  
+  // 承諾 → 取引成立
+  const fromP=ctFs.players.find(x=>x.id===offer.from);
+  const toP=ctFs.players.find(x=>x.id===pid);
+  if(!fromP||!toP) return;
+  // 双方の手札を確認
+  for(const r in offer.give){
+    if(fromP.hand[r]<offer.give[r]) return;
+  }
+  for(const r in offer.want){
+    if(toP.hand[r]<offer.want[r]) return;
+  }
+  // 取引実行
+  for(const r in offer.give){
+    fromP.hand[r]-=offer.give[r];
+    toP.hand[r]+=offer.give[r];
+  }
+  for(const r in offer.want){
+    toP.hand[r]-=offer.want[r];
+    fromP.hand[r]+=offer.want[r];
+  }
+  ctFs.log.push(`🤝 ${fromP.name} と ${toP.name} の取引が成立`);
+  ctFs.tradeOffer=null;
+  await ctBcast();
+  await ctSendPrivates();
+}
+
+async function ctHostCancelTrade(pid){
+  if(!isHost||!ctFs) return;
+  if(!ctFs.tradeOffer) return;
+  if(ctFs.tradeOffer.from!==pid) return;
+  ctFs.tradeOffer=null;
+  ctFs.log.push(`❌ 取引オファーが取り下げられました`);
+  await ctBcast();
+}
+
+// ====================
+// 最長交易路の計算
+// ====================
+function recomputeLongestRoad(){
+  // 各プレイヤーについて、道のグラフから最長単純パスを計算
+  let bestLen=4; // 5以上で取得
+  let bestOwner=ctFs.longestRoadOwner||null;
+  let lengths={};
+  
+  for(const p of ctFs.players){
+    // プレイヤーの道一覧
+    const myEdges=[];
+    for(const eid in ctFs.board.roads){
+      if(ctFs.board.roads[eid]===p.id) myEdges.push(eid);
+    }
+    if(myEdges.length===0){lengths[p.id]=0;continue;}
+    
+    // 最長パスを各辺を始点にDFS
+    let maxLen=0;
+    for(const startEid of myEdges){
+      const [v1,v2]=EDGE_VERTICES[startEid];
+      // 両端からスタート（DFSで最長単純パス）
+      const len1=longestPathDFS(v1,startEid,new Set([startEid]),p.id);
+      const len2=longestPathDFS(v2,startEid,new Set([startEid]),p.id);
+      maxLen=Math.max(maxLen,len1,len2);
+    }
+    lengths[p.id]=maxLen;
+    if(maxLen>bestLen){
+      bestLen=maxLen;
+      bestOwner=p.id;
+    }
+  }
+  // 現所有者を維持するルール（タイブレーク）
+  // 現所有者の道が他より少なくなった or 5未満なら剥奪
+  if(ctFs.longestRoadOwner){
+    const curOwnerLen=lengths[ctFs.longestRoadOwner]||0;
+    if(curOwnerLen<5){
+      // 5未満なら剥奪
+      ctFs.longestRoadOwner=null;
+      ctFs.longestRoadLength=0;
+      ctFs.log.push(`📉 最長交易路の所有者が変更（5未満）`);
+    } else {
+      // まだ持っている。他のプレイヤーが上回った場合のみ変更
+      let challenger=null,challengerLen=curOwnerLen;
+      for(const pid in lengths){
+        if(pid===ctFs.longestRoadOwner) continue;
+        if(lengths[pid]>challengerLen){
+          challenger=pid;
+          challengerLen=lengths[pid];
+        }
+      }
+      if(challenger){
+        const newOwner=ctFs.players.find(p=>p.id===challenger);
+        ctFs.longestRoadOwner=challenger;
+        ctFs.longestRoadLength=challengerLen;
+        ctFs.log.push(`🏆 ${newOwner.name} が最長交易路を獲得（${challengerLen}本）`);
+      } else {
+        ctFs.longestRoadLength=curOwnerLen;
+      }
+    }
+  } else if(bestOwner){
+    const newOwner=ctFs.players.find(p=>p.id===bestOwner);
+    ctFs.longestRoadOwner=bestOwner;
+    ctFs.longestRoadLength=bestLen;
+    ctFs.log.push(`🏆 ${newOwner.name} が最長交易路を獲得（${bestLen}本）`);
+  }
+}
+
+function longestPathDFS(currentVertex,fromEdge,visitedEdges,playerId){
+  // currentVertexから、playerIdの道を辿って最長パスを探す
+  // 相手の建物がある頂点では止まる
+  const board=ctFs.board;
+  const b=board.buildings[currentVertex];
+  if(b && b.owner!==playerId){
+    // 相手の建物で停止
+    return visitedEdges.size;
+  }
+  let maxLen=visitedEdges.size;
+  for(const nextEid of VERTEX_EDGES[currentVertex]||[]){
+    if(visitedEdges.has(nextEid)) continue;
+    if(board.roads[nextEid]!==playerId) continue;
+    // 次の頂点
+    const [v1,v2]=EDGE_VERTICES[nextEid];
+    const nextV=(v1===currentVertex?v2:v1);
+    visitedEdges.add(nextEid);
+    const sub=longestPathDFS(nextV,nextEid,visitedEdges,playerId);
+    if(sub>maxLen) maxLen=sub;
+    visitedEdges.delete(nextEid);
+  }
+  return maxLen;
+}
+
+// ====================
+// 再戦
+// ====================
+async function ctHostRematch(){
+  if(!isHost||!ctFs) return;
+  if(ctFs.phase!=='gameover') return;
+  ctFs.phase='waiting';
+  ctFs.subPhase=null;
+  ctFs.board=null;
+  ctFs.currentPlayerIdx=0;
+  ctFs.dice=null;
+  ctFs.longestRoadOwner=null;
+  ctFs.longestRoadLength=0;
+  ctFs.largestArmyOwner=null;
+  ctFs.largestArmySize=0;
+  ctFs.winner=null;
+  // プレイヤー初期化
+  for(const p of ctFs.players){
+    p.hand={wood:0,wheat:0,sheep:0,brick:0,ore:0};
+    p.devCards=[];
+    p.ports=[];
+    p.vp=0;
+    p.knightsPlayed=0;
+  }
+  ctFs.log.push(`🔄 再戦準備中`);
+  await ctBcast();
+}
+// ====================
+// レンダリング: 待機画面
+// ====================
+function ctRenderWaiting(){
+  if(!ctPub){
+    g('player-count').textContent='';
+    g('waiting-players').innerHTML='<div class="small muted center">接続中…</div>';
+    g('host-options').style.display='none';
+    g('wait-host-message').style.display='block';
+    return;
+  }
+  const players=ctPub.players||[];
+  g('player-count').textContent=`(${players.length}/4人)`;
+  const wp=g('waiting-players');
+  wp.innerHTML='';
+  players.forEach(p=>{
+    const item=mk('div','player-item');
+    if(p.id===myId) item.classList.add('me');
+    const left=mk('span');
+    left.innerHTML=`<span style="display:inline-block;width:12px;height:12px;background:var(--${p.color||'p1'});border-radius:50%;margin-right:6px;vertical-align:middle;"></span>${p.name}`;
+    const tag=mk('span','role-tag',p.isHost?'ホスト':'参加者');
+    item.appendChild(left);
+    item.appendChild(tag);
+    wp.appendChild(item);
+  });
+  
+  if(isHost){
+    g('host-options').style.display='block';
+    g('wait-host-message').style.display='none';
+    // VP・盤面ボタンの状態
+    ['8','10','12'].forEach(v=>{
+      const btn=g('vp-'+v);
+      btn.className='btn '+(ctPub.victoryPoints==parseInt(v)?'btn-amber':'btn-ghost')+' btn-sm';
+    });
+    ['fixed','rand'].forEach(m=>{
+      const btn=g('bd-'+m);
+      const matches=(m==='fixed'&&ctPub.boardMode==='fixed')||(m==='rand'&&ctPub.boardMode==='random');
+      btn.className='btn '+(matches?'btn-amber':'btn-ghost')+' btn-sm';
+    });
+    const btn=g('btn-start');
+    btn.disabled=(players.length<3);
+    btn.textContent=players.length<3?`▶ ゲーム開始（${3-players.length}人不足）`:'▶ ゲーム開始';
+  } else {
+    g('host-options').style.display='none';
+    g('wait-host-message').style.display='block';
+  }
+}
+
+// ====================
+// レンダリング: ゲーム画面
+// ====================
+function ctRenderGame(){
+  if(!ctPub||!ctPub.board) return;
+  // フェーズ情報
+  ctRenderPhaseInfo();
+  // ターンバナー
+  ctRenderTurnBanner();
+  // 盤面
+  renderBoard();
+  // アクションエリア
+  ctRenderActionArea();
+  // 自分の手札
+  ctRenderMyHand();
+  // プレイヤーパネル
+  ctRenderPlayersPanel();
+  // ログ
+  ctRenderLog();
+  // モーダル（手札捨て・盗賊先選択など）
+  ctRenderModals();
+}
+
+function ctRenderPhaseInfo(){
+  let txt='';
+  if(ctPub.subPhase==='initSettlement' || ctPub.subPhase==='initRoad'){
+    // 何巡目か計算
+    const idx=ctPub.initOrderIdx||0;
+    const n=ctPub.players.length;
+    const phase=idx<n?1:2;
+    txt=`初期配置 ${phase}巡目`;
+  } else if(ctPub.subPhase==='rollDice'){
+    txt='サイコロを振る';
+  } else if(ctPub.subPhase==='turn'){
+    txt='アクションフェーズ';
+  } else if(ctPub.subPhase==='discard'){
+    txt='手札捨て';
+  } else if(ctPub.subPhase==='robberMove'){
+    txt='盗賊を移動';
+  } else if(ctPub.subPhase==='roadBuilding'){
+    txt='街道建設（道2本）';
+  }
+  g('phase-info').textContent=txt;
+}
+
+function ctRenderTurnBanner(){
+  const banner=g('turn-banner');
+  banner.innerHTML='';
+  const cur=ctPub.players[ctPub.currentPlayerIdx];
+  if(!cur){banner.style.display='none';return;}
+  banner.style.display='block';
+  const isMyTurn=cur.id===myId;
+  const head=mk('div','small');
+  head.innerHTML=`<span style="display:inline-block;width:12px;height:12px;background:var(--${cur.color});border-radius:50%;margin-right:6px;vertical-align:middle;"></span><b>${cur.name}</b> の手番 ${isMyTurn?'<span class="bold" style="color:var(--accent)">←あなた！</span>':''}`;
+  banner.appendChild(head);
+  
+  if(ctPub.dice){
+    const dbox=mk('div','dice-box');
+    const d1=mk('div','dice',ctPub.dice.d1);
+    const d2=mk('div','dice',ctPub.dice.d2);
+    dbox.appendChild(d1);dbox.appendChild(d2);
+    const sumTxt=mk('div','center small bold');
+    sumTxt.textContent=`= ${ctPub.dice.sum}`;
+    sumTxt.style.marginTop='4px';
+    banner.appendChild(dbox);
+    banner.appendChild(sumTxt);
+  }
+}
+
+function ctRenderActionArea(){
+  const aa=g('action-area');
+  aa.innerHTML='';
+  if(!ctPub||!ctPrv) return;
+  const cur=ctPub.players[ctPub.currentPlayerIdx];
+  const isMyTurn=cur && cur.id===myId;
+  
+  if(ctPub.subPhase==='initSettlement'){
+    if(isMyTurn){
+      aa.appendChild(makeHint('🏠 開拓地を配置してください（盤面の白い点をタップ）','my'));
+    } else {
+      aa.appendChild(makeHint(`⏳ ${cur.name} が開拓地を配置中…`,'wait'));
+    }
+  } else if(ctPub.subPhase==='initRoad'){
+    if(isMyTurn){
+      aa.appendChild(makeHint('🛤️ 道を配置してください（先ほど置いた開拓地から伸ばす）','my'));
+    } else {
+      aa.appendChild(makeHint(`⏳ ${cur.name} が道を配置中…`,'wait'));
+    }
+  } else if(ctPub.subPhase==='rollDice'){
+    if(isMyTurn){
+      const card=mk('div','action-panel');
+      const txt=mk('div','small','🎲 サイコロを振ってください。');
+      card.appendChild(txt);
+      // 騎士カード使用ボタン（サイコロ前）
+      const myKnights=(ctPrv.devCards||[]).filter(d=>d.type==='knight'&&!d.new&&!d.played);
+      if(myKnights.length>0){
+        const knightBtn=mk('button','btn btn-amber btn-sm','⚔️ 騎士カードを使う（サイコロ前）');
+        knightBtn.onclick=()=>sendHostMsg({type:'playDev',cardType:'knight'});
+        card.appendChild(knightBtn);
+      }
+      const rollBtn=mk('button','btn btn-primary btn-block','🎲 サイコロを振る');
+      rollBtn.style.marginTop='6px';
+      rollBtn.onclick=()=>sendHostMsg({type:'rollDice'});
+      card.appendChild(rollBtn);
+      aa.appendChild(card);
+    } else {
+      aa.appendChild(makeHint(`⏳ ${cur.name} がサイコロを振るのを待っています`,'wait'));
+    }
+  } else if(ctPub.subPhase==='discard'){
+    // 自分が捨てる必要があるか
+    if(ctPub.discardRequired && ctPub.discardRequired[myId]){
+      const need=ctPub.discardRequired[myId];
+      aa.appendChild(makeHint(`⚠️ ${need}枚捨ててください`,'ng'));
+      aa.appendChild(makeDiscardUI(need));
+    } else {
+      const waiting=Object.keys(ctPub.discardRequired||{});
+      const names=waiting.map(pid=>ctPub.players.find(p=>p.id===pid)?.name).filter(Boolean);
+      aa.appendChild(makeHint(`⏳ 手札捨て待ち: ${names.join(', ')}`,'wait'));
+    }
+  } else if(ctPub.subPhase==='robberMove'){
+    if(isMyTurn){
+      if(ctPub.pendingRobbery){
+        // 奪う相手を選択
+        const card=mk('div','action-panel');
+        card.appendChild(mk('div','small bold','奪う相手を選択：'));
+        for(const tpid of ctPub.pendingRobbery.candidates){
+          const tp=ctPub.players.find(p=>p.id===tpid);
+          if(!tp) continue;
+          const b=mk('button','btn btn-amber btn-sm',`${tp.name}（${tp.handCount}枚）`);
+          b.style.margin='3px';
+          b.onclick=()=>sendHostMsg({type:'moveRobber',hexId:ctPub.board.robberHex,targetPid:tpid});
+          card.appendChild(b);
+        }
+        aa.appendChild(card);
+      } else {
+        aa.appendChild(makeHint('🦹 盗賊を移動するヘックスをタップしてください','my'));
+      }
+    } else {
+      aa.appendChild(makeHint(`⏳ ${cur.name} が盗賊を移動中…`,'wait'));
+    }
+  } else if(ctPub.subPhase==='roadBuilding'){
+    if(isMyTurn){
+      const remaining=2-(ctPub.roadBuildingCount||0);
+      aa.appendChild(makeHint(`🛤️ 残り${remaining}本の道を配置`,'my'));
+    } else {
+      aa.appendChild(makeHint(`⏳ ${cur.name} が道を配置中…`,'wait'));
+    }
+  } else if(ctPub.subPhase==='turn'){
+    if(isMyTurn){
+      aa.appendChild(makeTurnActions());
+    } else {
+      // 相手がアクション中。取引オファーがあれば応答
+      if(ctPub.tradeOffer && (!ctPub.tradeOffer.targetPid || ctPub.tradeOffer.targetPid===myId)){
+        aa.appendChild(makeTradeResponse());
+      } else {
+        aa.appendChild(makeHint(`⏳ ${cur.name} がアクション中…`,'wait'));
+      }
+    }
+  }
+}
+
+function makeHint(text,cls){
+  const h=mk('div','hint '+(cls||''));
+  h.textContent=text;
+  return h;
+}
+
+function makeDiscardUI(need){
+  const card=mk('div','action-panel');
+  card.appendChild(mk('div','small muted',`手札から${need}枚選んで捨ててください`));
+  const row=mk('div','hand-row');
+  const myHand=ctPrv.hand||{};
+  uiDiscardSelection=uiDiscardSelection||{};
+  function refresh(){
+    let total=0;
+    for(const r in uiDiscardSelection) total+=uiDiscardSelection[r]||0;
+    submitBtn.disabled=(total!==need);
+    submitBtn.textContent=`✅ ${total}/${need}枚捨てる`;
+  }
+  for(const r of ['wood','wheat','sheep','brick','ore']){
+    const wrap=mk('div','res-card '+r);
+    wrap.style.flexDirection='column';
+    wrap.innerHTML=`<div class="small">${resourceName(r)}</div><div class="count">${myHand[r]||0}</div>`;
+    const ctrl=mk('div','small');
+    ctrl.style.marginTop='2px';
+    const minus=mk('button','btn btn-sm','-');
+    minus.style.padding='1px 6px';
+    minus.onclick=(e)=>{
+      e.stopPropagation();
+      uiDiscardSelection[r]=Math.max(0,(uiDiscardSelection[r]||0)-1);
+      sel.textContent=uiDiscardSelection[r]||0;
+      refresh();
+    };
+    const plus=mk('button','btn btn-sm','+');
+    plus.style.padding='1px 6px';
+    plus.onclick=(e)=>{
+      e.stopPropagation();
+      const cur=uiDiscardSelection[r]||0;
+      if(cur<(myHand[r]||0)) uiDiscardSelection[r]=cur+1;
+      sel.textContent=uiDiscardSelection[r]||0;
+      refresh();
+    };
+    const sel=mk('span',null,uiDiscardSelection[r]||0);
+    sel.style.margin='0 4px';
+    ctrl.appendChild(minus);
+    ctrl.appendChild(sel);
+    ctrl.appendChild(plus);
+    wrap.appendChild(ctrl);
+    row.appendChild(wrap);
+  }
+  card.appendChild(row);
+  const submitBtn=mk('button','btn btn-red btn-block',`✅ 0/${need}枚捨てる`);
+  submitBtn.disabled=true;
+  submitBtn.onclick=()=>{
+    const cards={};
+    for(const r in uiDiscardSelection) if(uiDiscardSelection[r]>0) cards[r]=uiDiscardSelection[r];
+    sendHostMsg({type:'discard',cards});
+    uiDiscardSelection={};
+  };
+  card.appendChild(submitBtn);
+  return card;
+}
+
+function makeTurnActions(){
+  const card=mk('div','action-panel');
+  const myP=ctPub.players[ctPub.currentPlayerIdx];
+  // 建設ボタン
+  card.appendChild(mk('div','small bold','建設'));
+  const row1=mk('div','action-row');
+  const myHand=ctPrv.hand||{};
+  
+  // 道（材木+レンガ）
+  const roadBtn=mk('button','btn btn-sm',`🛤️ 道${ctPub.buildAction==='road'?' ✓':''}`);
+  // 選択済みの場合は選択解除のため有効化
+  if(ctPub.buildAction!=='road' && (myHand.wood<1||myHand.brick<1||myP.roads<=0)) roadBtn.disabled=true;
+  if(ctPub.buildAction==='road') roadBtn.classList.add('btn-amber');
+  else roadBtn.classList.add('btn-ghost');
+  roadBtn.onclick=()=>sendHostMsg({type:'setBuildAction',action:ctPub.buildAction==='road'?null:'road'});
+  row1.appendChild(roadBtn);
+  
+  // 開拓地（材木+レンガ+麦+羊）
+  const settBtn=mk('button','btn btn-sm',`🏠 開拓地${ctPub.buildAction==='settlement'?' ✓':''}`);
+  if(ctPub.buildAction!=='settlement' && (myHand.wood<1||myHand.brick<1||myHand.wheat<1||myHand.sheep<1||myP.settlements<=0)) settBtn.disabled=true;
+  if(ctPub.buildAction==='settlement') settBtn.classList.add('btn-amber');
+  else settBtn.classList.add('btn-ghost');
+  settBtn.onclick=()=>sendHostMsg({type:'setBuildAction',action:ctPub.buildAction==='settlement'?null:'settlement'});
+  row1.appendChild(settBtn);
+  
+  // 都市（麦2+鉱石3）
+  const cityBtn=mk('button','btn btn-sm',`🏛️ 都市${ctPub.buildAction==='city'?' ✓':''}`);
+  if(ctPub.buildAction!=='city' && (myHand.wheat<2||myHand.ore<3||myP.cities<=0)) cityBtn.disabled=true;
+  if(ctPub.buildAction==='city') cityBtn.classList.add('btn-amber');
+  else cityBtn.classList.add('btn-ghost');
+  cityBtn.onclick=()=>sendHostMsg({type:'setBuildAction',action:ctPub.buildAction==='city'?null:'city'});
+  row1.appendChild(cityBtn);
+  
+  // 発展カード（麦+羊+鉱石）
+  const devBtn=mk('button','btn btn-sm btn-ghost','📜 発展カード');
+  if(myHand.wheat<1||myHand.sheep<1||myHand.ore<1) devBtn.disabled=true;
+  devBtn.onclick=()=>sendHostMsg({type:'buyDev'});
+  row1.appendChild(devBtn);
+  
+  card.appendChild(row1);
+  
+  // 発展カード使用
+  const playable=(ctPrv.devCards||[]).filter(d=>!d.new&&!d.played&&d.type!=='vp');
+  if(playable.length>0){
+    card.appendChild(mk('div','small bold','発展カード使用'));
+    const row2=mk('div','action-row');
+    const types={};
+    for(const d of playable){
+      types[d.type]=(types[d.type]||0)+1;
+    }
+    for(const t in types){
+      const btn=mk('button','btn btn-sm btn-amber',devCardLabel(t)+`×${types[t]}`);
+      btn.onclick=()=>handlePlayDev(t);
+      row2.appendChild(btn);
+    }
+    card.appendChild(row2);
+  }
+  
+  // 取引ボタン
+  card.appendChild(mk('div','small bold','取引'));
+  const row3=mk('div','action-row');
+  const bankBtn=mk('button','btn btn-sm btn-ghost','🏦 銀行/港と交換');
+  bankBtn.onclick=()=>showBankTradeModal();
+  row3.appendChild(bankBtn);
+  
+  const playerBtn=mk('button','btn btn-sm btn-ghost','💱 プレイヤーと取引');
+  playerBtn.onclick=()=>showPlayerTradeModal();
+  row3.appendChild(playerBtn);
+  card.appendChild(row3);
+  
+  // 取引中
+  if(ctPub.tradeOffer && ctPub.tradeOffer.from===myId){
+    const offerInfo=mk('div','hint my');
+    offerInfo.innerHTML=`📤 オファー送信中: ${tradeOfferText(ctPub.tradeOffer)}`;
+    card.appendChild(offerInfo);
+    // 応答状況
+    const respList=mk('div','small');
+    for(const p of ctPub.players){
+      if(p.id===myId) continue;
+      if(ctPub.tradeOffer.targetPid&&ctPub.tradeOffer.targetPid!==p.id) continue;
+      const r=ctPub.tradeOffer.responses[p.id];
+      respList.innerHTML+=`<div>${p.name}: ${r==='decline'?'❌ 拒否':'⏳ 検討中'}</div>`;
+    }
+    card.appendChild(respList);
+    const cancelBtn=mk('button','btn btn-sm btn-red','❌ オファー取消');
+    cancelBtn.onclick=()=>sendHostMsg({type:'cancelTrade'});
+    card.appendChild(cancelBtn);
+  }
+  
+  // ターン終了
+  card.appendChild(mk('div','spacer'));
+  const endBtn=mk('button','btn btn-green btn-block','✅ ターン終了');
+  endBtn.onclick=()=>{
+    if(ctPub.buildAction){
+      if(!confirm('建設アクション中ですが、ターンを終了しますか？')) return;
+    }
+    sendHostMsg({type:'endTurn'});
+  };
+  card.appendChild(endBtn);
+  
+  return card;
+}
+
+function devCardLabel(t){
+  return {knight:'⚔️ 騎士',roadBuilding:'🛤️ 街道建設',monopoly:'💰 独占',yearOfPlenty:'🎁 発展'}[t]||t;
+}
+
+function handlePlayDev(cardType){
+  if(cardType==='knight'){
+    if(confirm('騎士カードを使用しますか？（盗賊を移動）')){
+      sendHostMsg({type:'playDev',cardType:'knight'});
+    }
+  } else if(cardType==='roadBuilding'){
+    if(confirm('街道建設カードを使用しますか？（道2本を建設）')){
+      sendHostMsg({type:'playDev',cardType:'roadBuilding'});
+    }
+  } else if(cardType==='monopoly'){
+    showMonopolyModal();
+  } else if(cardType==='yearOfPlenty'){
+    showYearOfPlentyModal();
+  }
+}
+
+function showMonopolyModal(){
+  const box=mk('div');
+  box.innerHTML='<h3>💰 独占カード</h3><p class="small muted">指定した資源を他のプレイヤー全員から奪います</p>';
+  const row=mk('div','action-row');
+  row.style.marginTop='8px';
+  for(const r of ['wood','wheat','sheep','brick','ore']){
+    const b=mk('button','btn btn-amber',`${resourceName(r)}`);
+    b.onclick=()=>{
+      sendHostMsg({type:'playDev',cardType:'monopoly',params:{resource:r}});
+      hideModal();
+    };
+    row.appendChild(b);
+  }
+  box.appendChild(row);
+  const cancel=mk('button','btn btn-ghost btn-block','キャンセル');
+  cancel.style.marginTop='8px';
+  cancel.onclick=()=>hideModal();
+  box.appendChild(cancel);
+  showModal(box);
+}
+
+function showYearOfPlentyModal(){
+  let r1=null,r2=null;
+  const box=mk('div');
+  box.innerHTML='<h3>🎁 発展カード</h3><p class="small muted">2つの資源を選択（同じものを2つも可）</p>';
+  const row1=mk('div');
+  row1.innerHTML='<div class="small bold">1枚目:</div>';
+  const r1row=mk('div','action-row');
+  for(const r of ['wood','wheat','sheep','brick','ore']){
+    const b=mk('button','btn btn-ghost btn-sm',resourceName(r));
+    b.onclick=()=>{
+      r1=r;
+      r1row.querySelectorAll('button').forEach(x=>x.classList.replace('btn-amber','btn-ghost'));
+      b.classList.replace('btn-ghost','btn-amber');
+    };
+    r1row.appendChild(b);
+  }
+  row1.appendChild(r1row);
+  box.appendChild(row1);
+  const row2=mk('div');
+  row2.style.marginTop='8px';
+  row2.innerHTML='<div class="small bold">2枚目:</div>';
+  const r2row=mk('div','action-row');
+  for(const r of ['wood','wheat','sheep','brick','ore']){
+    const b=mk('button','btn btn-ghost btn-sm',resourceName(r));
+    b.onclick=()=>{
+      r2=r;
+      r2row.querySelectorAll('button').forEach(x=>x.classList.replace('btn-amber','btn-ghost'));
+      b.classList.replace('btn-ghost','btn-amber');
+    };
+    r2row.appendChild(b);
+  }
+  row2.appendChild(r2row);
+  box.appendChild(row2);
+  box.appendChild(mk('div','spacer'));
+  const confirmBtn=mk('button','btn btn-primary btn-block','確定');
+  confirmBtn.onclick=()=>{
+    if(!r1||!r2){alert('2つ選んでください');return;}
+    sendHostMsg({type:'playDev',cardType:'yearOfPlenty',params:{r1,r2}});
+    hideModal();
+  };
+  box.appendChild(confirmBtn);
+  const cancel=mk('button','btn btn-ghost btn-block','キャンセル');
+  cancel.style.marginTop='4px';
+  cancel.onclick=()=>hideModal();
+  box.appendChild(cancel);
+  showModal(box);
+}
+
+function showBankTradeModal(){
+  const myHand=ctPrv.hand||{};
+  const myP=ctPub.players.find(p=>p.id===myId);
+  const myPorts=ctPrv.ports||[];
+  let giveR=null,getR=null;
+  const box=mk('div');
+  box.innerHTML='<h3>🏦 銀行/港との交換</h3>';
+  const rateInfo=mk('div','small muted');
+  rateInfo.textContent='交換レート: 4:1（銀行）、3:1（汎用港）、2:1（専門港）';
+  box.appendChild(rateInfo);
+  
+  // 渡す資源
+  box.appendChild(mk('div','small bold','渡す:'));
+  const giveRow=mk('div','action-row');
+  for(const r of ['wood','wheat','sheep','brick','ore']){
+    let rate=4;
+    if(myPorts.includes(r)) rate=2;
+    else if(myPorts.includes('any')) rate=3;
+    const b=mk('button','btn btn-sm btn-ghost');
+    b.innerHTML=`${resourceName(r)}×${rate}<br><span class="small">所持:${myHand[r]||0}</span>`;
+    if((myHand[r]||0)<rate) b.disabled=true;
+    b.onclick=()=>{
+      giveR=r;
+      giveRow.querySelectorAll('button').forEach(x=>{
+        if(!x.disabled) x.classList.replace('btn-amber','btn-ghost');
+      });
+      b.classList.replace('btn-ghost','btn-amber');
+    };
+    giveRow.appendChild(b);
+  }
+  box.appendChild(giveRow);
+  
+  // 受け取る資源
+  box.appendChild(mk('div','small bold','受け取る:'));
+  const getRow=mk('div','action-row');
+  for(const r of ['wood','wheat','sheep','brick','ore']){
+    const b=mk('button','btn btn-sm btn-ghost',resourceName(r));
+    b.onclick=()=>{
+      getR=r;
+      getRow.querySelectorAll('button').forEach(x=>x.classList.replace('btn-amber','btn-ghost'));
+      b.classList.replace('btn-ghost','btn-amber');
+    };
+    getRow.appendChild(b);
+  }
+  box.appendChild(getRow);
+  box.appendChild(mk('div','spacer'));
+  const confirmBtn=mk('button','btn btn-primary btn-block','✅ 交換実行');
+  confirmBtn.onclick=()=>{
+    if(!giveR||!getR){alert('資源を選んでください');return;}
+    if(giveR===getR){alert('同じ資源は交換できません');return;}
+    let rate=4;
+    if(myPorts.includes(giveR)) rate=2;
+    else if(myPorts.includes('any')) rate=3;
+    sendHostMsg({type:'bankTrade',give:giveR,giveQty:rate,get:getR});
+    hideModal();
+  };
+  box.appendChild(confirmBtn);
+  const cancel=mk('button','btn btn-ghost btn-block','キャンセル');
+  cancel.style.marginTop='4px';
+  cancel.onclick=()=>hideModal();
+  box.appendChild(cancel);
+  showModal(box);
+}
+
+function showPlayerTradeModal(){
+  const myHand=ctPrv.hand||{};
+  const give={wood:0,wheat:0,sheep:0,brick:0,ore:0};
+  const want={wood:0,wheat:0,sheep:0,brick:0,ore:0};
+  let target=null; // null=全員
+  const box=mk('div');
+  box.innerHTML='<h3>💱 プレイヤーと取引</h3>';
+  
+  function makeResSelector(label,obj,refObj){
+    const sec=mk('div');
+    sec.appendChild(mk('div','small bold',label));
+    const row=mk('div','hand-row');
+    for(const r of ['wood','wheat','sheep','brick','ore']){
+      const w=mk('div','res-card '+r);
+      const lbl=mk('div','small',resourceName(r));
+      const cnt=mk('div','count',obj[r]);
+      const ctrl=mk('div');
+      const m=mk('button','btn btn-sm','-');
+      m.style.padding='1px 6px';
+      m.onclick=()=>{if(obj[r]>0){obj[r]--;cnt.textContent=obj[r];}};
+      const p=mk('button','btn btn-sm','+');
+      p.style.padding='1px 6px';
+      p.onclick=()=>{
+        if(refObj){
+          // 渡す側は所持を超えない
+          if(obj[r]<refObj[r]){obj[r]++;cnt.textContent=obj[r];}
+        } else {
+          obj[r]++;cnt.textContent=obj[r];
+        }
+      };
+      ctrl.appendChild(m);ctrl.appendChild(p);
+      w.appendChild(lbl);w.appendChild(cnt);w.appendChild(ctrl);
+      row.appendChild(w);
+    }
+    sec.appendChild(row);
+    return sec;
+  }
+  
+  box.appendChild(makeResSelector('渡す（自分の手札から）:',give,myHand));
+  box.appendChild(makeResSelector('受け取る:',want,null));
+  
+  // 取引相手
+  box.appendChild(mk('div','small bold','取引相手:'));
+  const targetRow=mk('div','action-row');
+  const allBtn=mk('button','btn btn-amber btn-sm','全員に提示');
+  allBtn.onclick=()=>{
+    target=null;
+    targetRow.querySelectorAll('button').forEach(x=>x.classList.replace('btn-amber','btn-ghost'));
+    allBtn.classList.replace('btn-ghost','btn-amber');
+  };
+  targetRow.appendChild(allBtn);
+  for(const p of ctPub.players){
+    if(p.id===myId) continue;
+    const b=mk('button','btn btn-ghost btn-sm',p.name);
+    b.onclick=()=>{
+      target=p.id;
+      targetRow.querySelectorAll('button').forEach(x=>x.classList.replace('btn-amber','btn-ghost'));
+      b.classList.replace('btn-ghost','btn-amber');
+    };
+    targetRow.appendChild(b);
+  }
+  box.appendChild(targetRow);
+  box.appendChild(mk('div','spacer'));
+  
+  const confirmBtn=mk('button','btn btn-primary btn-block','📤 オファー送信');
+  confirmBtn.onclick=()=>{
+    let giveSum=0,wantSum=0;
+    for(const r in give) giveSum+=give[r];
+    for(const r in want) wantSum+=want[r];
+    if(giveSum===0&&wantSum===0){alert('資源を選択してください');return;}
+    sendHostMsg({type:'offerTrade',give,want,targetPid:target});
+    hideModal();
+  };
+  box.appendChild(confirmBtn);
+  const cancel=mk('button','btn btn-ghost btn-block','キャンセル');
+  cancel.style.marginTop='4px';
+  cancel.onclick=()=>hideModal();
+  box.appendChild(cancel);
+  showModal(box);
+}
+
+function tradeOfferText(offer){
+  function fmt(obj){
+    const parts=[];
+    for(const r in obj){
+      if(obj[r]>0) parts.push(`${resourceName(r)}×${obj[r]}`);
+    }
+    return parts.join(',')||'なし';
+  }
+  return `渡す: ${fmt(offer.give)} ⇆ 受取: ${fmt(offer.want)}`;
+}
+
+function makeTradeResponse(){
+  const card=mk('div','action-panel');
+  const offer=ctPub.tradeOffer;
+  const fromP=ctPub.players.find(p=>p.id===offer.from);
+  card.appendChild(mk('div','small bold',`💱 ${fromP.name} からの取引オファー`));
+  card.appendChild(mk('div','small',tradeOfferText(offer)));
+  // 自分の手札で可能か
+  const myHand=ctPrv.hand||{};
+  let canAccept=true;
+  for(const r in offer.want){
+    if(myHand[r]<offer.want[r]){canAccept=false;break;}
+  }
+  // 自分の応答
+  const myResp=offer.responses[myId];
+  if(myResp){
+    card.appendChild(mk('div','hint ng','✅ 応答済み: '+(myResp==='accept'?'承諾':'拒否')));
+  } else {
+    const row=mk('div','action-row');
+    const ok=mk('button','btn btn-green btn-sm','🤝 承諾');
+    if(!canAccept) ok.disabled=true;
+    ok.onclick=()=>sendHostMsg({type:'respondTrade',accept:true});
+    row.appendChild(ok);
+    const ng=mk('button','btn btn-red btn-sm','❌ 拒否');
+    ng.onclick=()=>sendHostMsg({type:'respondTrade',accept:false});
+    row.appendChild(ng);
+    card.appendChild(row);
+  }
+  return card;
+}
+
+function ctRenderMyHand(){
+  const div=g('my-hand');
+  div.innerHTML='';
+  if(!ctPrv){
+    div.innerHTML='<div class="small muted">ゲーム情報取得中…</div>';
+    return;
+  }
+  const myHand=ctPrv.hand||{};
+  const row=mk('div','hand-row');
+  for(const r of ['wood','wheat','sheep','brick','ore']){
+    const w=mk('div','res-card '+r);
+    if((myHand[r]||0)===0) w.classList.add('unowned');
+    w.innerHTML=`<div class="small">${resourceName(r)}</div><div class="count">${myHand[r]||0}</div>`;
+    row.appendChild(w);
+  }
+  div.appendChild(row);
+  
+  // 発展カード
+  const devs=ctPrv.devCards||[];
+  if(devs.length>0){
+    const devRow=mk('div');
+    devRow.style.marginTop='6px';
+    devRow.appendChild(mk('div','small muted','発展カード:'));
+    const dr=mk('div','hand-row');
+    const grouped={};
+    for(const d of devs){
+      if(d.played) continue;
+      const key=d.type+(d.new?'_new':'');
+      grouped[key]=(grouped[key]||0)+1;
+    }
+    for(const k in grouped){
+      const isNew=k.endsWith('_new');
+      const type=k.replace('_new','');
+      const tag=mk('span','dev-card'+(isNew?' new':''));
+      tag.textContent=devCardLabel(type)+'×'+grouped[k]+(isNew?'（次ターンから）':'');
+      dr.appendChild(tag);
+    }
+    devRow.appendChild(dr);
+    div.appendChild(devRow);
+  }
+  
+  // 港情報
+  const ports=ctPrv.ports||[];
+  if(ports.length>0){
+    const portRow=mk('div');
+    portRow.style.marginTop='6px';
+    portRow.innerHTML=`<div class="small muted">利用可能な港: ${ports.map(p=>p==='any'?'3:1':resourceName(p)+'(2:1)').join(', ')}</div>`;
+    div.appendChild(portRow);
+  }
+}
+
+function ctRenderPlayersPanel(){
+  const div=g('players-panel');
+  div.innerHTML='';
+  for(let i=0;i<ctPub.players.length;i++){
+    const p=ctPub.players[i];
+    const panel=mk('div','player-panel '+p.color);
+    if(ctPub.currentPlayerIdx===i) panel.classList.add('current');
+    const head=mk('div','player-panel-head');
+    const name=mk('div','player-name',p.name+(p.id===myId?' (あなた)':''));
+    head.appendChild(name);
+    const vpDiv=mk('div','bold');
+    // 自分の場合は勝利点カード込み（trueVP）を表示
+    const displayVP=(p.id===myId && ctPrv && ctPrv.trueVP!=null)?ctPrv.trueVP:p.vp;
+    const hasHiddenVP=(p.id===myId && ctPrv && ctPrv.trueVP>p.vp);
+    vpDiv.textContent=`${displayVP}点`+(hasHiddenVP?' 🎯':'');
+    vpDiv.style.color='var(--accent)';
+    if(hasHiddenVP){
+      vpDiv.title='勝利点カードを含む（自分のみ表示）';
+    }
+    head.appendChild(vpDiv);
+    panel.appendChild(head);
+    const stats=mk('div','player-stats');
+    stats.innerHTML=`
+      <span class="stat-tag">🎒${p.handCount}</span>
+      <span class="stat-tag">📜${p.devCount}</span>
+      <span class="stat-tag">⚔️${p.knightsPlayed}</span>
+      <span class="stat-tag">🛤️${15-p.roads}</span>
+      <span class="stat-tag">🏠${5-p.settlements}</span>
+      <span class="stat-tag">🏛️${4-p.cities}</span>
+    `;
+    if(ctPub.longestRoadOwner===p.id){
+      stats.innerHTML+='<span class="stat-tag" style="background:var(--accent);color:#1a1206">🏆最長</span>';
+    }
+    if(ctPub.largestArmyOwner===p.id){
+      stats.innerHTML+='<span class="stat-tag" style="background:var(--accent);color:#1a1206">⚔️最大</span>';
+    }
+    panel.appendChild(stats);
+    div.appendChild(panel);
+  }
+}
+
+function ctRenderLog(){
+  const box=g('log-box');
+  box.innerHTML='';
+  const log=ctPub.log||[];
+  for(let i=log.length-1;i>=0;i--){
+    const line=mk('div','log-line',log[i]);
+    box.appendChild(line);
+  }
+}
+
+function ctRenderModals(){
+  // モーダルは個別関数で表示するため、ここでは特になし
+}
+
+// クリックハンドラ
+function ctClickHex(hexId){
+  if(ctPub.subPhase==='robberMove'){
+    sendHostMsg({type:'moveRobber',hexId,targetPid:null});
+  }
+}
+function ctClickVertex(vid){
+  if(ctPub.subPhase==='initSettlement'){
+    sendHostMsg({type:'placeSettlement',vid});
+  } else if(ctPub.subPhase==='turn'){
+    if(ctPub.buildAction==='settlement') sendHostMsg({type:'placeSettlement',vid});
+    else if(ctPub.buildAction==='city') sendHostMsg({type:'placeCity',vid});
+  }
+}
+function ctClickEdge(eid){
+  if(ctPub.subPhase==='initRoad') sendHostMsg({type:'placeRoad',eid});
+  else if(ctPub.subPhase==='turn'&&ctPub.buildAction==='road') sendHostMsg({type:'placeRoad',eid});
+  else if(ctPub.subPhase==='roadBuilding') sendHostMsg({type:'placeRoad',eid});
+}
+
+// メッセージ送信（自分宛は直接、他人宛はFirebase経由）
+async function sendHostMsg(msg){
+  if(isHost){
+    await onHostMsg(myId,msg);
+  } else {
+    await fbSendToHost(msg);
+  }
+}
+
+// 結果画面
+function ctRenderResult(){
+  const winner=ctPub.players.find(p=>p.id===ctPub.winner);
+  const card=g('result-card');
+  if(winner && winner.id===myId){
+    card.style.background='rgba(61,214,140,0.2)';
+    g('result-title').textContent='🎉 勝利！';
+    g('result-subtitle').textContent='あなたの勝ちです';
+  } else if(winner){
+    card.style.background='rgba(141,150,179,0.1)';
+    g('result-title').textContent=`🏆 ${winner.name} の勝利`;
+    g('result-subtitle').textContent='また挑戦しましょう';
+  }
+  const rp=g('result-players');
+  rp.innerHTML='';
+  const sorted=ctPub.players.slice().sort((a,b)=>b.vp-a.vp);
+  sorted.forEach((p,i)=>{
+    const pi=mk('div','player-panel '+p.color);
+    pi.innerHTML=`<div class="player-panel-head"><b>${i+1}位: ${p.name}</b><span class="bold" style="color:var(--accent)">${p.vp}点</span></div>`;
+    rp.appendChild(pi);
+  });
+  g('result-host-controls').style.display=isHost?'block':'none';
+}
+
+function ctRematch(){
+  if(isHost) ctHostRematch();
+}
+
+// ====================
+// 上位ボタン用のラッパー
+// ====================
+function ctStartGame(){
+  sendHostMsg({type:'startGame'});
+}
+
+</script>
+</body>
+</html>
