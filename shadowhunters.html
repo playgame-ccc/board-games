@@ -624,6 +624,8 @@ h3 { font-size: 1rem; font-weight: 600; }
 
   <div class="divider"></div>
 
+  <button class="btn btn-ghost" onclick="openRules()">📖 ルール説明</button>
+
   <a href="./index.html" style="text-decoration:none;">
     <button class="btn btn-ghost">🔄 ロビーへ戻る</button>
   </a>
@@ -767,6 +769,64 @@ h3 { font-size: 1rem; font-weight: 600; }
     <h3 id="target-title">対象を選択</h3>
     <div class="target-list" id="target-list"></div>
     <button class="btn btn-ghost" onclick="closeTargetModal()">キャンセル</button>
+  </div>
+</div>
+
+<!-- ============ RULES MODAL ============ -->
+<div class="modal-overlay" id="rules-modal">
+  <div class="modal-content">
+    <h3 style="color:var(--purple);">🌙 シャドウハンターズ ルール</h3>
+    <div style="font-size:0.88rem;line-height:1.7;color:var(--text);">
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--purple);font-weight:700;margin-bottom:4px;">🎭 ゲームの目的</div>
+        各プレイヤーに3陣営のいずれかの正体カードが配られる。自分の正体は秘密で、他人の正体を推理しながら陣営ごとの勝利条件を満たす。
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--purple);font-weight:700;margin-bottom:4px;">⚔️ 3つの陣営と勝利条件</div>
+        <div style="margin-left:10px;">
+          🛡 <b>ハンター</b>：シャドウを全滅させたら勝利<br>
+          🗡 <b>シャドウ</b>：ハンターを全滅させたら勝利<br>
+          ⚖ <b>中立</b>：キャラごとの個別勝利条件（最初に死ぬ、緑カード5枚集める など）
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--purple);font-weight:700;margin-bottom:4px;">🎲 ターンの流れ</div>
+        <div style="margin-left:10px;">
+          ① ダイスを振って移動<br>
+          ② エリアの効果を使う（カードを引く・回復・誰かにダメージ）<br>
+          ③ 同じエリアの相手に攻撃（任意）<br>
+          ④ ターン終了
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--purple);font-weight:700;margin-bottom:4px;">🗺 エリア（ダイスの出目で移動）</div>
+        <div style="margin-left:10px;">
+          1：病院（自HP+1 または 誰かにHP-1）<br>
+          2：教会（白カード）<br>
+          3：武器庫（緑カード）<br>
+          4：古城（黒カード）<br>
+          5：墓場（黒カード）<br>
+          6：神殿（白カード）
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--purple);font-weight:700;margin-bottom:4px;">🎴 カードの種類</div>
+        <div style="margin-left:10px;">
+          <b style="color:var(--hunter);">白カード</b>：回復・正体確認など、主にハンター向け<br>
+          <b style="color:var(--shadow);">黒カード</b>：ダメージ・呪いなど、主にシャドウ向け<br>
+          <b style="color:var(--green);">緑カード</b>：武器・防具などの装備品
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--purple);font-weight:700;margin-bottom:4px;">⚠ 注意事項</div>
+        <div style="margin-left:10px;">
+          ・HPが0になると脱落、正体が公開される<br>
+          ・正体は自分から公開してもしなくてもOK（会話・ブラフ自由）<br>
+          ・ハンターまたはシャドウが全滅した時点でゲーム終了
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-purple" onclick="closeRules()">閉じる</button>
   </div>
 </div>
 
@@ -2308,6 +2368,9 @@ function pickEnemyTarget(cpu, candidates) {
 // ============================================================
 // INIT
 // ============================================================
+function openRules() { g('rules-modal').classList.add('active'); }
+function closeRules() { g('rules-modal').classList.remove('active'); }
+
 window.addEventListener('DOMContentLoaded', ()=>{
   // restore name
   const saved = localStorage.getItem('shName');
