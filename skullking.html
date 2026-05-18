@@ -285,17 +285,52 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
 .modal-body { color: var(--text); font-size: 0.92rem; line-height: 1.6; margin-bottom: 14px; }
 .modal-buttons { display: flex; flex-direction: column; gap: 8px; }
 
-/* Hand area */
+/* Hand area - grouped by suit */
 .hand-area {
-  display: flex; gap: 6px;
+  display: flex; flex-direction: column; gap: 8px;
   padding: 10px;
   background: var(--surface); border: 1px solid var(--surface3);
   border-radius: 10px;
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  min-height: 110px;
-  align-items: center;
+  min-height: 60px;
 }
+.hand-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.hand-row-label {
+  flex-shrink: 0;
+  width: 28px; min-height: 50px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 4px 2px;
+  color: white;
+  line-height: 1.1;
+}
+.hand-row-label.yellow { background: linear-gradient(180deg, #f0d000, #c8a800); color: #1a1a1a; }
+.hand-row-label.purple { background: linear-gradient(180deg, #b070d8, #7a40a0); color: white; }
+.hand-row-label.suit-green { background: linear-gradient(180deg, #5cd060, #3a9c40); color: white; }
+.hand-row-label.black { background: linear-gradient(180deg, #404858, #1a1e2a); color: #f0c850; border: 1px solid #f0c850; }
+.hand-row-label.special-label { background: linear-gradient(180deg, #d4af37, #8a6e1a); color: #1a1a1a; }
+.hand-row-cards {
+  flex: 1;
+  display: flex; gap: 4px;
+  overflow-x: auto;
+  padding: 2px;
+  flex-wrap: nowrap;
+}
+.hand-row-cards::-webkit-scrollbar { height: 4px; }
+.hand-row-cards::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* Smaller cards in grouped layout */
+.hand-area .card {
+  width: 44px; height: 64px;
+  padding: 4px 2px;
+}
+.hand-area .card .card-num { font-size: 1.1rem; }
+.hand-area .card .card-suit { font-size: 0.75rem; }
+.hand-area .card .card-special-icon { font-size: 1.2rem; }
+.hand-area .card .card-special-name { font-size: 0.5rem; }
 
 /* Trick table */
 .trick-table {
@@ -948,6 +983,63 @@ function cardEl(card, opts={}){
   div.innerHTML = inner;
   if(opts.onClick) div.onclick = opts.onClick;
   return div;
+}
+
+// スカルキング用：色ごとグループ手札描画
+// cards: 表示するカード配列, container: コンテナ要素, getCardOpts: (card)=>opts でオプションを返す関数
+function ttRenderGroupedHand(cards, container, getCardOpts){
+  container.innerHTML = '';
+  if(!cards || cards.length === 0){
+    container.innerHTML = '<div style="text-align:center; color:var(--muted); font-size:0.8rem; padding:10px;">手札なし</div>';
+    return;
+  }
+
+  // 通常カードを色ごとに分類
+  const groups = {};
+  TT_SUITS.forEach(s=>{ groups[s.key] = []; });
+  const specials = [];
+  cards.forEach(c=>{
+    if(c.kind === 'normal'){
+      groups[c.suit].push(c);
+    } else {
+      specials.push(c);
+    }
+  });
+  // 数字昇順ソート
+  Object.values(groups).forEach(arr=> arr.sort((a,b)=>a.num - b.num));
+
+  // 通常カードの行を表示
+  TT_SUITS.forEach(s=>{
+    const arr = groups[s.key];
+    if(arr.length === 0) return;
+    const row = mk('div', 'hand-row');
+    const label = mk('div', 'hand-row-label ' + s.color);
+    label.innerHTML = `${s.icon}<br>${arr.length}`;
+    const cardsWrap = mk('div', 'hand-row-cards');
+    arr.forEach(c=>{
+      cardsWrap.appendChild(cardEl(c, getCardOpts ? getCardOpts(c) : {}));
+    });
+    row.appendChild(label);
+    row.appendChild(cardsWrap);
+    container.appendChild(row);
+  });
+
+  // 特殊カード行
+  if(specials.length){
+    // 特殊カードは順序固定（SK→海賊→マーメイド→逃亡→ティグリス）
+    const order = ['sk','pirate','mermaid','escape','tigress'];
+    specials.sort((a,b)=> order.indexOf(a.kind) - order.indexOf(b.kind));
+    const row = mk('div', 'hand-row');
+    const label = mk('div', 'hand-row-label special-label');
+    label.innerHTML = `★<br>${specials.length}`;
+    const cardsWrap = mk('div', 'hand-row-cards');
+    specials.forEach(c=>{
+      cardsWrap.appendChild(cardEl(c, getCardOpts ? getCardOpts(c) : {}));
+    });
+    row.appendChild(label);
+    row.appendChild(cardsWrap);
+    container.appendChild(row);
+  }
 }
 
 // Lobby select
@@ -1875,12 +1967,9 @@ function ttRenderBid(){
     g('bid-start-player-reason').textContent = reason;
   }
 
-  // Hand
+  // Hand（色ごとグループ表示）
   const hand = g('bid-my-hand');
-  hand.innerHTML = '';
-  ttMyCards.forEach(c=>{
-    hand.appendChild(cardEl(c));
-  });
+  ttRenderGroupedHand(ttMyCards, hand, null);
 
   // Bid buttons
   const btns = g('bid-buttons');
@@ -1986,24 +2075,22 @@ function ttRenderPlay(){
     ta.innerHTML = '<div style="color:var(--muted); font-size:0.85rem;">（カードが出されるとここに表示）</div>';
   }
 
-  // Hand
+  // Hand（色ごとグループ表示）
   const hand = g('play-my-hand');
-  hand.innerHTML = '';
   const myTurn = cur && cur.id === myId;
   const lead = ttGs.leadSuit;
   // 通常カードでリードスートを持っているか（特殊カードは無視）
   const hasLeadSuit = lead && ttMyCards.some(c=>c.kind==='normal' && c.suit === lead);
-  ttMyCards.forEach(c=>{
+  ttRenderGroupedHand(ttMyCards, hand, (c)=>{
     let canPlay = myTurn;
     // 特殊カードは常に出せる。通常カードのみマストフォロー対象。
     if(myTurn && c.kind === 'normal' && lead && hasLeadSuit && c.suit !== lead){
       canPlay = false;
     }
-    const el = cardEl(c, {
+    return {
       extra: canPlay ? 'playable' : (myTurn ? 'disabled' : ''),
       onClick: canPlay ? ()=>ttPlayMyCard(c.id, c) : null,
-    });
-    hand.appendChild(el);
+    };
   });
 
   // Action hint

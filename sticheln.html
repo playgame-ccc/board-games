@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎯 シュティッヒルン</title>
+<style>
+:root {
+  --bg: #0e0a1a;
+  --surface: #1a1428;
+  --surface2: #261e3a;
+  --surface3: #3a2d54;
+  --accent: #b94c8c;
+  --accent-bright: #e070a8;
+  --accent-glow: rgba(185,76,140,0.35);
+  --warn: #ffb020;
+  --warn-glow: rgba(255,176,32,0.3);
+  --red: #d63243;
+  --red-glow: rgba(214,50,67,0.4);
+  --green: #2dff8a;
+  --text: #e8e8f0;
+  --muted: #7a708c;
+  --mono: 'Courier New', monospace;
+
+  /* Suit colors */
+  --suit-red: #e54848;
+  --suit-yellow: #f0c000;
+  --suit-blue: #4880e0;
+  --suit-green: #4caf50;
+  --suit-purple: #a060c8;
+  --suit-gray: #888888;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background: radial-gradient(ellipse at top, rgba(185,76,140,0.08), transparent 60%),
+              radial-gradient(ellipse at bottom, rgba(255,176,32,0.04), transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+.screen { display: none; padding: 14px; max-width: 540px; margin: 0 auto; position: relative; z-index: 1; gap: 12px; }
+.screen.active { display: flex; flex-direction: column; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: 1px; margin: 0; }
+h1 { font-size: 1.8rem; text-align: center; margin: 18px 0 6px; }
+h2 { font-size: 1.3rem; text-align: center; margin: 14px 0 8px; color: var(--accent); }
+h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
+
+.title-main {
+  font-size: 2.2rem; text-align: center; letter-spacing: 6px;
+  color: var(--accent); text-shadow: 0 0 20px var(--accent-glow);
+  margin: 16px 0 4px;
+}
+.title-sub {
+  text-align: center; font-family: var(--mono);
+  font-size: 0.85rem; letter-spacing: 3px; color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* Inputs */
+.input {
+  width: 100%; padding: 12px 14px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--surface3); border-radius: 8px;
+  font-size: 1rem; outline: none; font-family: inherit;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+.input.code-input {
+  font-family: var(--mono); letter-spacing: 8px;
+  font-size: 1.4rem; text-align: center;
+}
+
+/* Buttons */
+.btn {
+  width: 100%; padding: 13px;
+  border: none; border-radius: 8px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.btn-accent {
+  background: var(--accent); color: white;
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+.btn-accent:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(185,76,140,0.5); }
+
+.btn-warn {
+  background: var(--surface2); color: var(--warn);
+  border: 1px solid rgba(255,176,32,0.4);
+}
+.btn-warn:hover:not(:disabled) { border-color: var(--warn); box-shadow: 0 0 16px var(--warn-glow); }
+
+.btn-red {
+  background: var(--red); color: white;
+  box-shadow: 0 4px 16px var(--red-glow);
+}
+
+.btn-ghost {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--surface3); font-weight: 600;
+}
+.btn-ghost:hover:not(:disabled) { border-color: var(--muted); color: var(--text); }
+
+/* Row */
+.row { display: flex; gap: 8px; }
+.row .input { flex: 1; }
+.row .btn { width: auto; padding: 12px 18px; flex-shrink: 0; }
+
+.divider { height: 1px; background: linear-gradient(90deg, transparent, var(--surface3), transparent); margin: 4px 0; }
+
+/* Panel */
+.panel {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 10px; padding: 14px;
+}
+
+/* Status */
+.error { color: var(--red); font-size: 0.85rem; min-height: 18px; }
+.status-txt { color: var(--muted); font-size: 0.85rem; min-height: 18px; }
+
+/* Room code box */
+.code-box {
+  background: var(--surface); border: 1px solid rgba(185,76,140,0.4);
+  border-radius: 10px; padding: 18px; text-align: center;
+}
+.code-box .label {
+  font-family: var(--mono); font-size: 0.75rem;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.code-box .code {
+  font-family: var(--mono); font-size: 2.6rem; font-weight: 700;
+  letter-spacing: 10px; color: var(--accent);
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+
+/* Player list */
+.player-list { display: flex; flex-direction: column; gap: 8px; }
+.player-item {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 8px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.92rem;
+}
+.player-item.is-me { border-color: rgba(185,76,140,0.5); }
+.player-item.is-host { border-color: rgba(255,176,32,0.5); }
+.player-item.is-turn { background: rgba(185,76,140,0.1); border-color: var(--accent); }
+
+.p-info { flex: 1; }
+.p-name { font-weight: 700; }
+.p-sub { font-size: 0.75rem; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+.p-score { font-family: var(--mono); color: var(--warn); font-size: 1rem; font-weight: 700; }
+
+/* Count selector */
+.count-selector { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.count-btn {
+  width: 44px; height: 44px;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--surface3); border-radius: 8px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  font-family: inherit;
+}
+.count-btn.selected {
+  background: var(--accent); color: white;
+  border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow);
+}
+.count-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.count-label { text-align: center; margin-top: 10px; font-family: var(--mono); color: var(--warn); font-size: 0.9rem; }
+
+/* Cards */
+.card {
+  position: relative;
+  width: 56px; height: 84px;
+  border-radius: 8px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  padding: 6px 4px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: 2px solid rgba(0,0,0,0.3);
+  flex-shrink: 0;
+  color: white;
+}
+.card.large { width: 70px; height: 100px; }
+.card.small { width: 44px; height: 64px; font-size: 0.8rem; padding: 4px 2px; }
+.card-num { font-size: 1.5rem; line-height: 1; }
+.card.small .card-num { font-size: 1.1rem; }
+.card-suit { font-size: 0.85rem; line-height: 1; }
+.card.small .card-suit { font-size: 0.7rem; }
+
+.card.suit-red    { background: linear-gradient(180deg, #ff6060, #b02020); }
+.card.suit-yellow { background: linear-gradient(180deg, #f0d020, #b08800); color: #1a1a1a; }
+.card.suit-blue   { background: linear-gradient(180deg, #5090f0, #2050a0); }
+.card.suit-green  { background: linear-gradient(180deg, #5cd060, #2a8030); }
+.card.suit-purple { background: linear-gradient(180deg, #b070d8, #6028a0); }
+.card.suit-gray   { background: linear-gradient(180deg, #b0b0b0, #606060); }
+
+.card.minus-color {
+  border: 2px solid var(--red); 
+  box-shadow: 0 0 8px var(--red-glow);
+}
+
+.card.playable { cursor: pointer; }
+.card.playable:hover { transform: translateY(-6px); box-shadow: 0 6px 16px var(--accent-glow); }
+.card.selected { transform: translateY(-10px); box-shadow: 0 8px 20px var(--accent-glow); }
+.card.disabled { opacity: 0.4; cursor: not-allowed; }
+.card.disabled:hover { transform: none; box-shadow: none; }
+
+.card.back {
+  background: repeating-linear-gradient(45deg, #2a1d3e, #2a1d3e 4px, #1a0e2a 4px, #1a0e2a 8px);
+  color: var(--accent);
+  font-size: 1.5rem;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Hand area - grouped by suit */
+.hand-area {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 10px;
+  min-height: 60px;
+}
+.hand-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.hand-row.minus-row {
+  border: 2px solid var(--red);
+  border-radius: 8px;
+  padding: 4px;
+  background: rgba(214,50,67,0.06);
+}
+.hand-row-label {
+  flex-shrink: 0;
+  width: 32px; min-height: 50px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 4px 2px;
+  color: white;
+  line-height: 1.1;
+}
+.hand-row-label.suit-red    { background: linear-gradient(180deg, #ff6060, #b02020); }
+.hand-row-label.suit-yellow { background: linear-gradient(180deg, #f0d020, #b08800); color: #1a1a1a; }
+.hand-row-label.suit-blue   { background: linear-gradient(180deg, #5090f0, #2050a0); }
+.hand-row-label.suit-green  { background: linear-gradient(180deg, #5cd060, #2a8030); }
+.hand-row-label.suit-purple { background: linear-gradient(180deg, #b070d8, #6028a0); }
+.hand-row-label.suit-gray   { background: linear-gradient(180deg, #b0b0b0, #606060); }
+.hand-row-label .minus-mark {
+  font-size: 0.65rem;
+  color: var(--red);
+  background: white;
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-top: 2px;
+}
+.hand-row-cards {
+  flex: 1;
+  display: flex; gap: 4px;
+  overflow-x: auto;
+  padding: 2px;
+  flex-wrap: nowrap;
+}
+.hand-row-cards::-webkit-scrollbar { height: 4px; }
+.hand-row-cards::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* Smaller cards in grouped layout */
+.hand-area .card {
+  width: 42px; height: 60px;
+  padding: 4px 2px;
+}
+.hand-area .card .card-num { font-size: 1.0rem; }
+.hand-area .card .card-suit { font-size: 0.7rem; }
+
+/* Trick table */
+.trick-table {
+  background: var(--surface);
+  border: 1px solid var(--surface3);
+  border-radius: 12px;
+  padding: 16px;
+  min-height: 140px;
+}
+.trick-cards { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.trick-slot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.trick-slot .slot-name { font-size: 0.75rem; color: var(--muted); font-family: var(--mono); }
+.trick-slot.winner { 
+  background: rgba(255,176,32,0.15); 
+  border-radius: 8px; 
+  padding: 4px;
+}
+
+/* Suit chooser */
+.suit-chooser { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.suit-btn {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--surface3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: white;
+  transition: transform 0.15s;
+}
+.suit-btn:hover { transform: scale(1.1); }
+.suit-btn.selected { 
+  border-color: white; 
+  box-shadow: 0 0 16px rgba(255,255,255,0.5);
+  transform: scale(1.1);
+}
+.suit-btn.suit-red    { background: var(--suit-red); }
+.suit-btn.suit-yellow { background: var(--suit-yellow); color: #1a1a1a; }
+.suit-btn.suit-blue   { background: var(--suit-blue); }
+.suit-btn.suit-green  { background: var(--suit-green); }
+.suit-btn.suit-purple { background: var(--suit-purple); }
+.suit-btn.suit-gray   { background: var(--suit-gray); }
+
+/* Minus card selector */
+.minus-selector {
+  display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;
+  padding: 8px;
+}
+
+/* Info badges */
+.badge {
+  display: inline-block; padding: 4px 10px;
+  background: var(--surface2); border-radius: 6px;
+  font-family: var(--mono); font-size: 0.85rem;
+}
+.badge.lead { background: rgba(185,76,140,0.15); color: var(--accent); }
+.badge.trick { background: rgba(255,176,32,0.15); color: var(--warn); }
+.badge.minus { background: rgba(214,50,67,0.15); color: var(--red); }
+
+.info-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 4px; }
+
+/* Log */
+.log {
+  max-height: 140px; overflow-y: auto;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--muted); line-height: 1.5;
+  background: var(--surface2); border-radius: 6px;
+  padding: 8px; margin-top: 6px;
+}
+.log-entry { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.log-entry:last-child { border-bottom: none; }
+
+/* Result */
+.result-hero {
+  text-align: center; padding: 28px 16px;
+  background: var(--surface); border: 1px solid var(--accent);
+  border-radius: 14px;
+  box-shadow: 0 0 40px var(--accent-glow);
+}
+.result-emoji { font-size: 4rem; margin-bottom: 10px; }
+.result-title { font-size: 1.6rem; font-weight: 700; color: var(--accent); letter-spacing: 2px; }
+.result-sub { font-size: 0.95rem; color: var(--muted); margin-top: 6px; }
+
+.rank-list { display: flex; flex-direction: column; gap: 6px; }
+.rank-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 8px;
+}
+.rank-item.first { border-color: var(--accent); background: rgba(185,76,140,0.1); }
+.rank-num { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; min-width: 32px; color: var(--warn); }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease; }
+
+/* Rematch */
+.rematch-voters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rematch-voter-tag {
+  background: rgba(45,255,138,0.15); color: var(--green);
+  padding: 4px 10px; border-radius: 12px;
+  font-size: 0.8rem; font-family: var(--mono);
+}
+
+/* Game header */
+.game-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; background: var(--surface);
+  border: 1px solid var(--surface3); border-radius: 8px;
+}
+
+/* Scoreboard */
+.scoreboard {
+  background: var(--surface); border: 1px solid var(--surface3);
+  border-radius: 8px; padding: 8px;
+}
+.score-row {
+  display: grid;
+  grid-template-columns: 1fr 50px 80px 60px;
+  gap: 6px;
+  padding: 6px 4px;
+  align-items: center;
+  font-size: 0.88rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.score-row.header { color: var(--muted); font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; }
+.score-row.me { background: rgba(185,76,140,0.08); border-radius: 4px; }
+.score-cell { font-family: var(--mono); text-align: center; }
+.score-cell.name { text-align: left; font-family: inherit; font-weight: 600; }
+.score-cell.total { color: var(--warn); font-weight: 700; }
+.minus-dot {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  vertical-align: middle; margin-left: 4px;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================ LOBBY ============================================================ -->
+<div id="screen-lobby" class="screen active">
+  <h1 class="title-main">🎯 シュティッヒルン</h1>
+  <div class="title-sub">STICHELN</div>
+  <div class="panel">
+    <p style="font-size:0.85rem; color:var(--muted); line-height:1.7;">
+      <strong style="color:var(--accent);">メイフォロー</strong>のトリックテイキング。<br>
+      各プレイヤーが「<strong style="color:var(--red);">取りたくない色</strong>」を決め、その色のカードを取るとマイナス点。他の色は1枚1点。
+    </p>
+  </div>
+
+  <details class="panel">
+    <summary style="cursor:pointer; color:var(--warn); font-weight:700; font-size:0.95rem;">📜 ゲームの流れ</summary>
+    <div style="margin-top:10px; font-size:0.82rem; line-height:1.8; color:var(--text);">
+      <ol style="padding-left:1.2em; margin:0;">
+        <li>各プレイヤーに15枚配布</li>
+        <li>各自「マイナスカラー」のカード1枚を裏向きで提出</li>
+        <li>全員提出したら一斉公開（この数字も自分のマイナス点）</li>
+        <li>15トリックを行う</li>
+        <li>合計点が最大のプレイヤーが勝者</li>
+      </ol>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary style="cursor:pointer; color:var(--warn); font-weight:700; font-size:0.95rem;">⚔️ トリックの勝敗ルール</summary>
+    <div style="margin-top:10px; font-size:0.82rem; line-height:1.8; color:var(--text);">
+      <div style="padding:6px 0; border-bottom:1px solid var(--surface3);">
+        <strong style="color:var(--accent);">メイフォロー</strong><br>
+        <span style="color:var(--muted); font-size:0.78rem;">どの色でも自由に出せる（マストフォローではない）</span>
+      </div>
+      <div style="padding:6px 0; border-bottom:1px solid var(--surface3);">
+        <strong style="color:var(--accent);">リードスート以外はすべて切り札</strong><br>
+        <span style="color:var(--muted); font-size:0.78rem;">場の最初に出された色がリード。それ以外の色は切り札になる</span>
+      </div>
+      <div style="padding:6px 0; border-bottom:1px solid var(--surface3);">
+        <strong style="color:var(--accent);">勝敗判定</strong><br>
+        <span style="color:var(--muted); font-size:0.78rem;">
+          ① 全員同じ色 → 数字の大きい人が勝ち<br>
+          ② 違う色が含まれる → リードスート以外で最大の数字が勝ち<br>
+          ③ 同じ数字なら先出し勝ち
+        </span>
+      </div>
+      <div style="padding:6px 0;">
+        <strong style="color:var(--accent);">0は切り札にならない</strong><br>
+        <span style="color:var(--muted); font-size:0.78rem;">0のカードは違う色でも切り札にならず、ほぼ確実に負ける</span>
+      </div>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary style="cursor:pointer; color:var(--warn); font-weight:700; font-size:0.95rem;">📊 得点計算</summary>
+    <div style="margin-top:10px; font-size:0.82rem; line-height:1.8; color:var(--text);">
+      <div style="padding:8px; background:var(--surface2); border-radius:6px; margin-bottom:8px;">
+        <strong style="color:var(--red);">マイナスカラーのカード</strong><br>
+        <span style="color:var(--muted); font-size:0.78rem;">取ったカードの数字がそのままマイナス点（最初に提出した1枚もマイナス）</span>
+      </div>
+      <div style="padding:8px; background:var(--surface2); border-radius:6px;">
+        <strong style="color:var(--green);">マイナスカラー以外のカード</strong><br>
+        <span style="color:var(--muted); font-size:0.78rem;">1枚につき+1点</span>
+      </div>
+      <div style="margin-top:10px; padding:6px; background:var(--surface2); border-radius:6px; font-size:0.75rem; color:var(--muted);">
+        <strong style="color:var(--text);">例</strong>：マイナスカラー=赤。取ったトリックに赤5、赤7、青3、緑10があれば → −5−7+1+1 = <strong style="color:var(--red);">−10点</strong>
+      </div>
+    </div>
+  </details>
+
+  <input class="input" id="in-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12">
+  <button class="btn btn-accent" onclick="stCreateRoom()">🏠 部屋を作る（ホスト）</button>
+  <div class="divider"></div>
+  <div class="row">
+    <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4">
+    <button class="btn btn-warn" onclick="stJoinRoom()">参加</button>
+  </div>
+  <button class="btn btn-red" onclick="stShowSoloLobby()">🤖 ひとりで遊ぶ（CPU対戦）</button>
+  <div id="lobby-status" class="status-txt"></div>
+  <div id="lobby-error" class="error"></div>
+</div>
+
+<!-- ============================================================ SOLO SETUP ============================================================ -->
+<div id="screen-solo" class="screen">
+  <h2>CPU対戦設定</h2>
+  <input class="input" id="solo-name" type="text" placeholder="あなたの名前" maxlength="12">
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">プレイ人数（自分を含む）</div>
+    <div class="count-selector">
+      <button class="count-btn solo-count-btn selected" data-n="3" onclick="stSetSoloCount(3)">3</button>
+      <button class="count-btn solo-count-btn" data-n="4" onclick="stSetSoloCount(4)">4</button>
+      <button class="count-btn solo-count-btn" data-n="5" onclick="stSetSoloCount(5)">5</button>
+      <button class="count-btn solo-count-btn" data-n="6" onclick="stSetSoloCount(6)">6</button>
+    </div>
+    <div class="count-label" id="solo-count-label">CPU: 2人 / あなた: 1人</div>
+    <div id="solo-deck-info" style="text-align:center; color:var(--muted); font-size:0.75rem; margin-top:6px;"></div>
+  </div>
+  <div id="solo-error" class="error"></div>
+  <button class="btn btn-accent" onclick="stStartSoloGame()">▶ ゲーム開始</button>
+  <button class="btn btn-ghost" onclick="show('lobby')">← 戻る</button>
+</div>
+
+<!-- ============================================================ WAITING ============================================================ -->
+<div id="screen-waiting" class="screen">
+  <h2>待機ロビー</h2>
+  <div class="code-box">
+    <div class="label">ルームコード</div>
+    <div class="code" id="disp-code">----</div>
+  </div>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h3>参加者</h3>
+    <span id="p-count" style="font-family:var(--mono); color:var(--muted); font-size:0.85rem;">1人</span>
+  </div>
+  <div id="wait-list" class="player-list"></div>
+  <div id="wait-deck-info" style="text-align:center; color:var(--warn); font-family:var(--mono); font-size:0.85rem;"></div>
+  <div id="wait-status" class="status-txt"></div>
+  <button id="btn-start" class="btn btn-accent" onclick="stStartGame()" disabled>▶ ゲームを開始する</button>
+  <button class="btn btn-ghost" onclick="stLeaveRoom()">← 退出</button>
+</div>
+
+<!-- ============================================================ MINUS PHASE ============================================================ -->
+<div id="screen-minus" class="screen">
+  <h2>🎴 マイナスカラー決定</h2>
+  <div style="text-align:center; color:var(--muted); font-size:0.85rem;">
+    手札から「取りたくない色」のカードを1枚選んで提出してください。<br>
+    <span style="color:var(--red);">⚠️ このカードの数字もマイナス点になります</span>
+  </div>
+
+  <div class="panel">
+    <h3 style="text-align:center; margin-bottom:8px;">あなたの手札</h3>
+    <div id="minus-my-hand" class="hand-area" style="justify-content:center;"></div>
+  </div>
+
+  <div class="panel">
+    <div style="text-align:center; color:var(--muted); font-size:0.85rem; margin-bottom:6px;">
+      <span id="minus-selected-info">カードを1枚タップして選択</span>
+    </div>
+    <button id="btn-confirm-minus" class="btn btn-accent" onclick="stConfirmMinus()" disabled>このカードを提出</button>
+  </div>
+
+  <div class="panel">
+    <h3>📋 提出状況</h3>
+    <div id="minus-status-list" class="player-list"></div>
+  </div>
+
+  <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="stLeaveGame()">← 退出</button>
+</div>
+
+<!-- ============================================================ REVEAL PHASE ============================================================ -->
+<div id="screen-reveal" class="screen">
+  <h2>🎭 マイナスカラー公開</h2>
+  <div style="text-align:center; color:var(--muted); font-size:0.85rem;">
+    全員のマイナスカラーが公開されました。
+  </div>
+
+  <div class="panel">
+    <h3 style="text-align:center;">各プレイヤーのマイナスカラー</h3>
+    <div id="reveal-list" class="player-list"></div>
+  </div>
+
+  <button id="btn-start-play" class="btn btn-accent" onclick="stStartPlay()">▶ プレイ開始</button>
+  <div id="reveal-wait-msg" style="text-align:center; color:var(--muted); font-size:0.85rem; display:none;">ホストの開始を待っています...</div>
+  <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="stLeaveGame()">← 退出</button>
+</div>
+
+<!-- ============================================================ PLAY PHASE ============================================================ -->
+<div id="screen-play" class="screen">
+  <div class="game-header">
+    <div class="badge trick" id="play-trick-info">T 1/15</div>
+    <div class="badge" id="play-mycolor-info">あなた: ?</div>
+  </div>
+
+  <div class="scoreboard" id="play-scoreboard"></div>
+
+  <div class="panel">
+    <div id="play-turn-info" style="text-align:center; font-size:0.9rem; margin-bottom:8px; color:var(--accent);"></div>
+    <div class="trick-table">
+      <div id="play-trick-area" class="trick-cards"></div>
+    </div>
+    <div id="play-lead-info" style="text-align:center; font-size:0.8rem; color:var(--muted); margin-top:6px;"></div>
+  </div>
+
+  <div class="panel">
+    <h3 style="text-align:center;">あなたの手札</h3>
+    <div id="play-my-hand" class="hand-area" style="justify-content:center;"></div>
+    <div id="play-action-hint" style="text-align:center; font-size:0.85rem; color:var(--accent); margin-top:8px; min-height:18px;"></div>
+  </div>
+
+  <details class="panel">
+    <summary style="cursor:pointer; color:var(--warn); font-size:0.85rem;">📋 ゲームログ</summary>
+    <div id="play-log" class="log"></div>
+  </details>
+
+  <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="stLeaveGame()">← 退出</button>
+</div>
+
+<!-- ============================================================ RESULT ============================================================ -->
+<div id="screen-result" class="screen">
+  <div class="result-hero">
+    <div class="result-emoji" id="result-emoji">🏆</div>
+    <div class="result-title" id="result-title">ゲーム終了</div>
+    <div class="result-sub" id="result-sub"></div>
+  </div>
+
+  <div class="panel">
+    <h3>最終順位</h3>
+    <div class="rank-list" id="result-rank-list"></div>
+  </div>
+
+  <div class="panel">
+    <h3>📋 ゲームログ</h3>
+    <div class="log" id="result-log" style="max-height:200px;"></div>
+  </div>
+
+  <div class="panel" id="result-rematch-panel" style="display:none;">
+    <div id="result-rematch-status" style="text-align:center; color:var(--accent); font-family:var(--mono); font-size:0.88rem;"></div>
+    <div id="result-rematch-voters" class="rematch-voters"></div>
+  </div>
+
+  <button id="btn-rematch" class="btn btn-accent" onclick="stRematch()">🔄 もう一度遊ぶ</button>
+  <button class="btn btn-ghost" onclick="stLeaveGame()">← ロビーへ</button>
+</div>
+
+<script>
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const FB_URL = 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+let fbRoom = '';
+let fbListener = null;
+let fbLastSeen = {};
+
+async function fbPut(sub, data){
+  if(!fbRoom) return;
+  try {
+    await fetch(`${FB_URL}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)});
+  } catch(e){ console.warn('fbPut error', e); }
+}
+async function fbGet(sub){
+  if(!fbRoom) return null;
+  try {
+    const r = await fetch(`${FB_URL}/rooms/${fbRoom}/${sub}.json`);
+    return await r.json();
+  } catch(e){ return null; }
+}
+async function fbDel(sub){
+  if(!fbRoom) return;
+  try { await fetch(`${FB_URL}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){}
+}
+function fbBroadcast(msg){
+  if(!fbRoom) return;
+  const k = 'b_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  fbPut('broadcast/' + k, {...msg, ts:Date.now()});
+}
+function fbSendTo(pid, msg){
+  if(!fbRoom) return;
+  const k = 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  fbPut(`private/${pid}/${k}`, {...msg, ts:Date.now()});
+}
+function fbSendToHost(msg){
+  if(!fbRoom) return;
+  const k = 'h_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  fbPut(`action/${k}`, {...msg, sender:myId, ts:Date.now()});
+}
+function fbListen(){
+  if(fbListener) clearInterval(fbListener);
+  fbListener = setInterval(fbPoll, 1100);
+  fbPoll();
+}
+async function fbPoll(){
+  if(!fbRoom) return;
+  const b = await fbGet('broadcast') || {};
+  Object.entries(b).forEach(([k,v])=>{
+    if(!v||fbLastSeen[k]) return; fbLastSeen[k]=true;
+    onMsg(v, v.sender);
+  });
+  const p = await fbGet(`private/${myId}`) || {};
+  Object.entries(p).forEach(([k,v])=>{
+    if(!v||fbLastSeen['p_'+k]) return; fbLastSeen['p_'+k]=true;
+    onMsg(v, null);
+  });
+  if(isHost){
+    const a = await fbGet('action') || {};
+    Object.entries(a).forEach(([k,v])=>{
+      if(!v||fbLastSeen['a_'+k]) return; fbLastSeen['a_'+k]=true;
+      onMsg(v, v.sender);
+    });
+  }
+}
+function fbClose(){
+  if(fbListener) clearInterval(fbListener);
+  fbListener = null; fbRoom = ''; fbLastSeen = {};
+}
+async function checkFbConfig(){
+  try {
+    const r = await fetch(`${FB_URL}/.json?shallow=true`);
+    return r.ok;
+  } catch(e){ return false; }
+}
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const ST_SUITS = [
+  {key:'red',    label:'赤', color:'suit-red'},
+  {key:'yellow', label:'黄', color:'suit-yellow'},
+  {key:'blue',   label:'青', color:'suit-blue'},
+  {key:'green',  label:'緑', color:'suit-green'},
+  {key:'purple', label:'紫', color:'suit-purple'},
+  {key:'gray',   label:'灰', color:'suit-gray'},
+];
+
+// 人数による構成（公式準拠）
+// 3人: 4色×0-11, 4人: 5色×0-11, 5人: 6色×0-12, 6人: 6色×0-14
+function deckConfig(n){
+  if(n === 3) return {suitCount:4, maxNum:11};
+  if(n === 4) return {suitCount:5, maxNum:11};
+  if(n === 5) return {suitCount:6, maxNum:12};
+  if(n === 6) return {suitCount:6, maxNum:14};
+  // フォールバック
+  return {suitCount:6, maxNum:14};
+}
+
+const HAND_SIZE = 15;
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = null;
+let myName = '';
+let isHost = false;
+let isSolo = false;
+let roomCode = '';
+let stSoloCount = 3;
+let stFs = null;           // host-side full state
+let stGs = null;           // shared public state
+let stMyCards = [];        // private hand
+let stMySelectedMinusId = null; // pending minus card before confirmed
+let stAiTimer = null;
+let stRematchVoters = [];
+
+function genId(){ return 'p_' + Math.random().toString(36).substr(2,9) + '_' + Date.now().toString(36); }
+
+// ============================================================
+// HELPERS
+// ============================================================
+function g(id){ return document.getElementById(id); }
+function mk(tag, cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function show(scr){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-' + scr);
+  if(el) el.classList.add('active');
+}
+function setErr(msg){ const el=g('lobby-error'); if(el) el.textContent=msg||''; }
+function setSt(msg){ const el=g('lobby-status'); if(el) el.textContent=msg||''; }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function suitInfo(k){ return ST_SUITS.find(s=>s.key===k); }
+
+// Card: {id, suit, num}
+function makeDeck(n){
+  const cfg = deckConfig(n);
+  const suits = ST_SUITS.slice(0, cfg.suitCount);
+  const deck = [];
+  suits.forEach(s=>{
+    for(let num=0; num<=cfg.maxNum; num++){
+      deck.push({id:`${s.key}_${num}`, suit:s.key, num});
+    }
+  });
+  return deck;
+}
+
+function cardEl(card, opts={}){
+  const s = suitInfo(card.suit);
+  let cls = 'card ' + s.color;
+  if(opts.size) cls += ' ' + opts.size;
+  if(opts.extra) cls += ' ' + opts.extra;
+  const div = mk('div', cls);
+  div.innerHTML = `<div class="card-num">${card.num}</div><div class="card-suit">${s.label}</div>`;
+  if(opts.onClick) div.onclick = opts.onClick;
+  return div;
+}
+
+function backCardEl(opts={}){
+  let cls = 'card back';
+  if(opts.size) cls += ' ' + opts.size;
+  const div = mk('div', cls);
+  div.innerHTML = '?';
+  return div;
+}
+
+// シュティッヒルン用：色ごとグループ手札描画
+// cards: 表示するカード配列, container: コンテナ要素
+// minusSuit: マイナス色（指定があればその行を赤縁取り）
+// getCardOpts: (card)=>opts でオプションを返す関数
+function stRenderGroupedHand(cards, container, minusSuit, getCardOpts){
+  container.innerHTML = '';
+  if(!cards || cards.length === 0){
+    container.innerHTML = '<div style="text-align:center; color:var(--muted); font-size:0.8rem; padding:10px;">手札なし</div>';
+    return;
+  }
+
+  // 色ごとに分類
+  const groups = {};
+  ST_SUITS.forEach(s=>{ groups[s.key] = []; });
+  cards.forEach(c=>{
+    if(groups[c.suit]) groups[c.suit].push(c);
+  });
+  // 数字昇順ソート
+  Object.values(groups).forEach(arr=> arr.sort((a,b)=>a.num - b.num));
+
+  // 行を表示。マイナス色は最後に強調表示
+  ST_SUITS.forEach(s=>{
+    const arr = groups[s.key];
+    if(arr.length === 0) return;
+    const isMinus = (s.key === minusSuit);
+    const row = mk('div', 'hand-row' + (isMinus ? ' minus-row' : ''));
+    const label = mk('div', 'hand-row-label ' + s.color);
+    let labelHtml = `${s.label}<br>${arr.length}`;
+    if(isMinus){
+      labelHtml += `<div class="minus-mark">−</div>`;
+    }
+    label.innerHTML = labelHtml;
+    const cardsWrap = mk('div', 'hand-row-cards');
+    arr.forEach(c=>{
+      cardsWrap.appendChild(cardEl(c, getCardOpts ? getCardOpts(c) : {}));
+    });
+    row.appendChild(label);
+    row.appendChild(cardsWrap);
+    container.appendChild(row);
+  });
+}
+
+// Lobby select
+function stSetSoloCount(n){
+  stSoloCount = n;
+  document.querySelectorAll('.solo-count-btn').forEach(b=>{
+    b.classList.toggle('selected', parseInt(b.dataset.n)===n);
+  });
+  const cfg = deckConfig(n);
+  g('solo-count-label').textContent = `CPU: ${n-1}人 / あなた: 1人`;
+  g('solo-deck-info').textContent = `カード構成: ${cfg.suitCount}色 × 0〜${cfg.maxNum} = ${cfg.suitCount*(cfg.maxNum+1)}枚`;
+}
+function stShowSoloLobby(){ show('solo'); }
+
+// ============================================================
+// ROOM
+// ============================================================
+async function stCreateRoom(){
+  if(!(await checkFbConfig())){ setErr('接続失敗（ネットワークまたはFirebase設定を確認）'); return; }
+  const name = g('in-name').value.trim();
+  if(!name){ setErr('名前を入力してください'); return; }
+  myName = name; isHost = true; isSolo = false;
+  const code = Array.from({length:4}, ()=>Math.floor(Math.random()*10)).join('');
+  roomCode = code; fbRoom = 'ST-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'sticheln', ts:Date.now()});
+    stFs = {
+      phase:'waiting',
+      players:[{id:myId, name:myName, isHost:true, isCpu:false}],
+      log: ['🎯 部屋を作成しました'],
+    };
+    stBcast();
+    fbListen();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    show('waiting');
+    stRenderWaiting();
+  } catch(e){ setErr('エラー: ' + e.message); }
+}
+
+async function stJoinRoom(){
+  if(!(await checkFbConfig())){ setErr('接続失敗'); return; }
+  const name = g('in-name').value.trim();
+  if(!name){ setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)){ setErr('4桁の数字を入力'); return; }
+  myName = name; isHost = false; isSolo = false; roomCode = code;
+  fbRoom = 'ST-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta){ setErr('ルームが見つかりません'); return; }
+    if(meta.game !== 'sticheln'){ setErr('ゲームの種類が違います'); return; }
+    fbListen();
+    fbSendToHost({type:'st_join', name:myName, id:myId});
+    setErr(''); setSt('接続しました');
+    show('waiting');
+    g('disp-code').textContent = code;
+    g('btn-start').style.display = 'none';
+    let retries = 0;
+    const retryJoin = setInterval(()=>{
+      if(!fbRoom || retries>=5) { clearInterval(retryJoin); return; }
+      if(stGs?.players?.find(p=>p.id===myId)) { clearInterval(retryJoin); return; }
+      fbSendToHost({type:'st_join', name:myName, id:myId});
+      retries++;
+    }, 2000);
+  } catch(e){ setErr('参加失敗'); }
+}
+
+function stLeaveRoom(){ fbClose(); stReset(); show('lobby'); }
+function stLeaveGame(){
+  if(stAiTimer){ clearTimeout(stAiTimer); stAiTimer=null; }
+  fbClose(); stReset(); show('lobby');
+}
+function stReset(){
+  stFs = null; stGs = null; stMyCards = []; stMySelectedMinusId = null;
+  isSolo = false; isHost = false; myId = null;
+  stRematchVoters = [];
+  fbRoom = ''; fbLastSeen = {};
+}
+
+// ============================================================
+// SOLO
+// ============================================================
+function stStartSoloGame(){
+  const name = g('solo-name').value.trim();
+  if(!name){ g('solo-error').textContent='名前を入力してください'; return; }
+  g('solo-error').textContent = '';
+  myName = name; myId = 'human'; isHost = true; isSolo = true;
+  const cpuNames = ['CPU-A','CPU-B','CPU-C','CPU-D','CPU-E'];
+  stFs = {
+    phase:'waiting',
+    players:[
+      {id:'human', name:myName, isHost:true, isCpu:false},
+      ...Array.from({length:stSoloCount-1}, (_,i)=>({id:'cpu-'+i, name:cpuNames[i], isHost:false, isCpu:true}))
+    ],
+    log: ['🎯 CPU対戦を開始'],
+  };
+  stStartGameInternal();
+}
+
+// ============================================================
+// BROADCAST
+// ============================================================
+function stBcast(){
+  if(!stFs) return;
+  // ソロ：自分視点で1回だけ
+  if(isSolo){
+    stGs = stPub(stFs, myId);
+    stOnGsUpdate();
+    return;
+  }
+  // オンライン：プレイヤーごとに個別ペイロード
+  stGs = stPub(stFs, myId);
+  stFs.players.forEach(p=>{
+    if(p.isCpu) return;
+    if(p.id === myId){
+      stOnGsUpdate();
+      return;
+    }
+    fbSendTo(p.id, {type:'st_gs', s:stPub(stFs, p.id)});
+  });
+}
+
+// Public state generator. minusPhase中は他人のminusCardをマスク
+function stPub(f, viewerId){
+  return {
+    phase: f.phase,
+    players: f.players.map(p=>{
+      // minus phase: 他人のminusCardは隠す、minusSubmittedは可視
+      let visibleMinusCard = null;
+      if(p.minusCard){
+        if(f.phase === 'minus' && p.id !== viewerId){
+          visibleMinusCard = null; // 提出済みだが内容は隠す
+        } else {
+          visibleMinusCard = p.minusCard;
+        }
+      }
+      return {
+        id:p.id, name:p.name, isHost:p.isHost, isCpu:p.isCpu,
+        handCount: p.hand ? p.hand.length : 0,
+        minusCard: visibleMinusCard,
+        minusSubmitted: !!p.minusCard,
+        score: p.score || 0,
+        tricks: p.tricks || 0,
+        wonCardsCount: p.wonCards ? p.wonCards.length : 0,
+        minusPts: p.minusPts || 0,
+        plusPts: p.plusPts || 0,
+      };
+    }),
+    trick: f.trick || 1,
+    totalTricks: f.totalTricks || HAND_SIZE,
+    leadIdx: f.leadIdx,
+    curIdx: f.curIdx,
+    leadSuit: f.leadSuit,
+    trickCards: f.trickCards || [],
+    lastTrickWinnerId: f.lastTrickWinnerId,
+    log: (f.log || []).slice(-40),
+    winnerId: f.winnerId,
+  };
+}
+
+// ============================================================
+// START GAME
+// ============================================================
+function stStartGame(){
+  if(!stFs || stFs.phase !== 'waiting') return;
+  if(stFs.players.length < 3){ alert('3人以上必要です'); return; }
+  stStartGameInternal();
+}
+
+function stStartGameInternal(){
+  const n = stFs.players.length;
+  const deck = shuffle(makeDeck(n));
+
+  // 配布：手札15枚×人数
+  stFs.players.forEach((p, i)=>{
+    p.hand = deck.slice(i*HAND_SIZE, (i+1)*HAND_SIZE);
+    p.minusCard = null;
+    p.score = 0;
+    p.tricks = 0;
+    p.wonCards = [];
+    p.minusPts = 0;
+    p.plusPts = 0;
+  });
+
+  // フェーズ
+  stFs.phase = 'minus';
+  stFs.trick = 1;
+  stFs.totalTricks = HAND_SIZE - 1; // マイナスカード提出で1枚減る、残り14トリック
+  stFs.leadSuit = null;
+  stFs.trickCards = [];
+  stFs.lastTrickWinnerId = null;
+  stFs.log.push(`━━ ゲーム開始（${n}人、各15枚配布） ━━`);
+  stFs.log.push(`📮 マイナスカラーを各自選んでください`);
+
+  // 手札送信
+  stFs.players.forEach(p=>{
+    if(!p.isCpu && !isSolo){
+      fbSendTo(p.id, {type:'st_private', hand:p.hand});
+    } else if(p.id === myId){
+      stMyCards = p.hand.slice();
+      stMySelectedMinusId = null;
+    }
+  });
+
+  stBcast();
+
+  // CPU 自動でマイナス選択
+  if(isHost) stScheduleCpuMinus();
+}
+
+// ============================================================
+// MINUS PHASE
+// ============================================================
+function stScheduleCpuMinus(){
+  if(!stFs || stFs.phase !== 'minus') return;
+  stFs.players.forEach((p, idx)=>{
+    if(p.isCpu && !p.minusCard){
+      setTimeout(()=>{
+        if(!stFs || stFs.phase !== 'minus') return;
+        if(p.minusCard) return;
+        // CPU：最も枚数の少ない色のうち、数字が小さい1枚を選ぶ（取られるリスク小）
+        const counts = {};
+        p.hand.forEach(c=>{ counts[c.suit]=(counts[c.suit]||0)+1; });
+        const sorted = Object.entries(counts).sort((a,b)=>a[1]-b[1]);
+        const targetSuit = sorted[0][0];
+        const candidates = p.hand.filter(c=>c.suit===targetSuit).sort((a,b)=>a.num-b.num);
+        const card = candidates[0];
+        p.minusCard = card;
+        p.hand = p.hand.filter(c=>c.id!==card.id);
+        stFs.log.push(`🃏 ${p.name} がマイナスカードを提出`);
+        stBcast();
+        stCheckMinusAllDone();
+      }, 700 + idx*350);
+    }
+  });
+}
+
+function stHostMinusSubmit(senderId, cardId){
+  if(!stFs || stFs.phase !== 'minus') return;
+  const p = stFs.players.find(x=>x.id===senderId);
+  if(!p || p.minusCard) return;
+  const card = p.hand.find(c=>c.id===cardId);
+  if(!card) return;
+  p.minusCard = card;
+  p.hand = p.hand.filter(c=>c.id !== cardId);
+  // 自分の手札も更新
+  if(!p.isCpu && !isSolo){
+    fbSendTo(p.id, {type:'st_private', hand:p.hand});
+  } else if(p.id === myId){
+    stMyCards = p.hand.slice();
+  }
+  stFs.log.push(`🃏 ${p.name} がマイナスカードを提出`);
+  stBcast();
+  stCheckMinusAllDone();
+}
+
+function stCheckMinusAllDone(){
+  if(!stFs) return;
+  if(stFs.players.every(p=>p.minusCard)){
+    // 全員提出完了 → reveal フェーズに移動
+    stFs.phase = 'reveal';
+    // マイナスカラー公開ログ
+    const summary = stFs.players.map(p=>`${p.name}:${suitInfo(p.minusCard.suit).label}${p.minusCard.num}`).join(' / ');
+    stFs.log.push(`🎭 マイナスカラー公開 → ${summary}`);
+    // マイナスカードは最初にwonCardsに入る（自分が「取った」扱い）
+    stFs.players.forEach(p=>{
+      p.wonCards.push(p.minusCard);
+    });
+    stBcast();
+  }
+}
+
+// クライアント：マイナスカード提出
+function stConfirmMinus(){
+  if(!stMySelectedMinusId) return;
+  if(isSolo || isHost){
+    stHostMinusSubmit(myId, stMySelectedMinusId);
+  } else {
+    fbSendToHost({type:'st_action_minus', cardId:stMySelectedMinusId});
+  }
+  g('btn-confirm-minus').disabled = true;
+  g('btn-confirm-minus').textContent = '提出済み';
+}
+
+// ============================================================
+// PLAY PHASE
+// ============================================================
+function stStartPlay(){
+  if(!isHost){
+    // ゲスト側は何もしない（ホストがプレイを開始する）
+    return;
+  }
+  if(!stFs || stFs.phase !== 'reveal') return;
+  stFs.phase = 'play';
+  // ランダムにスタートプレイヤーを決定
+  stFs.leadIdx = Math.floor(Math.random() * stFs.players.length);
+  stFs.curIdx = stFs.leadIdx;
+  stFs.trick = 1;
+  stFs.leadSuit = null;
+  stFs.trickCards = [];
+  const startPlayer = stFs.players[stFs.leadIdx];
+  stFs.log.push(`🎯 スタートプレイヤー: ${startPlayer.name}`);
+  stBcast();
+  if(isHost) stScheduleCpuPlay();
+}
+
+function stScheduleCpuPlay(){
+  if(!stFs || stFs.phase !== 'play') return;
+  const cur = stFs.players[stFs.curIdx];
+  if(!cur || !cur.isCpu) return;
+  if(stAiTimer) clearTimeout(stAiTimer);
+  stAiTimer = setTimeout(()=>{
+    if(!stFs || stFs.phase !== 'play') return;
+    const card = stCpuPlay(cur);
+    stHostPlayCard(cur.id, card.id);
+  }, 900);
+}
+
+function stCpuPlay(p){
+  // 簡易CPU：マイナス色は出さないようにし、勝てそうならパスしたい
+  const hand = p.hand;
+  const minusSuit = p.minusCard ? p.minusCard.suit : null;
+  // リードがある場合
+  if(stFs.leadSuit){
+    // リードスート以外は切り札になる、つまり勝ちやすい
+    // 勝ちたくないので、低い数字を出す。マイナス色は最後に
+    // ① 既出のリードスート以外の最高数字より大きい数字を持っていないなら、適当な低カードを出す
+    const nonMinus = hand.filter(c=>c.suit !== minusSuit);
+    const sorted = (nonMinus.length ? nonMinus : hand).slice().sort((a,b)=>a.num-b.num);
+    return sorted[0];
+  } else {
+    // リード手番：マイナス色以外で適当に出す。マイナス色は最後の手段
+    const nonMinus = hand.filter(c=>c.suit !== minusSuit);
+    const sorted = (nonMinus.length ? nonMinus : hand).slice().sort((a,b)=>a.num-b.num);
+    // やや真ん中の数字を選んで取られにくくする
+    return sorted[Math.floor(sorted.length/2)];
+  }
+}
+
+function stHostPlayCard(senderId, cardId){
+  if(!stFs || stFs.phase !== 'play') return;
+  const p = stFs.players.find(x=>x.id===senderId);
+  if(!p) return;
+  if(stFs.players[stFs.curIdx].id !== senderId) return;
+  const card = p.hand.find(c=>c.id===cardId);
+  if(!card) return;
+
+  // メイフォロー：制限なし。どの色でも出せる
+  p.hand = p.hand.filter(c=>c.id !== cardId);
+  stFs.trickCards.push({playerId:senderId, card});
+  if(stFs.trickCards.length === 1) stFs.leadSuit = card.suit;
+
+  const s = suitInfo(card.suit);
+  stFs.log.push(`▶ ${p.name}: ${s.label}${card.num}`);
+
+  // 手札送信
+  if(!p.isCpu && !isSolo){
+    fbSendTo(p.id, {type:'st_private', hand:p.hand});
+  } else if(p.id === myId){
+    stMyCards = p.hand.slice();
+  }
+
+  if(stFs.trickCards.length === stFs.players.length){
+    stBcast();
+    setTimeout(()=>stResolveTrick(), 1200);
+  } else {
+    stFs.curIdx = (stFs.curIdx + 1) % stFs.players.length;
+    stBcast();
+    if(isHost) stScheduleCpuPlay();
+  }
+}
+
+function stResolveTrick(){
+  if(!stFs) return;
+  const trick = stFs.trickCards;
+  const lead = stFs.leadSuit;
+
+  // 勝敗判定（シュティッヒルン公式）
+  // ① 全員リード色 → 最大の数字が勝ち
+  // ② リード以外が含まれる場合、リード以外の最大の数字が勝ち（同数字なら先出し勝ち）
+  //    ただし0は切り札にならない（0だけ場にあるなら、0は除外して評価）
+  let candidates;
+  const nonLead = trick.filter(t=>t.card.suit !== lead && t.card.num !== 0);
+  if(nonLead.length){
+    // 切り札カード（リード以外、0を除く）の中で最大数字
+    candidates = nonLead;
+  } else {
+    // 全員リード色、または非リードがすべて0 → リード色のうち最大、または非リードを含む全カードから最大
+    // ルール厳密：全員同じ色の場合は数字最大が勝ち。リード以外が0だけなら、0は切り札にならないので
+    // リード色のカードと比較する。リード色のカードがあればそちらが勝ち、なければ最大数字
+    const leadCards = trick.filter(t=>t.card.suit === lead);
+    if(leadCards.length){
+      candidates = leadCards;
+    } else {
+      // すべて0で非リード色のみ
+      candidates = trick.slice();
+    }
+  }
+
+  // 最大数字で勝者決定。同数字なら先出し勝ち
+  let winner = candidates[0];
+  for(let i=1; i<candidates.length; i++){
+    if(candidates[i].card.num > winner.card.num){
+      winner = candidates[i];
+    }
+  }
+
+  const wp = stFs.players.find(p=>p.id === winner.playerId);
+  wp.tricks++;
+  stFs.lastTrickWinnerId = wp.id;
+  // 取ったカードを全部wonCardsに追加
+  trick.forEach(t=>{
+    wp.wonCards.push(t.card);
+  });
+  stFs.log.push(`🏆 ${wp.name} がトリック獲得（計${wp.tricks}）`);
+
+  // 全員手札が0枚なら終了
+  if(stFs.players.every(p=>p.hand.length === 0)){
+    stBcast();
+    setTimeout(()=>stEndGame(), 1400);
+    return;
+  }
+
+  // 勝者が次のトリックの先手
+  stFs.leadIdx = stFs.players.findIndex(p=>p.id===wp.id);
+  stFs.curIdx = stFs.leadIdx;
+  stFs.leadSuit = null;
+  stFs.trickCards = [];
+  stFs.trick++;
+  stBcast();
+  setTimeout(()=>{ if(isHost) stScheduleCpuPlay(); }, 200);
+}
+
+// ============================================================
+// END GAME / SCORING
+// ============================================================
+function stEndGame(){
+  if(!stFs) return;
+  // 得点計算
+  stFs.players.forEach(p=>{
+    const minusSuit = p.minusCard ? p.minusCard.suit : null;
+    let minusPts = 0;
+    let plusPts = 0;
+    p.wonCards.forEach(c=>{
+      if(c.suit === minusSuit){
+        minusPts += c.num;
+      } else {
+        plusPts += 1;
+      }
+    });
+    p.minusPts = minusPts;
+    p.plusPts = plusPts;
+    p.score = plusPts - minusPts;
+    stFs.log.push(`📊 ${p.name}: +${plusPts} −${minusPts} = ${p.score}点`);
+  });
+  // 勝者
+  const sorted = stFs.players.slice().sort((a,b)=>b.score - a.score);
+  stFs.winnerId = sorted[0].id;
+  stFs.log.push(`🏆 ${sorted[0].name} が勝利！（${sorted[0].score}点）`);
+  stFs.phase = 'result';
+  stBcast();
+}
+
+// ============================================================
+// REMATCH
+// ============================================================
+function stRematch(){
+  if(isSolo){ stRematchGo(); return; }
+  if(isHost){
+    stHostRematch(myId);
+    g('btn-rematch').disabled = true;
+    g('btn-rematch').textContent = '他のプレイヤー待ち...';
+  } else {
+    fbSendToHost({type:'st_action_rematch'});
+    g('btn-rematch').disabled = true;
+    g('btn-rematch').textContent = '他のプレイヤー待ち...';
+  }
+}
+
+function stHostRematch(pid){
+  if(!stFs || stFs.phase !== 'result') return;
+  const p = stFs.players.find(x=>x.id===pid);
+  if(!p) return;
+  if(stRematchVoters.includes(p.name)) return;
+  stRematchVoters.push(p.name);
+  fbBroadcast({type:'st_rematch_update', voters:stRematchVoters, total:stFs.players.length});
+  stRenderRematchPanel(stRematchVoters, stFs.players.length);
+  if(stRematchVoters.length >= stFs.players.length){
+    fbBroadcast({type:'st_rematch_go'});
+    stRematchGo();
+  }
+}
+
+function stRematchGo(){
+  stRematchVoters = [];
+  if(!stFs) return;
+  stFs.players.forEach(p=>{
+    p.score = 0; p.minusCard = null; p.hand = []; p.tricks = 0;
+    p.wonCards = []; p.minusPts = 0; p.plusPts = 0;
+  });
+  stFs.log = ['🔄 再戦開始'];
+  stFs.phase = 'waiting';
+  stBcast();
+  show('waiting');
+  stRenderWaiting();
+  g('btn-rematch').disabled = false;
+  g('btn-rematch').textContent = '🔄 もう一度遊ぶ';
+  if(isHost){
+    setTimeout(()=>{ if(stFs && stFs.phase === 'waiting') stStartGameInternal(); }, 500);
+  }
+}
+
+function stRenderRematchPanel(voters, total){
+  const panel = g('result-rematch-panel');
+  if(panel) panel.style.display = '';
+  const st = g('result-rematch-status');
+  const vl = g('result-rematch-voters');
+  if(st) st.textContent = `再戦希望: ${voters.length} / ${total} 人`;
+  if(vl){
+    vl.innerHTML = '';
+    voters.forEach(name=>{
+      const t = mk('span', 'rematch-voter-tag');
+      t.textContent = '✅ ' + name;
+      vl.appendChild(t);
+    });
+  }
+}
+
+// ============================================================
+// MESSAGE HANDLING
+// ============================================================
+function onMsg(d, senderId){
+  if(!d || !d.type) return;
+  if(isHost){
+    if(d.type === 'st_join'){ stHostJoin(d, senderId); return; }
+    if(d.type === 'st_action_minus'){ stHostMinusSubmit(senderId, d.cardId); return; }
+    if(d.type === 'st_action_play'){ stHostPlayCard(senderId, d.cardId); return; }
+    if(d.type === 'st_action_rematch'){ stHostRematch(senderId); return; }
+  }
+  if(d.type === 'st_gs'){ stGs = d.s; stOnGsUpdate(); return; }
+  if(d.type === 'st_private'){
+    if(d.hand) stMyCards = d.hand;
+    stUpdateGame();
+    return;
+  }
+  if(d.type === 'st_rematch_update'){
+    stRenderRematchPanel(d.voters || [], d.total || 0);
+    return;
+  }
+  if(d.type === 'st_rematch_go'){
+    stRematchGo();
+    return;
+  }
+}
+
+function stHostJoin(d){
+  if(!stFs || stFs.phase !== 'waiting') return;
+  if(stFs.players.length >= 6){ fbSendTo(d.id, {type:'st_full'}); return; }
+  if(stFs.players.find(p=>p.id===d.id)) return;
+  stFs.players.push({id:d.id, name:d.name, isHost:false, isCpu:false});
+  stFs.log.push(`👤 ${d.name} が参加しました`);
+  stBcast();
+}
+
+// ============================================================
+// CLIENT UPDATE / RENDERING
+// ============================================================
+function stOnGsUpdate(){
+  if(!stGs) return;
+  const ph = stGs.phase;
+  if(ph === 'waiting'){
+    if(!g('screen-waiting').classList.contains('active')) show('waiting');
+    stRenderWaiting();
+  } else if(ph === 'minus'){
+    if(!g('screen-minus').classList.contains('active')) show('minus');
+    stRenderMinus();
+  } else if(ph === 'reveal'){
+    if(!g('screen-reveal').classList.contains('active')) show('reveal');
+    stRenderReveal();
+  } else if(ph === 'play'){
+    if(!g('screen-play').classList.contains('active')) show('play');
+    stRenderPlay();
+  } else if(ph === 'result'){
+    if(!g('screen-result').classList.contains('active')) show('result');
+    stRenderResult();
+  }
+}
+
+function stUpdateGame(){
+  if(g('screen-minus').classList.contains('active')) stRenderMinus();
+  if(g('screen-play').classList.contains('active')) stRenderPlay();
+}
+
+function stRenderWaiting(){
+  if(!stGs) return;
+  const n = stGs.players.length;
+  g('p-count').textContent = n + '人';
+  const cfg = deckConfig(n);
+  g('wait-deck-info').textContent = `カード構成: ${cfg.suitCount}色 × 0〜${cfg.maxNum} = ${cfg.suitCount*(cfg.maxNum+1)}枚`;
+  const list = g('wait-list');
+  list.innerHTML = '';
+  stGs.players.forEach(p=>{
+    const item = mk('div', 'player-item' + (p.id===myId?' is-me':'') + (p.isHost?' is-host':''));
+    item.innerHTML = `
+      <div class="p-info">
+        <div class="p-name">${p.isHost?'👑 ':''}${p.name}${p.id===myId?' (あなた)':''}</div>
+        <div class="p-sub">${p.isHost?'HOST':''}${p.isCpu?' / CPU':''}</div>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+  g('wait-status').textContent = n >= 3
+    ? `${n}人参加中。開始できます`
+    : `あと${3-n}人必要です（最少3人）`;
+  if(isHost){
+    g('btn-start').style.display = '';
+    g('btn-start').disabled = n < 3;
+  } else {
+    g('btn-start').style.display = 'none';
+  }
+}
+
+function stRenderMinus(){
+  if(!stGs) return;
+  const me = stGs.players.find(p=>p.id===myId);
+  const submitted = me && me.minusSubmitted;
+
+  // Hand（色ごとグループ表示）
+  const hand = g('minus-my-hand');
+  stRenderGroupedHand(stMyCards, hand, null, (c)=>{
+    const isSelected = stMySelectedMinusId === c.id;
+    return {
+      extra: submitted ? 'disabled' : (isSelected ? 'selected playable' : 'playable'),
+      onClick: submitted ? null : ()=>{
+        stMySelectedMinusId = c.id;
+        stRenderMinus();
+      },
+    };
+  });
+
+  // 選択情報
+  if(submitted){
+    g('minus-selected-info').textContent = '✅ 提出済み（他のプレイヤー待ち）';
+    g('btn-confirm-minus').disabled = true;
+    g('btn-confirm-minus').textContent = '提出済み';
+  } else if(stMySelectedMinusId){
+    const c = stMyCards.find(c=>c.id === stMySelectedMinusId);
+    if(c){
+      const s = suitInfo(c.suit);
+      g('minus-selected-info').innerHTML = `選択中: <strong style="color:var(--red);">${s.label}の${c.num}</strong>（このカードを提出するとマイナス点${c.num}）`;
+    }
+    g('btn-confirm-minus').disabled = false;
+    g('btn-confirm-minus').textContent = 'このカードを提出';
+  } else {
+    g('minus-selected-info').textContent = 'カードを1枚タップして選択';
+    g('btn-confirm-minus').disabled = true;
+  }
+
+  // 提出状況
+  const list = g('minus-status-list');
+  list.innerHTML = '';
+  stGs.players.forEach(p=>{
+    const item = mk('div', 'player-item' + (p.id===myId?' is-me':''));
+    const stStr = p.minusSubmitted ? '✅ 提出済み' : '⏳ 選択中...';
+    item.innerHTML = `
+      <div class="p-info">
+        <div class="p-name">${p.name}${p.id===myId?' (あなた)':''}</div>
+        <div class="p-sub">${p.isCpu?'CPU':''}</div>
+      </div>
+      <span style="font-size:0.85rem; color:${p.minusSubmitted?'var(--green)':'var(--muted)'};">${stStr}</span>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function stRenderReveal(){
+  if(!stGs) return;
+  const list = g('reveal-list');
+  list.innerHTML = '';
+  stGs.players.forEach(p=>{
+    const item = mk('div', 'player-item' + (p.id===myId?' is-me':''));
+    let cardHtml = '';
+    if(p.minusCard){
+      const s = suitInfo(p.minusCard.suit);
+      cardHtml = `<div style="display:flex; align-items:center; gap:6px;">
+        <strong style="color:var(--red);">${s.label}の${p.minusCard.num}</strong>
+      </div>`;
+    }
+    item.innerHTML = `
+      <div class="p-info">
+        <div class="p-name">${p.name}${p.id===myId?' (あなた)':''}</div>
+        ${cardHtml}
+      </div>
+    `;
+    if(p.minusCard){
+      const cardWrap = mk('div', '');
+      cardWrap.appendChild(cardEl(p.minusCard, {size:'small', extra:'minus-color'}));
+      item.appendChild(cardWrap);
+    }
+    list.appendChild(item);
+  });
+
+  // ホスト/ゲスト表示制御
+  if(isHost){
+    g('btn-start-play').style.display = '';
+    g('reveal-wait-msg').style.display = 'none';
+  } else {
+    g('btn-start-play').style.display = 'none';
+    g('reveal-wait-msg').style.display = '';
+  }
+}
+
+function stRenderPlay(){
+  if(!stGs) return;
+  g('play-trick-info').textContent = `T ${stGs.trick}/${stGs.totalTricks}`;
+
+  // 自分のマイナス色
+  const me = stGs.players.find(p=>p.id===myId);
+  if(me && me.minusCard){
+    const s = suitInfo(me.minusCard.suit);
+    g('play-mycolor-info').innerHTML = `あなたのマイナス: <strong style="color:var(--red);">${s.label}</strong>`;
+  } else {
+    g('play-mycolor-info').textContent = '';
+  }
+
+  // スコアボード
+  const sb = g('play-scoreboard');
+  sb.innerHTML = '';
+  const header = mk('div', 'score-row header');
+  header.innerHTML = '<div class="score-cell name">プレイヤー</div><div class="score-cell">取得</div><div class="score-cell">マイナス色</div><div class="score-cell">枚数</div>';
+  sb.appendChild(header);
+  stGs.players.forEach(p=>{
+    const row = mk('div', 'score-row' + (p.id===myId?' me':''));
+    const cur = stGs.players[stGs.curIdx];
+    const isTurn = cur && cur.id === p.id;
+    let minusLabel = '?';
+    if(p.minusCard){
+      const s = suitInfo(p.minusCard.suit);
+      const suitVarMap = {
+        'suit-red':'var(--suit-red)',
+        'suit-yellow':'var(--suit-yellow)',
+        'suit-blue':'var(--suit-blue)',
+        'suit-green':'var(--suit-green)',
+        'suit-purple':'var(--suit-purple)',
+        'suit-gray':'var(--suit-gray)',
+      };
+      const dotColor = suitVarMap[s.color] || 'var(--muted)';
+      minusLabel = `<span class="minus-dot" style="background:${dotColor};"></span> ${s.label}`;
+    }
+    row.innerHTML = `
+      <div class="score-cell name">${isTurn?'▶ ':''}${p.name}${p.isCpu?' (CPU)':''}</div>
+      <div class="score-cell">${p.tricks}T</div>
+      <div class="score-cell">${minusLabel}</div>
+      <div class="score-cell total">${p.wonCardsCount}</div>
+    `;
+    sb.appendChild(row);
+  });
+
+  // ターン情報
+  const cur = stGs.players[stGs.curIdx];
+  if(cur){
+    g('play-turn-info').textContent = cur.id === myId ? '🎯 あなたの手番です' : `⏳ ${cur.name} の手番...`;
+  }
+
+  // リード情報
+  if(stGs.leadSuit){
+    const s = suitInfo(stGs.leadSuit);
+    g('play-lead-info').textContent = `リードスート: ${s.label} （他の色は切り札になる）`;
+  } else {
+    g('play-lead-info').textContent = '最初のカードを出してください（自由）';
+  }
+
+  // トリック表示
+  const ta = g('play-trick-area');
+  ta.innerHTML = '';
+  stGs.trickCards.forEach(t=>{
+    const slot = mk('div', 'trick-slot');
+    const player = stGs.players.find(p=>p.id===t.playerId);
+    const nameSpan = mk('div', 'slot-name');
+    nameSpan.textContent = player ? player.name : '?';
+    slot.appendChild(cardEl(t.card, {size:'small'}));
+    slot.appendChild(nameSpan);
+    ta.appendChild(slot);
+  });
+  if(stGs.trickCards.length === 0){
+    ta.innerHTML = '<div style="color:var(--muted); font-size:0.85rem;">（カードが出されるとここに表示）</div>';
+  }
+
+  // 手札表示（色ごとグループ、マイナス色を赤縁取り）
+  const hand = g('play-my-hand');
+  const myTurn = cur && cur.id === myId;
+  const me2 = stGs.players.find(p=>p.id===myId);
+  const minusSuit = me2 && me2.minusCard ? me2.minusCard.suit : null;
+  stRenderGroupedHand(stMyCards, hand, minusSuit, (c)=>({
+    extra: myTurn ? 'playable' : 'disabled',
+    onClick: myTurn ? ()=>stPlayMyCard(c.id) : null,
+  }));
+
+  if(myTurn){
+    g('play-action-hint').textContent = stGs.leadSuit ? '好きなカードを出せます' : 'リードカードを出してください';
+  } else {
+    g('play-action-hint').textContent = '';
+  }
+
+  // ログ
+  const log = g('play-log');
+  log.innerHTML = '';
+  (stGs.log || []).slice(-30).forEach(line=>{
+    const e = mk('div', 'log-entry');
+    e.textContent = line;
+    log.appendChild(e);
+  });
+  log.scrollTop = log.scrollHeight;
+}
+
+function stPlayMyCard(cardId){
+  if(isSolo || isHost){
+    stHostPlayCard(myId, cardId);
+  } else {
+    fbSendToHost({type:'st_action_play', cardId});
+  }
+}
+
+function stRenderResult(){
+  if(!stGs) return;
+  const sorted = stGs.players.slice().sort((a,b)=>b.score - a.score);
+  const winner = sorted[0];
+  g('result-emoji').textContent = winner.id === myId ? '🏆' : '🎯';
+  g('result-title').textContent = winner.id === myId ? 'あなたの勝利！' : `${winner.name} の勝利`;
+  g('result-sub').textContent = `${winner.score}点で1位`;
+
+  const list = g('result-rank-list');
+  list.innerHTML = '';
+  sorted.forEach((p, i)=>{
+    const item = mk('div', 'rank-item' + (i===0?' first':''));
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':' ';
+    let minusLabel = '';
+    if(p.minusCard){
+      const s = suitInfo(p.minusCard.suit);
+      minusLabel = `<span style="font-size:0.78rem; color:var(--muted);">マイナス色: ${s.label}</span>`;
+    }
+    item.innerHTML = `
+      <div class="rank-num">${medal} ${i+1}</div>
+      <div class="p-info">
+        <div class="p-name">${p.name}${p.id===myId?' (あなた)':''}${p.isCpu?' (CPU)':''}</div>
+        <div class="p-sub" style="font-size:0.75rem;">+${p.plusPts} −${p.minusPts}</div>
+        ${minusLabel}
+      </div>
+      <div class="p-score">${p.score}点</div>
+    `;
+    list.appendChild(item);
+  });
+
+  const log = g('result-log');
+  log.innerHTML = '';
+  (stGs.log || []).slice(-50).forEach(line=>{
+    const e = mk('div', 'log-entry');
+    e.textContent = line;
+    log.appendChild(e);
+  });
+
+  stRematchVoters = [];
+  g('result-rematch-panel').style.display = 'none';
+  g('btn-rematch').disabled = false;
+  g('btn-rematch').textContent = '🔄 もう一度遊ぶ';
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', ()=>{
+  stSetSoloCount(3);
+});
+</script>
+</body>
+</html>

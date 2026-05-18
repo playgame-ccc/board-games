@@ -594,6 +594,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="nimmt"]      { --tab-color:#d97e3a; }
 .game-tab[data-game="decrypto"]   { --tab-color:#ffb020; }
 .game-tab[data-game="catan"]      { --tab-color:#3a6b1f; }
+.game-tab[data-game="stichlen"]   { --tab-color:#b94c8c; }
 
 .game-tab.active {
   border-color: var(--tab-color);
@@ -613,6 +614,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="nimmt"].active      { background:rgba(217,126,58,0.12); }
 .game-tab[data-game="decrypto"].active   { background:rgba(255,176,32,0.12); }
 .game-tab[data-game="catan"].active      { background:rgba(58,107,31,0.12); }
+.game-tab[data-game="stichlen"].active   { background:rgba(185,76,140,0.12); }
 .game-tab.active .game-tab-name { color:var(--text); }
 .game-tab.active .game-tab-icon { filter:drop-shadow(0 0 6px var(--tab-color)); }
 
@@ -916,6 +918,10 @@ h3 { font-size: 1rem; font-weight: 600; }
         <span class="game-tab-icon">🏝️</span>
         <span class="game-tab-name">カタン</span>
       </button>
+      <button class="game-tab" id="tab-st" data-game="stichlen" onclick="selectLobbyGame('stichlen')">
+        <span class="game-tab-icon">🎯</span>
+        <span class="game-tab-name">シュティッヒルン</span>
+      </button>
     </div>
 
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
@@ -1182,6 +1188,25 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- STICHLEN section（別ページ誘導） -->
+    <div id="lobby-st" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(185,76,140,0.05); border:1px solid rgba(185,76,140,0.3); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">🎯</div>
+          <div style="font-family:var(--mono); color:#b94c8c; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">シュティッヒルン</div>
+          <div style="color:var(--muted); font-size:0.72rem;">STICHELN</div>
+        </div>
+        <a href="sticheln.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(185,76,140,0.12); color:#b94c8c; border:1px solid rgba(185,76,140,0.5);">
+            🎯 シュティッヒルンのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
+          ※ シュティッヒルンは専用のページで動作します<br>3〜6人で遊べます
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1273,6 +1298,12 @@ h3 { font-size: 1rem; font-weight: 600; }
         各ターン、サイコロ2個を振り、出目の数字が書かれた六角形タイルの周囲の建物所有者が資源を獲得。<br>
         ⚠️ <strong style="color:#f04866;">7</strong>が出たら：手札8枚以上の人は半数を捨て、盗賊を移動して資源を奪う。<br>
         資源を消費して<strong style="color:#3a6b1f;">道・開拓地・都市</strong>を建設し、勝利点を稼ぐ。
+      </p>
+      <p id="rules-st" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        3〜6人のトリックテイキング系カードゲーム。<br>
+        各プレイヤーは「<strong style="color:#d63243;">取りたくない色</strong>」を決め、その色のカードを取ると<strong style="color:#d63243;">マイナス点</strong>。他の色は1枚1点。<br>
+        各プレイヤーに15枚配布、トリックの一番強いカードを出した人が全部を取る。<br>
+        合計点が最大のプレイヤーが勝者。
       </p>
     </div>
   </div>
@@ -3754,13 +3785,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
