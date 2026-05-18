@@ -593,6 +593,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="shadowhunters"] { --tab-color:#c678dd; }
 .game-tab[data-game="nimmt"]      { --tab-color:#d97e3a; }
 .game-tab[data-game="decrypto"]   { --tab-color:#ffb020; }
+.game-tab[data-game="catan"]      { --tab-color:#3a6b1f; }
 
 .game-tab.active {
   border-color: var(--tab-color);
@@ -611,6 +612,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="shadowhunters"].active { background:rgba(198,120,221,0.12); }
 .game-tab[data-game="nimmt"].active      { background:rgba(217,126,58,0.12); }
 .game-tab[data-game="decrypto"].active   { background:rgba(255,176,32,0.12); }
+.game-tab[data-game="catan"].active      { background:rgba(58,107,31,0.12); }
 .game-tab.active .game-tab-name { color:var(--text); }
 .game-tab.active .game-tab-icon { filter:drop-shadow(0 0 6px var(--tab-color)); }
 
@@ -910,6 +912,10 @@ h3 { font-size: 1rem; font-weight: 600; }
         <span class="game-tab-icon">🔐</span>
         <span class="game-tab-name">デクリプト</span>
       </button>
+      <button class="game-tab" id="tab-ct" data-game="catan" onclick="selectLobbyGame('catan')">
+        <span class="game-tab-icon">🏝️</span>
+        <span class="game-tab-name">カタン</span>
+      </button>
     </div>
 
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
@@ -1157,6 +1163,25 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- CATAN section（別ページ誘導） -->
+    <div id="lobby-ct" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(58,107,31,0.05); border:1px solid rgba(58,107,31,0.3); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">🏝️</div>
+          <div style="font-family:var(--mono); color:#3a6b1f; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">カタン</div>
+          <div style="color:var(--muted); font-size:0.72rem;">CATAN</div>
+        </div>
+        <a href="catan.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(58,107,31,0.12); color:#3a6b1f; border:1px solid rgba(58,107,31,0.5);">
+            🏝️ カタンのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
+          ※ カタンは専用のページで動作します<br>3〜4人で遊べます
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1242,6 +1267,12 @@ h3 { font-size: 1rem; font-weight: 600; }
         各チームには秘密のキーワード4つ（番号1〜4）が配られる。<br>
         ヒント役は3桁の番号コードを示すヒントを出し、自チームは番号を当てる／相手チームは傍受を試みる。<br>
         <strong style="color:#3dd68c;">傍受2回成功で勝利</strong>／<strong style="color:#f04866;">失敗2回でその場で敗北</strong>（8ラウンドで強制終了）。
+      </p>
+      <p id="rules-ct" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        3〜4人。指定した勝利点（8/10/12）に最初に到達したプレイヤーの勝利。<br>
+        各ターン、サイコロ2個を振り、出目の数字が書かれた六角形タイルの周囲の建物所有者が資源を獲得。<br>
+        ⚠️ <strong style="color:#f04866;">7</strong>が出たら：手札8枚以上の人は半数を捨て、盗賊を移動して資源を奪う。<br>
+        資源を消費して<strong style="color:#3a6b1f;">道・開拓地・都市</strong>を建設し、勝利点を稼ぐ。
       </p>
     </div>
   </div>
@@ -3723,13 +3754,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
