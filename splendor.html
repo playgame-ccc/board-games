@@ -14,13 +14,19 @@
   --surface: #131322;
   --surface2: #1a1a2e;
   --surface3: #25253d;
-  --gem-w: #f2efe6;   /* diamond / white */
-  --gem-b: #4a8fff;   /* sapphire / blue */
-  --gem-g: #2dd66a;   /* emerald / green */
-  --gem-r: #ff3b5c;   /* ruby / red */
-  --gem-k: #1a1a26;   /* onyx / black */
-  --gem-k-border: #6a6a86;
-  --gem-y: #ffd84d;   /* gold / yellow */
+  --gem-w: #f5f3ea;   /* diamond / white */
+  --gem-w-text: #1a1a26;
+  --gem-b: #3a7eff;   /* sapphire / blue */
+  --gem-b-text: #ffffff;
+  --gem-g: #2ed87a;   /* emerald / green */
+  --gem-g-text: #0a3a1a;
+  --gem-r: #ff4565;   /* ruby / red */
+  --gem-r-text: #ffffff;
+  --gem-k: #2a2a3e;   /* onyx / black */
+  --gem-k-text: #ffffff;
+  --gem-k-border: #8888a8;
+  --gem-y: #ffce3a;   /* gold / yellow */
+  --gem-y-text: #4a3a00;
   --accent: #ffd84d;
   --text: #e8e8f0;
   --muted: #5a5a7a;
@@ -138,32 +144,33 @@ h3 { font-size: 1rem; font-weight: 600; }
 /* Gem token */
 .gem {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px;
+  width: 32px; height: 32px;
   border-radius: 50%;
-  font-family: var(--mono); font-weight: 900; font-size: 0.85rem;
-  color: black;
+  font-family: var(--sans); font-weight: 900; font-size: 1rem;
   flex-shrink: 0;
-  border: 1.5px solid transparent;
+  border: 2px solid rgba(0,0,0,0.25);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 2px 3px rgba(255,255,255,0.3);
 }
-.gem-w { background: var(--gem-w); color: #333; }
-.gem-b { background: var(--gem-b); color: white; }
-.gem-g { background: var(--gem-g); color: black; }
-.gem-r { background: var(--gem-r); color: white; }
-.gem-k { background: var(--gem-k); color: white; border-color: var(--gem-k-border); }
-.gem-y { background: var(--gem-y); color: black; }
+.gem-w { background: var(--gem-w); color: var(--gem-w-text); border-color: #b0aea0; }
+.gem-b { background: var(--gem-b); color: var(--gem-b-text); }
+.gem-g { background: var(--gem-g); color: var(--gem-g-text); }
+.gem-r { background: var(--gem-r); color: var(--gem-r-text); }
+.gem-k { background: var(--gem-k); color: var(--gem-k-text); border-color: var(--gem-k-border); }
+.gem-y { background: var(--gem-y); color: var(--gem-y-text); }
 
 /* Cost gem (smaller, used inside cards) */
 .cost-gem {
   display: inline-flex; align-items: center; justify-content: center;
   width: 20px; height: 20px;
   border-radius: 50%;
-  font-family: var(--mono); font-weight: 900; font-size: 0.7rem;
-  color: black;
-  border: 1.5px solid transparent;
+  font-family: var(--sans); font-weight: 900; font-size: 0.78rem;
+  border: 1.5px solid rgba(0,0,0,0.3);
 }
-.cost-gem.gem-k { color: white; border-color: var(--gem-k-border); }
-.cost-gem.gem-b { color: white; }
-.cost-gem.gem-r { color: white; }
+.cost-gem.gem-w { color: var(--gem-w-text); border-color: #b0aea0; }
+.cost-gem.gem-b { color: var(--gem-b-text); }
+.cost-gem.gem-g { color: var(--gem-g-text); }
+.cost-gem.gem-r { color: var(--gem-r-text); }
+.cost-gem.gem-k { color: var(--gem-k-text); border-color: var(--gem-k-border); }
 
 .bank-row {
   display: grid;
@@ -256,24 +263,43 @@ h3 { font-size: 1rem; font-weight: 600; }
   cursor: pointer;
   transition: all 0.15s;
   position: relative;
+  overflow: hidden;
 }
-.dev-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-.dev-card.affordable { box-shadow: 0 0 8px rgba(45,214,106,0.3); border-color: var(--gem-g); }
+.dev-card:hover { transform: translateY(-1px); filter: brightness(1.1); }
+.dev-card.affordable { box-shadow: 0 0 12px rgba(45,214,106,0.5); outline: 2px solid var(--gem-g); }
+.dev-card.bonus-w { background: linear-gradient(160deg, #fafaef, #d8d4c5); color: var(--gem-w-text); border-color: #b0aea0; }
+.dev-card.bonus-b { background: linear-gradient(160deg, #5b9eff, #2c6fd6); color: var(--gem-b-text); border-color: #1f5fd9; }
+.dev-card.bonus-g { background: linear-gradient(160deg, #45e88e, #1aa85a); color: var(--gem-g-text); border-color: #1aa85a; }
+.dev-card.bonus-r { background: linear-gradient(160deg, #ff6080, #d22040); color: var(--gem-r-text); border-color: #d22040; }
+.dev-card.bonus-k { background: linear-gradient(160deg, #4a4a65, #1a1a2e); color: var(--gem-k-text); border-color: var(--gem-k-border); }
 .dev-card .top-row {
   display: flex; justify-content: space-between; align-items: center;
 }
 .dev-card .pv {
-  font-family: var(--mono); font-weight: 900; font-size: 1rem;
-  color: var(--accent);
+  font-family: var(--mono); font-weight: 900; font-size: 1.2rem;
   min-width: 14px;
 }
-.dev-card .pv.zero { color: var(--surface3); }
-.dev-card .bonus-mark { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid transparent; }
-.dev-card.bonus-w .bonus-mark { background: var(--gem-w); }
-.dev-card.bonus-b .bonus-mark { background: var(--gem-b); }
-.dev-card.bonus-g .bonus-mark { background: var(--gem-g); }
-.dev-card.bonus-r .bonus-mark { background: var(--gem-r); }
-.dev-card.bonus-k .bonus-mark { background: var(--gem-k); border-color: var(--gem-k-border); }
+.dev-card.bonus-w .pv { color: #6b4500; text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+.dev-card.bonus-b .pv { color: #fff8c0; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.dev-card.bonus-g .pv { color: #fff8c0; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.dev-card.bonus-r .pv { color: #fff8c0; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.dev-card.bonus-k .pv { color: var(--accent); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.dev-card .pv.zero { visibility: hidden; }
+.dev-card .bonus-mark {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.85);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-weight: 900; font-size: 0.9rem;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.dev-card.bonus-w .bonus-mark { color: var(--gem-w-text); background: #fff; }
+.dev-card.bonus-b .bonus-mark { color: var(--gem-b); background: rgba(255,255,255,0.95); }
+.dev-card.bonus-g .bonus-mark { color: var(--gem-g); background: rgba(255,255,255,0.95); }
+.dev-card.bonus-r .bonus-mark { color: var(--gem-r); background: rgba(255,255,255,0.95); }
+.dev-card.bonus-k .bonus-mark { color: var(--gem-k); background: rgba(255,255,255,0.95); }
 .dev-card .costs {
   display: flex; flex-direction: column; gap: 1px;
   margin-top: auto;
@@ -285,14 +311,23 @@ h3 { font-size: 1rem; font-weight: 600; }
 }
 .dev-card .cost-pill {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 18px; height: 16px; padding: 0 4px;
-  border-radius: 8px;
-  font-family: var(--mono); font-size: 0.7rem; font-weight: 700;
-  color: black;
+  gap: 2px;
+  min-width: 28px; height: 20px; padding: 0 5px;
+  border-radius: 10px;
+  font-family: var(--sans); font-size: 0.8rem; font-weight: 900;
+  background: rgba(255,255,255,0.92);
+  color: #1a1a26;
+  border: 1.5px solid rgba(0,0,0,0.2);
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
-.dev-card .cost-pill.gem-k { color: white; }
-.dev-card .cost-pill.gem-b { color: white; }
-.dev-card .cost-pill.gem-r { color: white; }
+.dev-card .cost-pill.gem-w { color: var(--gem-w-text); }
+.dev-card .cost-pill.gem-b { color: var(--gem-b); border-color: var(--gem-b); }
+.dev-card .cost-pill.gem-g { color: #157a3a; border-color: var(--gem-g); }
+.dev-card .cost-pill.gem-r { color: #b8233f; border-color: var(--gem-r); }
+.dev-card .cost-pill.gem-k { color: #1a1a26; border-color: #1a1a26; }
+.dev-card .cost-pill .pill-icon { font-size: 0.75rem; opacity: 1; }
+.dev-card .cost-pill .pill-num { font-weight: 900; }
 
 .players-overview {
   display: flex; flex-direction: column; gap: 6px;
@@ -313,16 +348,26 @@ h3 { font-size: 1rem; font-weight: 600; }
 .po-item .po-gems, .po-item .po-bonuses {
   display: flex; gap: 3px; flex-wrap: wrap; font-size: 0.75rem;
 }
-.po-item .gem-mini {
+.gem-mini {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 20px; height: 16px;
-  border-radius: 8px;
-  font-family: var(--mono); font-size: 0.7rem; font-weight: 700;
-  color: black; padding: 0 5px;
+  gap: 2px;
+  min-width: 24px; height: 18px;
+  border-radius: 9px;
+  font-family: var(--sans); font-size: 0.75rem; font-weight: 900;
+  padding: 0 5px;
+  border: 1px solid rgba(0,0,0,0.3);
+  line-height: 1;
 }
-.po-item .gem-mini.gem-k { color: white; border:1px solid var(--gem-k-border); }
-.po-item .gem-mini.gem-b { color: white; }
-.po-item .gem-mini.gem-r { color: white; }
+.gem-mini.gem-w { background: var(--gem-w); color: var(--gem-w-text); border-color: #b0aea0; }
+.gem-mini.gem-b { background: var(--gem-b); color: var(--gem-b-text); }
+.gem-mini.gem-g { background: var(--gem-g); color: var(--gem-g-text); }
+.gem-mini.gem-r { background: var(--gem-r); color: var(--gem-r-text); }
+.gem-mini.gem-k { background: var(--gem-k); color: var(--gem-k-text); border-color: var(--gem-k-border); }
+.gem-mini.gem-y { background: var(--gem-y); color: var(--gem-y-text); }
+.gem-mini .pill-icon { font-size: 0.7rem; opacity: 0.85; }
+.po-item .gem-mini {
+  /* inherits all from .gem-mini */
+}
 .po-item .po-reserves {
   display: flex; gap: 3px; align-items: center;
   font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
@@ -546,6 +591,17 @@ h3 { font-size: 1rem; font-weight: 600; }
   <div class="modal-content">
     <h3 style="color:var(--accent);">💎 宝石の煌めき ルール</h3>
     <div style="font-size:0.88rem;line-height:1.7;color:var(--text);">
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🎨 宝石の種類（アイコン+色）</div>
+        <div style="margin-left:10px;line-height:1.9;">
+          <span class="gem-mini gem-w"><span class="pill-icon">◇</span></span> ダイヤ（白）　
+          <span class="gem-mini gem-b"><span class="pill-icon">●</span></span> サファイア（青）　
+          <span class="gem-mini gem-g"><span class="pill-icon">▲</span></span> エメラルド（緑）<br>
+          <span class="gem-mini gem-r"><span class="pill-icon">■</span></span> ルビー（赤）　
+          <span class="gem-mini gem-k"><span class="pill-icon">★</span></span> オニキス（黒）　
+          <span class="gem-mini gem-y"><span class="pill-icon">✦</span></span> ゴールド（万能）
+        </div>
+      </div>
       <div style="margin-bottom:12px;">
         <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🏆 勝利条件</div>
         15点（威信ポイント）に最初に到達。到達者が出たラウンドの最後まで進めて、最高得点者が勝利。
@@ -790,6 +846,7 @@ const CARDS = [
 ];
 const GEM_COLORS = ['w','b','g','r','k']; // 5 main colors (no gold in cost)
 const GEM_NAMES = { w:'ダイヤ', b:'サファイア', g:'エメラルド', r:'ルビー', k:'オニキス', y:'ゴールド' };
+const GEM_ICONS = { w:'◇', b:'●', g:'▲', r:'■', k:'★', y:'✦' };
 
 // 10 nobles (each 3 points)
 const NOBLES = [
@@ -1115,7 +1172,7 @@ function renderGame() {
       slot.innerHTML = `
         <div class="top-row">
           <div class="pv ${card.pv===0?'zero':''}">${card.pv||''}</div>
-          <div class="bonus-mark"></div>
+          <div class="bonus-mark">${GEM_ICONS[card.bonus]}</div>
         </div>
         <div class="costs">${costHtml(card.cost)}</div>
       `;
@@ -1136,7 +1193,7 @@ function renderGame() {
     const count = gs.bank[c] || 0;
     cell.className = 'bank-cell' + (count===0?' unavail':'') + (selectedGems[c]>0?' selected':'');
     cell.innerHTML = `
-      <div class="gem gem-${c}">${c==='y'?'★':''}</div>
+      <div class="gem gem-${c}">${GEM_ICONS[c]}</div>
       <div class="count">${count}</div>
       ${selectedGems[c]>0?`<div class="sel-mark">+${selectedGems[c]}</div>`:''}
     `;
@@ -1165,12 +1222,12 @@ function renderGame() {
         <div class="po-pts">${p.points||0}</div>
       </div>
       <div class="po-bonuses">
-        ${['w','b','g','r','k'].map(c=>`<span class="gem-mini gem-${c}">${p.bonuses?.[c]||0}</span>`).join('')}
+        ${['w','b','g','r','k'].map(c=>`<span class="gem-mini gem-${c}"><span class="pill-icon">${GEM_ICONS[c]}</span>${p.bonuses?.[c]||0}</span>`).join('')}
       </div>
       <div class="po-gems">
         ${['w','b','g','r','k','y'].map(c=>{
           const v = p.tokens?.[c]||0;
-          return v>0?`<span class="gem-mini gem-${c}">${v}</span>`:'';
+          return v>0?`<span class="gem-mini gem-${c}"><span class="pill-icon">${GEM_ICONS[c]}</span>${v}</span>`:'';
         }).join('')}
       </div>
       <div class="po-reserves">予約: ${(p.reserved||[]).length||(p.reservedCount||0)} / 3　貴族: ${(p.nobles||[]).length}</div>
@@ -1193,7 +1250,7 @@ function renderGame() {
       slot.innerHTML = `
         <div class="top-row">
           <div class="pv ${card.pv===0?'zero':''}">${card.pv||''}</div>
-          <div class="bonus-mark"></div>
+          <div class="bonus-mark">${GEM_ICONS[card.bonus]}</div>
         </div>
         <div class="costs">${costHtml(card.cost)}</div>
       `;
@@ -1215,12 +1272,12 @@ function renderGame() {
 }
 
 function gemReqsHtml(reqs) {
-  return Object.keys(reqs).map(c=>`<span class="cost-pill gem-${c}">${reqs[c]}</span>`).join('');
+  return Object.keys(reqs).map(c=>`<span class="cost-pill gem-${c}"><span class="pill-icon">${GEM_ICONS[c]}</span><span class="pill-num">${reqs[c]}</span></span>`).join('');
 }
 function costHtml(cost) {
   const items = [];
   ['w','b','g','r','k'].forEach(c=>{
-    if(cost[c]>0) items.push(`<span class="cost-pill gem-${c}">${cost[c]}</span>`);
+    if(cost[c]>0) items.push(`<span class="cost-pill gem-${c}"><span class="pill-icon">${GEM_ICONS[c]}</span><span class="pill-num">${cost[c]}</span></span>`);
   });
   // wrap in rows of 2
   let out = '';
@@ -1317,7 +1374,7 @@ function openCardActionModal(card, source, locator) {
     <div class="dev-card bonus-${card.bonus}" style="max-width:200px;margin:0 auto;">
       <div class="top-row">
         <div class="pv ${card.pv===0?'zero':''}">${card.pv||0}</div>
-        <div class="bonus-mark"></div>
+        <div class="bonus-mark">${GEM_ICONS[card.bonus]}</div>
       </div>
       <div class="costs">${costHtml(card.cost)}</div>
     </div>
@@ -1702,7 +1759,7 @@ function renderDiscardRow(currentTokens, required) {
     const cell = document.createElement('div');
     cell.className = 'bank-cell' + (discarding>0?' selected':'');
     cell.innerHTML = `
-      <div class="gem gem-${c}">${c==='y'?'★':''}</div>
+      <div class="gem gem-${c}">${GEM_ICONS[c]}</div>
       <div class="count">${remaining}</div>
       ${discarding>0?`<div class="sel-mark">-${discarding}</div>`:''}
     `;
