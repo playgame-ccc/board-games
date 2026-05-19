@@ -1401,10 +1401,7 @@ function srHostCoinPass(actorId, targetId){
   const coinHolder = srFs.players[srFs.coinIdx];
   if(coinHolder.id !== actorId) return;
   const target = srFs.players.find(p=>p.id===targetId);
-  if(!target || target.chip == null) return;
-  // 自分を選べるのはラウンド1のみ
-  const isSelf = target.id === actorId;
-  if(isSelf && srFs.round !== 1) return;
+  if(!target || target.chip == null || target.id === actorId) return;
   // Transfer coin
   const newIdx = srFs.players.findIndex(p=>p.id===targetId);
   srFs.coinIdx = newIdx;
@@ -1413,11 +1410,7 @@ function srHostCoinPass(actorId, targetId){
   const slotIdx = srFs.chipsPlaced.length + 1; // 1-5
   srFs.chipsPlaced.push({playerId:target.id, chipNumber:chipNum, slotIdx});
   target.chip = null;
-  if(isSelf){
-    srFs.log.push(`🪙 ${coinHolder.name} は自分をスタートプレイヤーに指定 (水晶チップ ${chipNum} を公開)`);
-  } else {
-    srFs.log.push(`🪙 ${coinHolder.name} → ${target.name} (水晶チップ ${chipNum} を公開)`);
-  }
+  srFs.log.push(`🪙 ${coinHolder.name} → ${target.name} (水晶チップ ${chipNum} を公開)`);
   srFs.log.push(`✨ 魔法効果 ${chipNum}: ${SR_MAGIC[chipNum-1].name}`);
   // Activate magic effect
   srFs.activeMagic = chipNum;
@@ -2740,31 +2733,18 @@ function srRenderActionArea(){
   }
   // Phase 1: coin holder picks target
   if(srGs.phase === 'phase1' && srGs.coinHolderId === myId){
-    const isRound1 = srGs.round === 1;
-    // ラウンド1のみ自分も候補に含める
-    const candidates = isRound1
-      ? srGs.players.filter(p=>p.hasChip)
-      : srGs.players.filter(p=>p.id!==myId && p.hasChip);
+    const candidates = srGs.players.filter(p=>p.id!==myId && p.hasChip);
     const wrapper = mk('div', 'panel');
-    const msg = isRound1
-      ? '🪙 コインを渡す相手を選んでください<br><span style="font-size:0.72rem; color:var(--muted);">※ ラウンド1のみ自分自身を選んでスタートプレイヤーになれます</span>'
-      : '🪙 コインを渡す相手を選んでください（水晶チップ保持者のみ）';
-    wrapper.innerHTML = `<div style="color:var(--gold); font-size:0.85rem; margin-bottom:8px;">${msg}</div>`;
+    wrapper.innerHTML = `<div style="color:var(--gold); font-size:0.85rem; margin-bottom:8px;">🪙 コインを渡す相手を選んでください（水晶チップ保持者のみ）</div>`;
     if(candidates.length===0){
       wrapper.innerHTML += `<div style="color:var(--muted);">対象がいません</div>`;
     } else {
       const grid = mk('div'); grid.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
       candidates.forEach(p=>{
-        const isSelf = p.id === myId;
-        const btn = mk('button', isSelf ? 'btn btn-blood' : 'btn btn-rose');
+        const btn = mk('button', 'btn btn-rose');
         btn.style.padding = '8px 12px';
-        btn.textContent = isSelf ? `🪙 自分（${p.name}）を指名する` : p.name;
-        btn.onclick = ()=>{
-          if(isSelf){
-            if(!confirm('自分自身をスタートプレイヤーに指定しますか？\n自分のチップが公開され、その魔法効果が発動します。')) return;
-          }
-          srSubmitCoinPass(p.id);
-        };
+        btn.textContent = p.name;
+        btn.onclick = ()=>srSubmitCoinPass(p.id);
         grid.appendChild(btn);
       });
       wrapper.appendChild(grid);
