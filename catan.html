@@ -164,6 +164,10 @@ body{min-height:100vh;padding:10px;background:radial-gradient(circle at 30% 40%,
 .trade-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:3px 0;}
 .trade-num{width:28px;text-align:center;font-weight:700;}
 
+/* 確認モーダル */
+.confirm-modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;padding:20px;z-index:2000;}
+.confirm-modal-inner{background:var(--surface);border-radius:14px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:12px;}
+
 @media(max-width:480px){
   .dice{width:34px;height:34px;font-size:1.2rem;}
   .res-card{min-width:42px;font-size:0.7rem;}
@@ -171,6 +175,17 @@ body{min-height:100vh;padding:10px;background:radial-gradient(circle at 30% 40%,
 </style>
 </head>
 <body>
+
+<!-- 確認モーダル -->
+<div id="confirm-modal" class="confirm-modal" style="display:none;">
+  <div class="confirm-modal-inner">
+    <h2 id="confirm-title" style="font-size:1.1rem;text-align:left;margin:0;">確認</h2>
+    <p id="confirm-msg" style="font-size:0.9rem;white-space:pre-line;margin:0;"></p>
+    <button class="btn btn-green" id="confirm-ok">はい</button>
+    <button class="btn btn-ghost" id="confirm-cancel">キャンセル</button>
+  </div>
+</div>
+
 <div class="app">
 
 <!-- パスワード画面 -->
@@ -3276,7 +3291,10 @@ function makeTurnActions(){
   const endBtn=mk('button','btn btn-green btn-block','✅ ターン終了');
   endBtn.onclick=()=>{
     if(ctPub.buildAction){
-      if(!confirm('建設アクション中ですが、ターンを終了しますか？')) return;
+      showConfirm('建設アクション中ですが、ターンを終了しますか？',()=>{
+        sendHostMsg({type:'endTurn'});
+      });
+      return;
     }
     sendHostMsg({type:'endTurn'});
   };
@@ -3289,15 +3307,31 @@ function devCardLabel(t){
   return {knight:'⚔️ 騎士',roadBuilding:'🛤️ 街道建設',monopoly:'💰 独占',yearOfPlenty:'🎁 発展'}[t]||t;
 }
 
+// カスタム確認ダイアログ（モバイルブラウザのconfirm()問題対策）
+function showConfirm(message, onOk, onCancel){
+  const modal=g('confirm-modal');
+  g('confirm-msg').textContent=message;
+  modal.style.display='flex';
+  const okBtn=g('confirm-ok');
+  const cancelBtn=g('confirm-cancel');
+  const cleanup=()=>{
+    modal.style.display='none';
+    okBtn.onclick=null;
+    cancelBtn.onclick=null;
+  };
+  okBtn.onclick=()=>{cleanup();if(onOk) onOk();};
+  cancelBtn.onclick=()=>{cleanup();if(onCancel) onCancel();};
+}
+
 function handlePlayDev(cardType){
   if(cardType==='knight'){
-    if(confirm('騎士カードを使用しますか？（盗賊を移動）')){
+    showConfirm('騎士カードを使用しますか？（盗賊を移動）',()=>{
       sendHostMsg({type:'playDev',cardType:'knight'});
-    }
+    });
   } else if(cardType==='roadBuilding'){
-    if(confirm('街道建設カードを使用しますか？（道2本を建設）')){
+    showConfirm('街道建設カードを使用しますか？（道2本を建設）',()=>{
       sendHostMsg({type:'playDev',cardType:'roadBuilding'});
-    }
+    });
   } else if(cardType==='monopoly'){
     showMonopolyModal();
   } else if(cardType==='yearOfPlenty'){

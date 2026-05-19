@@ -481,7 +481,7 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
     <div style="margin-top:10px; font-size:0.82rem; line-height:1.8; color:var(--text);">
       <div style="padding:8px; background:var(--surface2); border-radius:6px; margin-bottom:8px;">
         <strong style="color:var(--red);">マイナスカラーのカード</strong><br>
-        <span style="color:var(--muted); font-size:0.78rem;">取ったカードの数字がそのままマイナス点（最初に提出した1枚もマイナス）</span>
+        <span style="color:var(--muted); font-size:0.78rem;">取ったカードの数字がそのままマイナス点（提出済みのマイナスカードは計算に含めない）</span>
       </div>
       <div style="padding:8px; background:var(--surface2); border-radius:6px;">
         <strong style="color:var(--green);">マイナスカラー以外のカード</strong><br>
@@ -494,6 +494,16 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
   </details>
 
   <input class="input" id="in-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12">
+
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">ラウンド数（部屋を作る場合）</div>
+    <div class="count-selector">
+      <button class="count-btn lobby-round-btn selected" data-r="1" onclick="stSetRounds(1)">1</button>
+      <button class="count-btn lobby-round-btn" data-r="3" onclick="stSetRounds(3)">3</button>
+      <button class="count-btn lobby-round-btn" data-r="5" onclick="stSetRounds(5)">5</button>
+    </div>
+  </div>
+
   <button class="btn btn-accent" onclick="stCreateRoom()">🏠 部屋を作る（ホスト）</button>
   <div class="divider"></div>
   <div class="row">
@@ -519,6 +529,14 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
     </div>
     <div class="count-label" id="solo-count-label">CPU: 2人 / あなた: 1人</div>
     <div id="solo-deck-info" style="text-align:center; color:var(--muted); font-size:0.75rem; margin-top:6px;"></div>
+  </div>
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">ラウンド数</div>
+    <div class="count-selector">
+      <button class="count-btn solo-round-btn selected" data-r="1" onclick="stSetSoloRounds(1)">1</button>
+      <button class="count-btn solo-round-btn" data-r="3" onclick="stSetSoloRounds(3)">3</button>
+      <button class="count-btn solo-round-btn" data-r="5" onclick="stSetSoloRounds(5)">5</button>
+    </div>
   </div>
   <div id="solo-error" class="error"></div>
   <button class="btn btn-accent" onclick="stStartSoloGame()">▶ ゲーム開始</button>
@@ -548,7 +566,7 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
   <h2>🎴 マイナスカラー決定</h2>
   <div style="text-align:center; color:var(--muted); font-size:0.85rem;">
     手札から「取りたくない色」のカードを1枚選んで提出してください。<br>
-    <span style="color:var(--red);">⚠️ このカードの数字もマイナス点になります</span>
+    <span style="color:var(--accent);">この色のカードを取るとマイナス点になります</span>
   </div>
 
   <div class="panel">
@@ -616,6 +634,25 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
     <div id="play-log" class="log"></div>
   </details>
 
+  <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="stLeaveGame()">← 退出</button>
+</div>
+
+<!-- ============================================================ ROUND END ============================================================ -->
+<div id="screen-roundend" class="screen">
+  <h2 id="roundend-title">ラウンド終了</h2>
+
+  <div class="panel">
+    <h3>このラウンドの結果</h3>
+    <div class="scoreboard" id="roundend-scoreboard"></div>
+  </div>
+
+  <div class="panel">
+    <h3>累計スコア</h3>
+    <div class="scoreboard" id="roundend-total-scoreboard"></div>
+  </div>
+
+  <div id="roundend-next-info" style="text-align:center; color:var(--muted); font-size:0.85rem;"></div>
+  <button id="btn-next-round" class="btn btn-accent" onclick="stNextRound()">▶ 次のラウンドへ</button>
   <button class="btn btn-ghost" style="font-size:0.78rem;" onclick="stLeaveGame()">← 退出</button>
 </div>
 
@@ -757,6 +794,8 @@ let isHost = false;
 let isSolo = false;
 let roomCode = '';
 let stSoloCount = 3;
+let stSelectedRounds = 1; // ロビーで選択するラウンド数
+let stSoloRounds = 1;     // ソロ設定で選択するラウンド数
 let stFs = null;           // host-side full state
 let stGs = null;           // shared public state
 let stMyCards = [];        // private hand
@@ -872,6 +911,18 @@ function stSetSoloCount(n){
   g('solo-count-label').textContent = `CPU: ${n-1}人 / あなた: 1人`;
   g('solo-deck-info').textContent = `カード構成: ${cfg.suitCount}色 × 0〜${cfg.maxNum} = ${cfg.suitCount*(cfg.maxNum+1)}枚`;
 }
+function stSetRounds(r){
+  stSelectedRounds = r;
+  document.querySelectorAll('.lobby-round-btn').forEach(b=>{
+    b.classList.toggle('selected', parseInt(b.dataset.r)===r);
+  });
+}
+function stSetSoloRounds(r){
+  stSoloRounds = r;
+  document.querySelectorAll('.solo-round-btn').forEach(b=>{
+    b.classList.toggle('selected', parseInt(b.dataset.r)===r);
+  });
+}
 function stShowSoloLobby(){ show('solo'); }
 
 // ============================================================
@@ -892,6 +943,8 @@ async function stCreateRoom(){
     stFs = {
       phase:'waiting',
       players:[{id:myId, name:myName, isHost:true, isCpu:false}],
+      totalRounds: stSelectedRounds,
+      currentRound: 1,
       log: ['🎯 部屋を作成しました'],
     };
     stBcast();
@@ -960,6 +1013,8 @@ function stStartSoloGame(){
       {id:'human', name:myName, isHost:true, isCpu:false},
       ...Array.from({length:stSoloCount-1}, (_,i)=>({id:'cpu-'+i, name:cpuNames[i], isHost:false, isCpu:true}))
     ],
+    totalRounds: stSoloRounds,
+    currentRound: 1,
     log: ['🎯 CPU対戦を開始'],
   };
   stStartGameInternal();
@@ -1002,20 +1057,28 @@ function stPub(f, viewerId){
           visibleMinusCard = p.minusCard;
         }
       }
+      // リアルタイム点数計算（今このラウンドで持ってる暫定点）
+      const live = stCalcLiveScore(p);
       return {
         id:p.id, name:p.name, isHost:p.isHost, isCpu:p.isCpu,
         handCount: p.hand ? p.hand.length : 0,
         minusCard: visibleMinusCard,
         minusSubmitted: !!p.minusCard,
         score: p.score || 0,
+        totalScore: p.totalScore || 0,
         tricks: p.tricks || 0,
         wonCardsCount: p.wonCards ? p.wonCards.length : 0,
         minusPts: p.minusPts || 0,
         plusPts: p.plusPts || 0,
+        liveScore: live.score,
+        livePlus: live.plus,
+        liveMinus: live.minus,
       };
     }),
     trick: f.trick || 1,
     totalTricks: f.totalTricks || HAND_SIZE,
+    currentRound: f.currentRound || 1,
+    totalRounds: f.totalRounds || 1,
     leadIdx: f.leadIdx,
     curIdx: f.curIdx,
     leadSuit: f.leadSuit,
@@ -1024,6 +1087,23 @@ function stPub(f, viewerId){
     log: (f.log || []).slice(-40),
     winnerId: f.winnerId,
   };
+}
+
+// このラウンドで現在持ってる暫定点を計算
+function stCalcLiveScore(p){
+  if(!p.wonCards || !p.minusCard){
+    return {score:0, plus:0, minus:0};
+  }
+  const minusSuit = p.minusCard.suit;
+  let plus = 0, minus = 0;
+  p.wonCards.forEach(c=>{
+    if(c.suit === minusSuit){
+      minus += c.num;
+    } else {
+      plus += 1;
+    }
+  });
+  return {score: plus - minus, plus, minus};
 }
 
 // ============================================================
@@ -1039,7 +1119,14 @@ function stStartGameInternal(){
   const n = stFs.players.length;
   const deck = shuffle(makeDeck(n));
 
-  // 配布：手札15枚×人数
+  // 初回ゲーム開始（currentRound=1かつtotalScoreがundefined）ならtotalScoreを0に初期化
+  stFs.players.forEach(p=>{
+    if(stFs.currentRound === 1 && (p.totalScore === undefined || p.totalScore === null)){
+      p.totalScore = 0;
+    }
+  });
+
+  // ラウンド初期化（毎ラウンドリセット）
   stFs.players.forEach((p, i)=>{
     p.hand = deck.slice(i*HAND_SIZE, (i+1)*HAND_SIZE);
     p.minusCard = null;
@@ -1057,7 +1144,7 @@ function stStartGameInternal(){
   stFs.leadSuit = null;
   stFs.trickCards = [];
   stFs.lastTrickWinnerId = null;
-  stFs.log.push(`━━ ゲーム開始（${n}人、各15枚配布） ━━`);
+  stFs.log.push(`━━ ラウンド ${stFs.currentRound}/${stFs.totalRounds}（${n}人、各15枚配布） ━━`);
   stFs.log.push(`📮 マイナスカラーを各自選んでください`);
 
   // 手札送信
@@ -1130,10 +1217,6 @@ function stCheckMinusAllDone(){
     // マイナスカラー公開ログ
     const summary = stFs.players.map(p=>`${p.name}:${suitInfo(p.minusCard.suit).label}${p.minusCard.num}`).join(' / ');
     stFs.log.push(`🎭 マイナスカラー公開 → ${summary}`);
-    // マイナスカードは最初にwonCardsに入る（自分が「取った」扱い）
-    stFs.players.forEach(p=>{
-      p.wonCards.push(p.minusCard);
-    });
     stBcast();
   }
 }
@@ -1282,10 +1365,10 @@ function stResolveTrick(){
   });
   stFs.log.push(`🏆 ${wp.name} がトリック獲得（計${wp.tricks}）`);
 
-  // 全員手札が0枚なら終了
+  // 全員手札が0枚ならラウンド終了
   if(stFs.players.every(p=>p.hand.length === 0)){
     stBcast();
-    setTimeout(()=>stEndGame(), 1400);
+    setTimeout(()=>stEndRound(), 1400);
     return;
   }
 
@@ -1300,11 +1383,11 @@ function stResolveTrick(){
 }
 
 // ============================================================
-// END GAME / SCORING
+// ROUND END / SCORING
 // ============================================================
-function stEndGame(){
+function stEndRound(){
   if(!stFs) return;
-  // 得点計算
+  // ラウンドの得点計算
   stFs.players.forEach(p=>{
     const minusSuit = p.minusCard ? p.minusCard.suit : null;
     let minusPts = 0;
@@ -1319,12 +1402,33 @@ function stEndGame(){
     p.minusPts = minusPts;
     p.plusPts = plusPts;
     p.score = plusPts - minusPts;
-    stFs.log.push(`📊 ${p.name}: +${plusPts} −${minusPts} = ${p.score}点`);
+    p.totalScore = (p.totalScore || 0) + p.score;
+    stFs.log.push(`📊 ${p.name}: +${plusPts} −${minusPts} = ${p.score}点（累計 ${p.totalScore}）`);
   });
-  // 勝者
-  const sorted = stFs.players.slice().sort((a,b)=>b.score - a.score);
+  stFs.phase = 'roundend';
+  stBcast();
+}
+
+function stNextRound(){
+  if(!isHost){
+    // ゲスト側は何もしない（ホストが進行）
+    return;
+  }
+  if(!stFs || stFs.phase !== 'roundend') return;
+  if(stFs.currentRound >= stFs.totalRounds){
+    stEndGame();
+    return;
+  }
+  stFs.currentRound++;
+  stStartGameInternal();
+}
+
+function stEndGame(){
+  if(!stFs) return;
+  // 全ラウンド終了 → 最終結果
+  const sorted = stFs.players.slice().sort((a,b)=>b.totalScore - a.totalScore);
   stFs.winnerId = sorted[0].id;
-  stFs.log.push(`🏆 ${sorted[0].name} が勝利！（${sorted[0].score}点）`);
+  stFs.log.push(`🏆 ${sorted[0].name} が総合優勝！（${sorted[0].totalScore}点）`);
   stFs.phase = 'result';
   stBcast();
 }
@@ -1363,9 +1467,11 @@ function stRematchGo(){
   stRematchVoters = [];
   if(!stFs) return;
   stFs.players.forEach(p=>{
-    p.score = 0; p.minusCard = null; p.hand = []; p.tricks = 0;
+    p.score = 0; p.totalScore = 0;
+    p.minusCard = null; p.hand = []; p.tricks = 0;
     p.wonCards = []; p.minusPts = 0; p.plusPts = 0;
   });
+  stFs.currentRound = 1;
   stFs.log = ['🔄 再戦開始'];
   stFs.phase = 'waiting';
   stBcast();
@@ -1448,6 +1554,9 @@ function stOnGsUpdate(){
   } else if(ph === 'play'){
     if(!g('screen-play').classList.contains('active')) show('play');
     stRenderPlay();
+  } else if(ph === 'roundend'){
+    if(!g('screen-roundend').classList.contains('active')) show('roundend');
+    stRenderRoundEnd();
   } else if(ph === 'result'){
     if(!g('screen-result').classList.contains('active')) show('result');
     stRenderResult();
@@ -1464,7 +1573,8 @@ function stRenderWaiting(){
   const n = stGs.players.length;
   g('p-count').textContent = n + '人';
   const cfg = deckConfig(n);
-  g('wait-deck-info').textContent = `カード構成: ${cfg.suitCount}色 × 0〜${cfg.maxNum} = ${cfg.suitCount*(cfg.maxNum+1)}枚`;
+  const roundsText = stGs.totalRounds > 1 ? ` / ${stGs.totalRounds}ラウンド` : '';
+  g('wait-deck-info').textContent = `カード構成: ${cfg.suitCount}色 × 0〜${cfg.maxNum} = ${cfg.suitCount*(cfg.maxNum+1)}枚${roundsText}`;
   const list = g('wait-list');
   list.innerHTML = '';
   stGs.players.forEach(p=>{
@@ -1515,7 +1625,7 @@ function stRenderMinus(){
     const c = stMyCards.find(c=>c.id === stMySelectedMinusId);
     if(c){
       const s = suitInfo(c.suit);
-      g('minus-selected-info').innerHTML = `選択中: <strong style="color:var(--red);">${s.label}の${c.num}</strong>（このカードを提出するとマイナス点${c.num}）`;
+      g('minus-selected-info').innerHTML = `選択中: <strong style="color:var(--accent);">${s.label}の${c.num}</strong>（${s.label}色を取らないように立ち回ろう）`;
     }
     g('btn-confirm-minus').disabled = false;
     g('btn-confirm-minus').textContent = 'このカードを提出';
@@ -1582,20 +1692,28 @@ function stRenderPlay(){
   if(!stGs) return;
   g('play-trick-info').textContent = `T ${stGs.trick}/${stGs.totalTricks}`;
 
-  // 自分のマイナス色
+  // ラウンド情報を mycolor 横に表示
   const me = stGs.players.find(p=>p.id===myId);
+  let infoHtml = '';
+  if(stGs.totalRounds > 1){
+    infoHtml += `<span style="color:var(--warn); margin-right:6px;">R${stGs.currentRound}/${stGs.totalRounds}</span>`;
+  }
   if(me && me.minusCard){
     const s = suitInfo(me.minusCard.suit);
-    g('play-mycolor-info').innerHTML = `あなたのマイナス: <strong style="color:var(--red);">${s.label}</strong>`;
-  } else {
-    g('play-mycolor-info').textContent = '';
+    infoHtml += `あなたのマイナス: <strong style="color:var(--red);">${s.label}</strong>`;
   }
+  g('play-mycolor-info').innerHTML = infoHtml;
 
-  // スコアボード
+  // スコアボード（点数ベース）
   const sb = g('play-scoreboard');
   sb.innerHTML = '';
   const header = mk('div', 'score-row header');
-  header.innerHTML = '<div class="score-cell name">プレイヤー</div><div class="score-cell">取得</div><div class="score-cell">マイナス色</div><div class="score-cell">枚数</div>';
+  // 複数ラウンドなら累計列を表示
+  if(stGs.totalRounds > 1){
+    header.innerHTML = '<div class="score-cell name">プレイヤー</div><div class="score-cell">マイナス</div><div class="score-cell">今R点</div><div class="score-cell">累計</div>';
+  } else {
+    header.innerHTML = '<div class="score-cell name">プレイヤー</div><div class="score-cell">マイナス</div><div class="score-cell">内訳</div><div class="score-cell">点数</div>';
+  }
   sb.appendChild(header);
   stGs.players.forEach(p=>{
     const row = mk('div', 'score-row' + (p.id===myId?' me':''));
@@ -1615,12 +1733,29 @@ function stRenderPlay(){
       const dotColor = suitVarMap[s.color] || 'var(--muted)';
       minusLabel = `<span class="minus-dot" style="background:${dotColor};"></span> ${s.label}`;
     }
-    row.innerHTML = `
-      <div class="score-cell name">${isTurn?'▶ ':''}${p.name}${p.isCpu?' (CPU)':''}</div>
-      <div class="score-cell">${p.tricks}T</div>
-      <div class="score-cell">${minusLabel}</div>
-      <div class="score-cell total">${p.wonCardsCount}</div>
-    `;
+    // ライブスコア表示
+    const live = p.liveScore || 0;
+    const liveColor = live >= 0 ? 'var(--green)' : 'var(--red)';
+    const liveSign = live >= 0 ? '+' : '';
+    const breakdown = `<span style="color:var(--green);">+${p.livePlus||0}</span>/<span style="color:var(--red);">−${p.liveMinus||0}</span>`;
+
+    if(stGs.totalRounds > 1){
+      const total = (p.totalScore || 0) + live; // ラウンド進行中の暫定累計
+      const totalColor = total >= 0 ? 'var(--warn)' : 'var(--red)';
+      row.innerHTML = `
+        <div class="score-cell name">${isTurn?'▶ ':''}${p.name}${p.isCpu?' (CPU)':''}</div>
+        <div class="score-cell">${minusLabel}</div>
+        <div class="score-cell" style="color:${liveColor};">${liveSign}${live}</div>
+        <div class="score-cell total" style="color:${totalColor};">${total}</div>
+      `;
+    } else {
+      row.innerHTML = `
+        <div class="score-cell name">${isTurn?'▶ ':''}${p.name}${p.isCpu?' (CPU)':''}</div>
+        <div class="score-cell">${minusLabel}</div>
+        <div class="score-cell" style="font-size:0.78rem;">${breakdown}</div>
+        <div class="score-cell total" style="color:${liveColor};">${liveSign}${live}</div>
+      `;
+    }
     sb.appendChild(row);
   });
 
@@ -1689,32 +1824,105 @@ function stPlayMyCard(cardId){
   }
 }
 
+function stRenderRoundEnd(){
+  if(!stGs) return;
+  g('roundend-title').textContent = `ラウンド ${stGs.currentRound}/${stGs.totalRounds} 終了`;
+
+  // このラウンドの結果
+  const sb = g('roundend-scoreboard');
+  sb.innerHTML = '';
+  const header = mk('div', 'score-row header');
+  header.innerHTML = '<div class="score-cell name">プレイヤー</div><div class="score-cell">マイナス</div><div class="score-cell">内訳</div><div class="score-cell">今R</div>';
+  sb.appendChild(header);
+  const sorted = stGs.players.slice().sort((a,b)=>b.score - a.score);
+  sorted.forEach(p=>{
+    const row = mk('div', 'score-row' + (p.id===myId?' me':''));
+    let minusLabel = '?';
+    if(p.minusCard){
+      const s = suitInfo(p.minusCard.suit);
+      minusLabel = s.label;
+    }
+    const scoreColor = p.score >= 0 ? 'var(--green)' : 'var(--red)';
+    const sign = p.score >= 0 ? '+' : '';
+    row.innerHTML = `
+      <div class="score-cell name">${p.name}${p.isCpu?' (CPU)':''}</div>
+      <div class="score-cell">${minusLabel}</div>
+      <div class="score-cell" style="font-size:0.78rem;"><span style="color:var(--green);">+${p.plusPts}</span>/<span style="color:var(--red);">−${p.minusPts}</span></div>
+      <div class="score-cell total" style="color:${scoreColor};">${sign}${p.score}</div>
+    `;
+    sb.appendChild(row);
+  });
+
+  // 累計スコア（複数ラウンド時のみ）
+  const totalSb = g('roundend-total-scoreboard');
+  totalSb.innerHTML = '';
+  if(stGs.totalRounds > 1){
+    const totalHeader = mk('div', 'score-row header');
+    totalHeader.innerHTML = '<div class="score-cell name">プレイヤー</div><div class="score-cell">今R</div><div class="score-cell">累計</div>';
+    totalHeader.style.gridTemplateColumns = '1fr 60px 60px';
+    totalSb.appendChild(totalHeader);
+    const sortedTotal = stGs.players.slice().sort((a,b)=>b.totalScore - a.totalScore);
+    sortedTotal.forEach(p=>{
+      const row = mk('div', 'score-row' + (p.id===myId?' me':''));
+      row.style.gridTemplateColumns = '1fr 60px 60px';
+      const scoreColor = p.score >= 0 ? 'var(--green)' : 'var(--red)';
+      const sign = p.score >= 0 ? '+' : '';
+      const totalColor = p.totalScore >= 0 ? 'var(--warn)' : 'var(--red)';
+      row.innerHTML = `
+        <div class="score-cell name">${p.name}${p.isCpu?' (CPU)':''}</div>
+        <div class="score-cell" style="color:${scoreColor};">${sign}${p.score}</div>
+        <div class="score-cell total" style="color:${totalColor};">${p.totalScore}</div>
+      `;
+      totalSb.appendChild(row);
+    });
+  } else {
+    totalSb.style.display = 'none';
+    // 親パネルも非表示
+    const parent = totalSb.closest('.panel');
+    if(parent) parent.style.display = 'none';
+  }
+
+  // 次へ進むボタンの表示
+  const isLast = stGs.currentRound >= stGs.totalRounds;
+  if(isLast){
+    g('btn-next-round').textContent = '🏆 最終結果を見る';
+    g('roundend-next-info').textContent = '全ラウンド終了';
+  } else {
+    g('btn-next-round').textContent = `▶ ラウンド ${stGs.currentRound+1} へ`;
+    g('roundend-next-info').textContent = `次は ラウンド ${stGs.currentRound+1}`;
+  }
+  if(isHost){
+    g('btn-next-round').style.display = '';
+    g('btn-next-round').disabled = false;
+  } else {
+    g('btn-next-round').style.display = 'none';
+    g('roundend-next-info').textContent = 'ホストの操作を待っています...';
+  }
+}
+
 function stRenderResult(){
   if(!stGs) return;
-  const sorted = stGs.players.slice().sort((a,b)=>b.score - a.score);
+  // 累計スコアでソート（複数ラウンドの場合）。1ラウンドゲームならtotalScore=scoreなので同じ結果
+  const sorted = stGs.players.slice().sort((a,b)=>b.totalScore - a.totalScore);
   const winner = sorted[0];
   g('result-emoji').textContent = winner.id === myId ? '🏆' : '🎯';
   g('result-title').textContent = winner.id === myId ? 'あなたの勝利！' : `${winner.name} の勝利`;
-  g('result-sub').textContent = `${winner.score}点で1位`;
+  g('result-sub').textContent = stGs.totalRounds > 1
+    ? `${stGs.totalRounds}ラウンド合計 ${winner.totalScore}点で1位`
+    : `${winner.totalScore}点で1位`;
 
   const list = g('result-rank-list');
   list.innerHTML = '';
   sorted.forEach((p, i)=>{
     const item = mk('div', 'rank-item' + (i===0?' first':''));
     const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':' ';
-    let minusLabel = '';
-    if(p.minusCard){
-      const s = suitInfo(p.minusCard.suit);
-      minusLabel = `<span style="font-size:0.78rem; color:var(--muted);">マイナス色: ${s.label}</span>`;
-    }
     item.innerHTML = `
       <div class="rank-num">${medal} ${i+1}</div>
       <div class="p-info">
         <div class="p-name">${p.name}${p.id===myId?' (あなた)':''}${p.isCpu?' (CPU)':''}</div>
-        <div class="p-sub" style="font-size:0.75rem;">+${p.plusPts} −${p.minusPts}</div>
-        ${minusLabel}
+        <div class="p-sub" style="font-size:0.75rem;">合計 ${p.totalScore}点</div>
       </div>
-      <div class="p-score">${p.score}点</div>
+      <div class="p-score">${p.totalScore}</div>
     `;
     list.appendChild(item);
   });
@@ -1738,6 +1946,8 @@ function stRenderResult(){
 // ============================================================
 window.addEventListener('DOMContentLoaded', ()=>{
   stSetSoloCount(3);
+  stSetRounds(1);
+  stSetSoloRounds(1);
 });
 </script>
 </body>

@@ -361,6 +361,16 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
   </div>
 </div>
 
+<!-- 確認モーダル（プレイ/捨てる確認用） -->
+<div id="confirm-modal" class="fb-modal" style="display:none;">
+  <div class="fb-modal-inner">
+    <h2 id="confirm-title" style="font-size:1.1rem; text-align:left;">確認</h2>
+    <p id="confirm-msg" style="font-size:0.9rem; white-space:pre-line;"></p>
+    <button class="btn btn-green" id="confirm-ok">はい</button>
+    <button class="btn btn-ghost" id="confirm-cancel">キャンセル</button>
+  </div>
+</div>
+
 <div class="app">
 
   <!-- ===== LOBBY ===== -->
@@ -503,7 +513,7 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <!-- ログ -->
     <div id="game-log" class="game-log"></div>
 
-    <button class="btn btn-ghost" onclick="if(confirm('ゲームを抜けますか？'))leaveRoom()">退出</button>
+    <button class="btn btn-ghost" onclick="confirmLeave()">退出</button>
   </div>
 
   <!-- ===== RESULT ===== -->
@@ -1842,35 +1852,72 @@ function renderLog() {
 // ============================================================
 // ACTION SENDERS
 // ============================================================
+// カスタム確認ダイアログ（モバイルブラウザのconfirm()問題対策）
+function showConfirm(message, onOk) {
+  const modal = g('confirm-modal');
+  g('confirm-msg').textContent = message;
+  modal.style.display = 'flex';
+  const okBtn = g('confirm-ok');
+  const cancelBtn = g('confirm-cancel');
+  const cleanup = () => {
+    modal.style.display = 'none';
+    okBtn.onclick = null;
+    cancelBtn.onclick = null;
+  };
+  okBtn.onclick = () => { cleanup(); if(onOk) onOk(); };
+  cancelBtn.onclick = cleanup;
+}
+
+function confirmLeave() {
+  showConfirm('ゲームを抜けますか？', () => leaveRoom());
+}
+
 let isSendingAction = false;
 function sendHint(targetId, hintType, hintValue) {
   if(isSendingAction) return;
   isSendingAction = true;
-  const msg = {action:'hint', targetId, hintType, hintValue};
-  if(isHost) handleAction(myId, msg);
-  else fbSendToHost({type:'action', ...msg});
-  currentAction = null; actionState = {};
   setTimeout(() => { isSendingAction = false; }, 800);
+  try {
+    const msg = {action:'hint', targetId, hintType, hintValue};
+    if(isHost) handleAction(myId, msg);
+    else fbSendToHost({type:'action', ...msg});
+    currentAction = null; actionState = {};
+  } catch(e) {
+    console.error('sendHint error', e);
+    isSendingAction = false;
+  }
 }
 function sendPlay(cardIdx) {
   if(isSendingAction) return;
-  if(!confirm('このカードをプレイしますか？\n（間違っているとミス+1）')) return;
-  isSendingAction = true;
-  const msg = {action:'play', cardIdx};
-  if(isHost) handleAction(myId, msg);
-  else fbSendToHost({type:'action', ...msg});
-  currentAction = null; actionState = {};
-  setTimeout(() => { isSendingAction = false; }, 800);
+  showConfirm('このカードをプレイしますか？\n（間違っているとミス+1）', () => {
+    isSendingAction = true;
+    setTimeout(() => { isSendingAction = false; }, 800);
+    try {
+      const msg = {action:'play', cardIdx};
+      if(isHost) handleAction(myId, msg);
+      else fbSendToHost({type:'action', ...msg});
+      currentAction = null; actionState = {};
+    } catch(e) {
+      console.error('sendPlay error', e);
+      isSendingAction = false;
+    }
+  });
 }
 function sendDiscard(cardIdx) {
   if(isSendingAction) return;
-  if(!confirm('このカードを捨てますか？')) return;
-  isSendingAction = true;
-  const msg = {action:'discard', cardIdx};
-  if(isHost) handleAction(myId, msg);
-  else fbSendToHost({type:'action', ...msg});
-  currentAction = null; actionState = {};
-  setTimeout(() => { isSendingAction = false; }, 800);
+  showConfirm('このカードを捨てますか？', () => {
+    isSendingAction = true;
+    setTimeout(() => { isSendingAction = false; }, 800);
+    try {
+      const msg = {action:'discard', cardIdx};
+      if(isHost) handleAction(myId, msg);
+      else fbSendToHost({type:'action', ...msg});
+      currentAction = null; actionState = {};
+    } catch(e) {
+      console.error('sendDiscard error', e);
+      isSendingAction = false;
+    }
+  });
 }
 
 // ============================================================

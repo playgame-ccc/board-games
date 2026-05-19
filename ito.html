@@ -269,6 +269,16 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
   </div>
 </div>
 
+<!-- 確認モーダル -->
+<div id="confirm-modal" class="fb-modal" style="display:none;">
+  <div class="fb-modal-inner">
+    <h2 id="confirm-title" style="font-size:1.1rem; text-align:left;">確認</h2>
+    <p id="confirm-msg" style="font-size:0.9rem; white-space:pre-line;"></p>
+    <button class="btn btn-green" id="confirm-ok">はい</button>
+    <button class="btn btn-ghost" id="confirm-cancel">キャンセル</button>
+  </div>
+</div>
+
 <div class="app">
 
   <!-- ===== LOBBY ===== -->
@@ -444,7 +454,7 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <!-- ログ -->
     <div id="game-log" class="game-log"></div>
 
-    <button class="btn btn-ghost" onclick="if(confirm('ゲームを抜けますか？'))leaveRoom()">退出</button>
+    <button class="btn btn-ghost" onclick="confirmLeave()">退出</button>
   </div>
 
   <!-- ===== RESULT ===== -->
@@ -1752,6 +1762,26 @@ function renderPlaying() {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+// カスタム確認ダイアログ（モバイルブラウザのconfirm()問題対策）
+function showConfirm(message, onOk, onCancel) {
+  const modal = g('confirm-modal');
+  g('confirm-msg').textContent = message;
+  modal.style.display = 'flex';
+  const okBtn = g('confirm-ok');
+  const cancelBtn = g('confirm-cancel');
+  const cleanup = () => {
+    modal.style.display = 'none';
+    okBtn.onclick = null;
+    cancelBtn.onclick = null;
+  };
+  okBtn.onclick = () => { cleanup(); if(onOk) onOk(); };
+  cancelBtn.onclick = () => { cleanup(); if(onCancel) onCancel(); };
+}
+
+function confirmLeave() {
+  showConfirm('ゲームを抜けますか？', () => leaveRoom());
+}
+
 let isSubmittingExp = false;
 function submitExpression() {
   if(isSubmittingExp) return;
@@ -1760,8 +1790,16 @@ function submitExpression() {
   // 数字を含むチェック（半角・全角・漢数字）
   const numberRegex = /[0-9０-９一二三四五六七八九十百千万億兆零壱弐参肆伍陸漆捌玖拾]/;
   if(numberRegex.test(text)) {
-    if(!confirm('数字（漢数字含む）を含んでいるようです。本当に送信しますか？\n※itoでは数字を直接言うのは禁止のルールがあります')) return;
+    showConfirm('数字(漢数字含む)を含んでいるようです。本当に送信しますか?\n※itoでは数字を直接言うのは禁止のルールがあります', () => {
+      doSubmitExpression(text);
+    });
+    return;
   }
+  doSubmitExpression(text);
+}
+
+function doSubmitExpression(text) {
+  if(isSubmittingExp) return;
   isSubmittingExp = true;
   const btn = g('btn-submit-exp');
   btn.disabled = true;
@@ -1785,16 +1823,18 @@ function playMyCard() {
   if(me.played) { alert('もうカードを出しています'); return; }
   if(!me.expression) { alert('まず表現を送信してください'); return; }
   const orderTxt = gs.order === 'desc' ? '大きい' : '小さい';
-  if(!confirm(`自分のカードを出しますか？\nまだ自分より${orderTxt}数字を持つ人がいたら失敗します（ライフ-1）`)) return;
-  isPlayingCard = true;
-  const btn = g('btn-play-card');
-  if(btn) { btn.disabled = true; btn.textContent = '⏳ 送信中...'; }
-  if(isHost) handlePlay(myId);
-  else fbSendToHost({type:'play'});
-  setTimeout(() => {
-    isPlayingCard = false;
-    if(btn) { btn.disabled = false; btn.textContent = '📤 自分のカードを出す'; }
-  }, 1000);
+  showConfirm(`自分のカードを出しますか？\nまだ自分より${orderTxt}数字を持つ人がいたら失敗します（ライフ-1）`, () => {
+    if(isPlayingCard) return;
+    isPlayingCard = true;
+    const btn = g('btn-play-card');
+    if(btn) { btn.disabled = true; btn.textContent = '⏳ 送信中...'; }
+    if(isHost) handlePlay(myId);
+    else fbSendToHost({type:'play'});
+    setTimeout(() => {
+      isPlayingCard = false;
+      if(btn) { btn.disabled = false; btn.textContent = '📤 自分のカードを出す'; }
+    }, 1000);
+  });
 }
 
 // ============================================================
