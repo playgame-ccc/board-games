@@ -1345,6 +1345,7 @@ function openCardActionModal(card, source, locator) {
     };
     btnContainer.appendChild(bRes);
   }
+  g('card-modal').classList.add('active');
 }
 function closeCardModal() { g('card-modal').classList.remove('active'); cardModalCtx=null; }
 
