@@ -168,6 +168,16 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
 }
 .hand-area.is-me { border-left: 3px solid var(--hanabi-pink); }
 .hand-area.current-turn { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
+/* 自分のターンでタップ可能なカードに対するインジケーター */
+.hand-area.is-me.current-turn .card {
+  transition: transform 0.15s;
+}
+.hand-area.is-me.current-turn .card:hover {
+  transform: translateY(-3px);
+}
+.hand-area.is-me.current-turn .card:active {
+  transform: translateY(-1px);
+}
 .hand-header {
   display: flex; align-items: center; gap: 8px;
   font-size: 0.85rem; margin-bottom: 10px;
@@ -371,6 +381,17 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
   </div>
 </div>
 
+<!-- カード選択モーダル（手札タップ時） -->
+<div id="card-action-modal" class="fb-modal" style="display:none;">
+  <div class="fb-modal-inner">
+    <h2 style="font-size:1.1rem; text-align:left;">カードをどうする？</h2>
+    <div id="card-action-preview" style="display:flex; justify-content:center; padding:6px 0;"></div>
+    <button class="btn btn-green" id="card-action-play">🎆 プレイ</button>
+    <button class="btn btn-amber" id="card-action-discard">🗑️ 捨てる</button>
+    <button class="btn btn-ghost" id="card-action-cancel">キャンセル</button>
+  </div>
+</div>
+
 <div class="app">
 
   <!-- ===== LOBBY ===== -->
@@ -403,6 +424,13 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         重要: 自分の手札は<strong style="color:var(--amber);">見えません</strong>。他人の手札は見えます。<br>
         手番でできるアクション: ① ヒント / ② プレイ / ③ 捨てる<br>
         ミス3回でゲーム終了。全色5まで完成で完全勝利（25点）。
+      </p>
+      <h4 style="margin-top:12px; margin-bottom:6px; font-size:0.88rem;">カード構成</h4>
+      <p style="font-size:0.78rem; color:var(--muted); line-height:1.6;">
+        各色: 1が3枚、2/3/4が各2枚、5が1枚 = <strong>10枚/色</strong><br>
+        <strong style="color:var(--hanabi-pink);">5色モード: 計50枚</strong>（赤・青・黄・緑・白）<br>
+        <strong style="color:var(--amber);">6色モード: 計55枚</strong>（5色+虹色5枚）<br>
+        ※虹色は1〜5が各1枚のみ。すべての色のヒントに該当する難易度UP用。
       </p>
     </div>
 
@@ -1500,20 +1528,32 @@ function renderHands() {
   const mySection = g('my-hand-section');
   mySection.innerHTML = '';
   if(me) {
-    const area = mk('div', 'hand-area is-me' + (gs.currentTurn === myIdx ? ' current-turn' : ''));
+    const myTurn = (gs.currentTurn === myIdx);
+    const area = mk('div', 'hand-area is-me' + (myTurn ? ' current-turn' : ''));
     const header = mk('div', 'hand-header');
     const nameSpan = mk('span', 'hand-name');
     nameSpan.textContent = '👤 自分の手札（自分には見えません）';
     header.appendChild(nameSpan);
-    if(gs.currentTurn === myIdx) {
+    if(myTurn) {
       const turnSpan = mk('span', 'turn-indicator');
       turnSpan.textContent = 'あなたの番';
       header.appendChild(turnSpan);
     }
     area.appendChild(header);
+    // 自分のターンの時、タップ案内
+    if(myTurn) {
+      const hint = mk('div');
+      hint.style.cssText = 'text-align:center; font-size:0.75rem; color:var(--muted); margin-bottom:6px;';
+      hint.textContent = '👆 カードをタップしてプレイ・捨て札を選べます';
+      area.appendChild(hint);
+    }
     const cards = mk('div', 'hand-cards');
     me.hand.forEach((c, idx) => {
       const card = renderMyCardElement(c, idx, {});
+      if(myTurn) {
+        card.style.cursor = 'pointer';
+        card.onclick = () => showMyCardAction(idx);
+      }
       cards.appendChild(card);
     });
     area.appendChild(cards);
@@ -1870,6 +1910,57 @@ function showConfirm(message, onOk) {
 
 function confirmLeave() {
   showConfirm('ゲームを抜けますか？', () => leaveRoom());
+}
+
+// 自分の手札をタップした時のアクション選択モーダル
+function showMyCardAction(cardIdx) {
+  if(!gs || !fs) return;
+  const myIdx = gs.players.findIndex(p => p.id === myId);
+  if(gs.currentTurn !== myIdx) return; // 自分のターンでないなら無視
+  if(isSendingAction) return;
+  
+  const me = gs.players.find(p => p.id === myId);
+  if(!me || !me.hand || !me.hand[cardIdx]) return;
+  
+  const modal = g('card-action-modal');
+  // プレビュー表示（裏向きカードを表示）
+  const preview = g('card-action-preview');
+  preview.innerHTML = '';
+  const cardEl = renderMyCardElement(me.hand[cardIdx], cardIdx, {});
+  cardEl.style.transform = 'scale(1.2)';
+  preview.appendChild(cardEl);
+  
+  modal.style.display = 'flex';
+  
+  const playBtn = g('card-action-play');
+  const discardBtn = g('card-action-discard');
+  const cancelBtn = g('card-action-cancel');
+  
+  // 捨てるはヒントトークン満タンなら無効化
+  if(gs.hintTokens >= gs.maxHintTokens) {
+    discardBtn.disabled = true;
+    discardBtn.textContent = '🗑️ 捨てる（ヒント満タンのため不可）';
+  } else {
+    discardBtn.disabled = false;
+    discardBtn.textContent = '🗑️ 捨てる';
+  }
+  
+  const cleanup = () => {
+    modal.style.display = 'none';
+    playBtn.onclick = null;
+    discardBtn.onclick = null;
+    cancelBtn.onclick = null;
+  };
+  
+  playBtn.onclick = () => {
+    cleanup();
+    sendPlay(cardIdx);
+  };
+  discardBtn.onclick = () => {
+    cleanup();
+    sendDiscard(cardIdx);
+  };
+  cancelBtn.onclick = cleanup;
 }
 
 let isSendingAction = false;
