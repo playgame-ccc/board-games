@@ -208,6 +208,24 @@ h3 { font-size:1.0rem; color:var(--rose-dark); margin:8px 0; }
 }
 .phase-tag.active { background:var(--gold); color:var(--bg); }
 
+/* === 魔法効果の対象アナウンス === */
+#game-target-announce {
+  background: linear-gradient(135deg, rgba(255,176,32,0.18), rgba(168,85,247,0.18));
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--gold);
+  animation: target-announce-pulse 2s ease-in-out infinite;
+  line-height: 1.5;
+}
+@keyframes target-announce-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,176,32,0.4); }
+  50% { box-shadow: 0 0 16px 0 rgba(255,176,32,0.6); }
+}
+
 /* === Modal === */
 .modal-bg {
   position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none;
@@ -527,6 +545,7 @@ h3 { font-size:1.0rem; color:var(--rose-dark); margin:8px 0; }
 <!-- ============================================================ GAME ============================================================ -->
 <div id="screen-game" class="screen">
   <div id="game-phase-bar" class="phase-bar"></div>
+  <div id="game-target-announce" style="display:none;"></div>
   <div id="game-active-magic"></div>
   <div id="game-progress-info"></div>
   <div id="game-board" class="board"></div>
@@ -1055,6 +1074,7 @@ function srPub(f){
     turnOrder: f.turnOrder || [],
     turnPtr: f.turnPtr != null ? f.turnPtr : null,
     lastMagic: f.lastMagic || null, // このラウンドの魔法効果（解決後も表示し続ける）
+    targetAnnounce: f.targetAnnounce || null, // 魔法効果のターゲットアナウンス
   };
 }
 
@@ -1339,6 +1359,7 @@ function srStartRound(){
   srFs.revealedCards = null;
   srFs.activeMagic = null;
   srFs.lastMagic = null; // 新ラウンドでリセット
+  srFs.targetAnnounce = null; // 新ラウンドでターゲットアナウンスもリセット
   srFs.forcedPlayers = [];
   srFs.randomPlayers = [];
   srFs.syncedPairs = [];
@@ -1380,7 +1401,10 @@ function srHostCoinPass(actorId, targetId){
   const coinHolder = srFs.players[srFs.coinIdx];
   if(coinHolder.id !== actorId) return;
   const target = srFs.players.find(p=>p.id===targetId);
-  if(!target || target.chip == null || target.id === actorId) return;
+  if(!target || target.chip == null) return;
+  // 自分を選べるのはラウンド1のみ
+  const isSelf = target.id === actorId;
+  if(isSelf && srFs.round !== 1) return;
   // Transfer coin
   const newIdx = srFs.players.findIndex(p=>p.id===targetId);
   srFs.coinIdx = newIdx;
@@ -1389,7 +1413,11 @@ function srHostCoinPass(actorId, targetId){
   const slotIdx = srFs.chipsPlaced.length + 1; // 1-5
   srFs.chipsPlaced.push({playerId:target.id, chipNumber:chipNum, slotIdx});
   target.chip = null;
-  srFs.log.push(`🪙 ${coinHolder.name} → ${target.name} (水晶チップ ${chipNum} を公開)`);
+  if(isSelf){
+    srFs.log.push(`🪙 ${coinHolder.name} は自分をスタートプレイヤーに指定 (水晶チップ ${chipNum} を公開)`);
+  } else {
+    srFs.log.push(`🪙 ${coinHolder.name} → ${target.name} (水晶チップ ${chipNum} を公開)`);
+  }
   srFs.log.push(`✨ 魔法効果 ${chipNum}: ${SR_MAGIC[chipNum-1].name}`);
   // Activate magic effect
   srFs.activeMagic = chipNum;
@@ -1570,6 +1598,21 @@ function srHostMagicTarget(actorId, targetIds){
   if(srFs.targetPickerId !== actorId) return;
   const magic = srFs.targetPickerMagic;
   const holderIdx = srFs.players.findIndex(p=>p.id===actorId);
+  const holder = srFs.players.find(p=>p.id===actorId);
+  // 対象アナウンス用に保存
+  const targetNames = targetIds.filter(id => id !== 'LAST' && id !== 'NOW').map(id => {
+    const tp = srFs.players.find(p=>p.id===id);
+    return tp ? tp.name : '？';
+  });
+  if(targetNames.length > 0 && magic !== 6 && magic !== 9) {
+    const magicName = SR_MAGIC[magic-1]?.name || `効果${magic}`;
+    srFs.targetAnnounce = {
+      magic, magicName,
+      holderName: holder?.name || '？',
+      targetNames,
+      ts: Date.now()
+    };
+  }
   // Reset picker
   srFs.targetPickerId = null;
   srFs.targetPickerMagic = null;
@@ -1930,11 +1973,35 @@ function srHostPickReplace(actorId, newCardId){
   setTimeout(()=>srDoReveal(), 1000);
 }
 
+// Helper: カードからプレイヤー名取得（魔法2のログ用）
+function srGetPlayerNameByCard(c){
+  if(!c || !c.playerId) return '？';
+  const p = srFs.players.find(x=>x.id===c.playerId);
+  return p ? p.name : '？';
+}
+// Helper: カードタイプから日本語名取得（魔法2のログ用）
+function srGetCardTypeName(t){
+  const map = {
+    whiteRose:'白薔薇', bishop:'司教', believer:'信者', ghost:'幽魂',
+    greatSword:'大剣', doubleKnife:'双刃', darkKnife:'暗刃'
+  };
+  return map[t] || t;
+}
+
 function srDoReveal(){
   // Shuffle played cards (unless magic 2 active)
   let cards = srFs.playedCards.slice();
-  if(!srFs.noShuffleAtReveal){
+  const wasMagic2 = srFs.noShuffleAtReveal;
+  if(!wasMagic2){
     cards = shuffle(cards);
+  } else {
+    // 魔法2: 出した順で公開、誰が何を出したかをログに残す
+    srFs.log.push('📜 ── 魔法2: カードの公開順 ──');
+    cards.forEach((c, idx) => {
+      const playerName = srGetPlayerNameByCard(c);
+      const cardName = srGetCardTypeName(c.type);
+      srFs.log.push(`  ${idx+1}. ${playerName}: ${cardName}`);
+    });
   }
   srFs.revealedCards = cards;
   srFs.revealMode = true;
@@ -2038,6 +2105,27 @@ function srCheckWinAndAdvance(){
     if(!isSolo) fbBroadcast({type:'sr_result'});
     srShowResult();
     return;
+  }
+  // ===== 要望4: 「プレイヤー数-1ラウンド経過」かつ「全プレイヤーの手札に刃なし」なら白薔薇勝利 =====
+  const playerCount = srFs.players.length;
+  const roundThreshold = playerCount - 1;
+  if(srFs.round >= roundThreshold){
+    // 全プレイヤーの手札を確認、刃（greatSword/doubleKnife/darkKnife）が一枚もないか
+    let bladeFound = false;
+    srFs.players.forEach(p=>{
+      (p.hand||[]).forEach(c=>{
+        if(['greatSword','doubleKnife','darkKnife'].includes(c.type)) bladeFound = true;
+      });
+    });
+    if(!bladeFound){
+      srFs.winner = 'rose';
+      srFs.winReason = `ラウンド ${srFs.round} 終了時、全プレイヤーの手札に刃（大剣・双刃・暗刃）がなく、白薔薇陣営の勝利！`;
+      srFs.phase = 'result';
+      srBcast();
+      if(!isSolo) fbBroadcast({type:'sr_result'});
+      srShowResult();
+      return;
+    }
   }
   // Next round
   srFs.round++;
@@ -2403,7 +2491,28 @@ function srRenderTable(){
 // ============================================================
 // ACTIVE MAGIC (発動中の魔法効果 - 大きく目立つ表示)
 // ============================================================
+function srRenderTargetAnnounce(){
+  const el = g('game-target-announce');
+  if(!el) return;
+  const ta = srGs?.targetAnnounce;
+  if(!ta || !ta.targetNames || ta.targetNames.length === 0){
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = '';
+  const targetsHtml = ta.targetNames.map(name =>
+    `<strong style="color:var(--rose); font-size:1rem;">${name}</strong>`
+  ).join('、');
+  el.innerHTML = `
+    🎯 <span style="color:var(--text);">魔法効果${ta.magic}「${ta.magicName}」の対象:</span><br>
+    ${targetsHtml}
+  `;
+}
+
 function srRenderActiveMagic(){
+  // ターゲットアナウンスバナーを描画
+  srRenderTargetAnnounce();
   const el = g('game-active-magic');
   if(!el) return;
   // ラウンド中に発動した魔法効果（activeMagic が null になっても、そのラウンド中は表示し続ける）
@@ -2631,18 +2740,31 @@ function srRenderActionArea(){
   }
   // Phase 1: coin holder picks target
   if(srGs.phase === 'phase1' && srGs.coinHolderId === myId){
-    const candidates = srGs.players.filter(p=>p.id!==myId && p.hasChip);
+    const isRound1 = srGs.round === 1;
+    // ラウンド1のみ自分も候補に含める
+    const candidates = isRound1
+      ? srGs.players.filter(p=>p.hasChip)
+      : srGs.players.filter(p=>p.id!==myId && p.hasChip);
     const wrapper = mk('div', 'panel');
-    wrapper.innerHTML = `<div style="color:var(--gold); font-size:0.85rem; margin-bottom:8px;">🪙 コインを渡す相手を選んでください（水晶チップ保持者のみ）</div>`;
+    const msg = isRound1
+      ? '🪙 コインを渡す相手を選んでください<br><span style="font-size:0.72rem; color:var(--muted);">※ ラウンド1のみ自分自身を選んでスタートプレイヤーになれます</span>'
+      : '🪙 コインを渡す相手を選んでください（水晶チップ保持者のみ）';
+    wrapper.innerHTML = `<div style="color:var(--gold); font-size:0.85rem; margin-bottom:8px;">${msg}</div>`;
     if(candidates.length===0){
       wrapper.innerHTML += `<div style="color:var(--muted);">対象がいません</div>`;
     } else {
       const grid = mk('div'); grid.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
       candidates.forEach(p=>{
-        const btn = mk('button', 'btn btn-rose');
+        const isSelf = p.id === myId;
+        const btn = mk('button', isSelf ? 'btn btn-blood' : 'btn btn-rose');
         btn.style.padding = '8px 12px';
-        btn.textContent = p.name;
-        btn.onclick = ()=>srSubmitCoinPass(p.id);
+        btn.textContent = isSelf ? `🪙 自分（${p.name}）を指名する` : p.name;
+        btn.onclick = ()=>{
+          if(isSelf){
+            if(!confirm('自分自身をスタートプレイヤーに指定しますか？\n自分のチップが公開され、その魔法効果が発動します。')) return;
+          }
+          srSubmitCoinPass(p.id);
+        };
         grid.appendChild(btn);
       });
       wrapper.appendChild(grid);
