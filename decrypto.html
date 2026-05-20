@@ -1328,7 +1328,16 @@ async function dcSendPrivates(){
     if(prv.isEncoder){
       prv.code=dcFs.codes[team];
     }
-    await fbSendTo(p.id,prv);
+    // ホスト本人の場合はdcPrvを直接更新（ソロモード対応）
+    if(p.id===myId){
+      dcPrv=prv;
+      // 画面再描画（ゲーム画面が表示中の時のみ）
+      if(g('screen-game') && g('screen-game').classList.contains('active')){
+        dcRenderGame();
+      }
+    } else {
+      await fbSendTo(p.id,prv);
+    }
   }
 }
 
