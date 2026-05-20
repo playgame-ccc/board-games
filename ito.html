@@ -309,11 +309,12 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         各プレイヤーに1〜100の数字カードが配られ、テーマに沿って自分の数字を<strong style="color:var(--ito-pink);">言葉で表現</strong>。<br>
         全員で<strong style="color:var(--green);">数字の小さい順</strong>にカードを出していく。<br>
         小さいと思った人から順番に出して、間違えるとライフ-1。<br>
-        ライフが0になる前に全員出し切れば成功！
+        <strong style="color:var(--green);">3ラウンド成功で勝利！</strong>（ライフ0で敗北）
       </p>
       <p style="font-size:0.78rem; color:var(--muted); line-height:1.6; margin-top:10px;">
         💡 数字を直接言うのは禁止。<br>
-        💡 ヒントは言葉のみ（テーマに沿って）。
+        💡 ヒントは言葉のみ（テーマに沿って）。<br>
+        💡 1ラウンドで全員のカードを出し切ると成功。新しい数字とテーマで次へ。
       </p>
     </div>
 
@@ -1388,6 +1389,8 @@ function pubFs(f) {
     numberRange: f.numberRange || 100,
     order: f.order || 'asc',
     playedCards: f.playedCards.slice(),
+    roundsCleared: f.roundsCleared || 0,
+    roundsNeeded: f.roundsNeeded || 3,
     log: f.log.slice(-20),
     winner: f.winner,
     revealAll: f.revealAll || null, // 結果画面用
@@ -1431,6 +1434,23 @@ function startGame() {
   const startBtn = g('btn-start');
   if(startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳ 開始中...'; }
 
+  // ラウンド進行用の初期化
+  fs.maxLives = fs.lives;
+  fs.roundsCleared = 0;
+  fs.roundsNeeded = 3;
+  fs.phase = 'playing';
+  fs.winner = null;
+  fs.revealAll = null;
+  fs.log = [];
+  fs.log.push('🎲 ゲーム開始！全部で ' + fs.roundsNeeded + ' ラウンド成功すれば勝利');
+
+  // 第1ラウンド開始
+  startNextRound(true);
+}
+
+// 次のラウンド開始（新しい数字とテーマを配布）
+function startNextRound(isFirst) {
+  if(!fs) return;
   // ランダムにテーマ選択（直近と被らないように）
   let candidate = null;
   for(let i=0;i<30;i++) {
@@ -1452,14 +1472,12 @@ function startGame() {
     p.played = false;
   });
 
-  fs.maxLives = fs.lives;
   fs.playedCards = [];
-  fs.log = [];
-  fs.log.push('🎲 ゲーム開始！テーマ: ' + fs.theme.text);
-  fs.log.push('⚙️ 順序: ' + (fs.order === 'desc' ? '大→小（降順）' : '小→大（昇順）') + ' / ライフ: ' + fs.lives + ' / 範囲: 1〜' + range);
-  fs.phase = 'playing';
-  fs.winner = null;
-  fs.revealAll = null;
+  const roundNo = (fs.roundsCleared || 0) + 1;
+  if(isFirst) {
+    fs.log.push('⚙️ 順序: ' + (fs.order === 'desc' ? '大→小（降順）' : '小→大（昇順）') + ' / ライフ: ' + fs.lives + ' / 範囲: 1〜' + range);
+  }
+  fs.log.push('🎯 ラウンド ' + roundNo + ' / ' + fs.roundsNeeded + ' 開始！テーマ: ' + fs.theme.text);
 
   bcast();
 }
@@ -1502,7 +1520,13 @@ function handlePlay(actorId) {
     // 失敗：順序が間違っていた
     fs.lives -= 1;
     actor.played = true;
-    fs.playedCards.push({playerId:actor.id, name:actor.name, number:myNum, isError:true});
+    // 失敗時は即座に公開（教訓のため、出した本人＆その時の他人の数字を全て見せる）
+    fs.playedCards.push({playerId:actor.id, name:actor.name, number:myNum, isError:true, revealed:true});
+    // まだ出してない人のカードも公開しないとプレイヤーは反省できないが、ゲーム継続なので、
+    // 過去に出したカードのみ公開状態にする
+    for(const pc of fs.playedCards){
+      pc.revealed = true;
+    }
     const directionWord = order === 'asc' ? '小さい' : '大きい';
     fs.log.push('💔 ' + actor.name + ' が ' + myNum + ' を出したが、もっと' + directionWord + '人がいた！(ライフ-1)');
     // ライフ0で失敗
@@ -1518,18 +1542,38 @@ function handlePlay(actorId) {
     return;
   }
 
-  // 成功
+  // 成功（カードは伏せたまま積む）
   actor.played = true;
-  fs.playedCards.push({playerId:actor.id, name:actor.name, number:myNum, isError:false});
-  fs.log.push('✅ ' + actor.name + ' が ' + myNum + ' を出した');
+  fs.playedCards.push({playerId:actor.id, name:actor.name, number:myNum, isError:false, revealed:false});
+  fs.log.push('✅ ' + actor.name + ' がカードを出した');
 
-  // 全員出したらクリア
+  // 全員出したら1ラウンド成功
   if(fs.players.every(p => p.played)) {
-    fs.winner = 'clear';
-    fs.phase = 'result';
-    revealAll();
-    fs.log.push('🎉 クリア！全員のカードを順番に出せた');
+    // 全カードを公開状態にする（このラウンドの振り返り用）
+    for(const pc of fs.playedCards){
+      pc.revealed = true;
+    }
+    fs.roundsCleared = (fs.roundsCleared || 0) + 1;
+    const needed = fs.roundsNeeded || 3;
+    
+    if(fs.roundsCleared >= needed) {
+      // 全ラウンド達成 → 勝利
+      fs.winner = 'clear';
+      fs.phase = 'result';
+      revealAll();
+      fs.log.push('🎉 ' + needed + ' ラウンド達成！完全クリア！');
+      bcast();
+      return;
+    }
+    // まだ続行：次のラウンドへ
+    fs.log.push('✨ ラウンド ' + fs.roundsCleared + ' クリア！（残り ' + (needed - fs.roundsCleared) + ' ラウンド）');
     bcast();
+    // 少し待ってから次ラウンド開始（演出のため）
+    setTimeout(() => {
+      if(fs && fs.phase === 'playing') {
+        startNextRound(false);
+      }
+    }, 4000);
     return;
   }
   bcast();
@@ -1671,6 +1715,19 @@ function renderPlaying() {
     heart.textContent = '❤️';
     lives.appendChild(heart);
   }
+  // ラウンド進捗を併記
+  if(gs.roundsNeeded && gs.roundsNeeded > 1) {
+    const roundsBox = mk('span');
+    roundsBox.style.cssText = 'margin-left:12px; font-size:0.85rem; color:var(--muted); font-family:var(--mono); letter-spacing:1px;';
+    const cleared = gs.roundsCleared || 0;
+    const needed = gs.roundsNeeded;
+    let stars = '';
+    for(let i=0;i<needed;i++){
+      stars += (i < cleared ? '⭐' : '☆');
+    }
+    roundsBox.innerHTML = stars + ' (' + cleared + '/' + needed + ')';
+    lives.appendChild(roundsBox);
+  }
 
   // 出したカード
   const pf = g('played-cards');
@@ -1682,7 +1739,14 @@ function renderPlaying() {
       const wrap = mk('div');
       wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:14px;';
       const card = mk('div', 'played-card' + (pc.isError ? ' error' : ''));
-      card.textContent = pc.number;
+      // 自分のカード または 公開済みカード のみ数字を表示
+      const showNumber = pc.revealed || pc.playerId === myId;
+      if(showNumber) {
+        card.textContent = pc.number;
+      } else {
+        card.textContent = '?';
+        card.style.opacity = '0.7';
+      }
       wrap.appendChild(card);
       const name = mk('div');
       name.style.cssText = 'font-size:0.65rem; color:var(--muted); text-align:center;';
