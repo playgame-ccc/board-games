@@ -3940,10 +3940,11 @@ function avCalcInfo(player, all, lanc){
     default:
       if(player.team==='evil'){
         // Evil players see their initial evil teammates (excluding Oberon)
-        info.seeAs='悪の仲間（ゲーム開始時）';
+        // ⚠️ 役職は教えない（陣営のみ認識）
+        info.seeAs='悪の仲間（ゲーム開始時。役職は不明）';
         info.seePlayers=all
           .filter(p=>p.team==='evil' && p.role!=='oberon' && p.id!==player.id)
-          .map(p=>({id:p.id, name:p.name, label:'evil', role:p.role}));
+          .map(p=>({id:p.id, name:p.name, label:'evil'}));
       }
   }
   // Store initial evil ids for highlight use (will not change)
@@ -4009,7 +4010,7 @@ function avStartNight(){
     wrap.style.cssText='display:flex; flex-wrap:wrap; gap:8px; justify-content:center;';
     avMyInfo.seePlayers.forEach(sp=>{
       if(isEvilTeamRecognition){
-        // 悪仲間: 大きく目立つカード
+        // 悪仲間: 大きく目立つカード（役職は教えない）
         const card=mk('div','');
         card.style.cssText=`
           padding:10px 14px;
@@ -4019,16 +4020,13 @@ function avStartNight(){
           display:flex; flex-direction:column; align-items:center; gap:4px;
           min-width:100px;
           box-shadow:0 0 10px rgba(255,45,74,0.3);`;
-        const roleName = sp.role ? AV_ROLES[sp.role]?.name : '';
-        const roleIcon = sp.role ? AV_ROLES[sp.role]?.icon : '🗡️';
-        card.innerHTML=`<div style="font-size:1.4rem;">${roleIcon}</div>
-          <div style="font-weight:700; color:var(--av-evil); font-size:0.9rem;">${sp.name}</div>
-          ${roleName?`<div style="font-size:0.7rem; color:var(--muted);">${roleName}</div>`:''}`;
+        card.innerHTML=`<div style="font-size:1.4rem;">🗡️</div>
+          <div style="font-weight:700; color:var(--av-evil); font-size:0.9rem;">${sp.name}</div>`;
         wrap.appendChild(card);
       } else {
-        // 通常: バッジ
+        // 通常: バッジ（マーリンが見る悪・パーシヴァルが見るマーリン/モルガナなど）
         const b=mk('span','av-see-badge '+(sp.label==='evil'?'evil':'special'));
-        b.textContent=(sp.label==='evil'?'🗡️':'✨')+' '+sp.name+(sp.role?' ('+AV_ROLES[sp.role]?.name+')':'');
+        b.textContent=(sp.label==='evil'?'🗡️':'✨')+' '+sp.name;
         wrap.appendChild(b);
       }
     });
