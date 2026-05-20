@@ -77,11 +77,11 @@ body{min-height:100vh;padding:10px;background:radial-gradient(circle at 30% 40%,
 .hex-tile.ore{fill:var(--t-ore);}
 .hex-tile.desert{fill:var(--t-desert);}
 .hex-tile.sea{fill:var(--t-sea);}
-.hex-num{fill:#fdf6e3;font-size:14px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none;}
-.hex-num.hot{fill:#ff5040;}
-.hex-num-bg{fill:#fdf6e3;stroke:#444;stroke-width:0.5;}
-.hex-dots{font-size:8px;fill:#222;text-anchor:middle;}
-.hex-dots.hot{fill:#ff5040;}
+.hex-num{fill:#1a1a1a;font-size:17px;font-weight:900;text-anchor:middle;dominant-baseline:central;pointer-events:none;}
+.hex-num.hot{fill:#e8150a;}
+.hex-num-bg{fill:#fff;stroke:#aaa;stroke-width:1;}
+.hex-dots{font-size:9px;fill:#555;text-anchor:middle;}
+.hex-dots.hot{fill:#e8150a;}
 .robber{fill:#000;stroke:#fff;stroke-width:1;pointer-events:none;}
 
 /* 頂点・辺（クリック可能） */
@@ -1579,12 +1579,12 @@ function renderBoard(){
       const isHot=(h.number===6||h.number===8);
       const bg=mkSVG('circle',{
         'class':'hex-num-bg',
-        'cx':cx,'cy':cy,'r':13
+        'cx':cx,'cy':cy,'r':16
       });
       svg.appendChild(bg);
       const txt=mkSVG('text',{
         'class':'hex-num'+(isHot?' hot':''),
-        'x':cx,'y':cy-2,
+        'x':cx,'y':cy-3,
       });
       txt.textContent=h.number;
       svg.appendChild(txt);
@@ -1592,7 +1592,7 @@ function renderBoard(){
       const dots=DOT_COUNT[h.number]||0;
       const dotTxt=mkSVG('text',{
         'class':'hex-dots'+(isHot?' hot':''),
-        'x':cx,'y':cy+8,
+        'x':cx,'y':cy+10,
       });
       dotTxt.textContent='•'.repeat(dots);
       svg.appendChild(dotTxt);
@@ -1627,17 +1627,42 @@ function renderBoard(){
       const portX=mx+dx/len*18;
       const portY=my+dy/len*18;
       // 港マーカー
+      const bgColor = portBgColor(port.type);
       const portBg=mkSVG('circle',{
         'class':'port-bg',
-        'cx':portX,'cy':portY,'r':14
+        'cx':portX,'cy':portY,'r':17,
+        'style': `fill:${bgColor};stroke:#fff;stroke-width:1.5;`
       });
       svg.appendChild(portBg);
-      const portTxt=mkSVG('text',{
-        'class':'port',
-        'x':portX,'y':portY,
-      });
-      portTxt.textContent=portLabel(port.type);
-      svg.appendChild(portTxt);
+
+      if(port.type === 'any'){
+        // 3:1港は1行
+        const portTxt=mkSVG('text',{
+          'class':'port',
+          'x':portX,'y':portY,
+          'style':'font-size:10px;fill:#fff;font-weight:900;',
+        });
+        portTxt.textContent='3:1';
+        svg.appendChild(portTxt);
+      } else {
+        // 2:1港は絵文字+レート2行
+        const emojiMap={wood:'🪵',wheat:'🌾',sheep:'🐑',brick:'🧱',ore:'🪨'};
+        const emoji = emojiMap[port.type] || '?';
+        const emTxt = mkSVG('text',{
+          'x':portX,'y':portY-5,
+          'text-anchor':'middle','dominant-baseline':'central',
+          'font-size':'12','pointer-events':'none',
+        });
+        emTxt.textContent = emoji;
+        svg.appendChild(emTxt);
+        const rateTxt = mkSVG('text',{
+          'x':portX,'y':portY+8,
+          'text-anchor':'middle','dominant-baseline':'central',
+          'font-size':'8','fill':'#fff','font-weight':'900','pointer-events':'none',
+        });
+        rateTxt.textContent = '2:1';
+        svg.appendChild(rateTxt);
+      }
       // 港から両頂点に線
       const l1=mkSVG('line',{
         'class':'port-line',
@@ -1700,8 +1725,28 @@ function renderBoard(){
 }
 
 function portLabel(t){
-  if(t==='any') return '3:1';
-  return '2:1';
+  const map={
+    wood:  '🪵\n2:1',
+    wheat: '🌾\n2:1',
+    sheep: '🐑\n2:1',
+    brick: '🧱\n2:1',
+    ore:   '🪨\n2:1',
+    any:   '3:1',
+  };
+  return map[t] || '2:1';
+}
+
+// 港の背景色（資源別）
+function portBgColor(t){
+  const map={
+    wood:  '#2d6a2d',
+    wheat: '#c4a000',
+    sheep: '#7ec87e',
+    brick: '#b84a1e',
+    ore:   '#5a5a8a',
+    any:   '#1a3a5a',
+  };
+  return map[t] || '#1a3a5a';
 }
 
 function renderPlacementSpots(svg,offsetX,offsetY,board){
@@ -1920,7 +1965,19 @@ async function ctSendPrivates(){
       ports:p.ports||[], // このプレイヤーが利用可能な港リスト
       trueVP:p.vp||0,    // 自分の本当のVP（勝利点カード込み）
     };
-    await fbSendTo(p.id,prv);
+    if(!fbRoom){
+      // ソロモード: Firebase なし → ホスト自身の ctPrv を直接セット
+      if(p.id===myId){
+        ctPrv=prv;
+        if(g('screen-game').classList.contains('active')) ctRenderGame();
+      }
+    } else if(p.id===myId){
+      // マルチプレイのホスト自身: Firebase経由を介さず直接セット（遅延防止）
+      ctPrv=prv;
+      if(g('screen-game').classList.contains('active')) ctRenderGame();
+    } else {
+      await fbSendTo(p.id,prv);
+    }
   }
 }
 
