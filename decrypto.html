@@ -419,32 +419,133 @@ function dcRemoveBot(){
 }
 
 // BOTエンコーダー: 3つのコード番号に対応するキーワードから連想ヒントを生成
-// 中級戦略: キーワードの「一部」を取って「ヒントっぽい単語」を生成
+// 禁止文字（コードに対応する3つのキーワードの文字）を含まないヒントを作る
 function dcBotGenerateHints(botId,team,codes){
   const keywords=dcFs.keywords[team];
+  // 禁止文字セット
+  const forbiddenChars=new Set();
+  for(const num of codes){
+    const kw=keywords[num-1];
+    if(!kw) continue;
+    for(const ch of kw) forbiddenChars.add(ch);
+  }
   const hints=[];
+  const usedHints=new Set(); // ヒントの重複防止
   for(let i=0;i<3;i++){
     const num=codes[i];
-    const kw=keywords[num-1]; // 1-indexed
-    // 連想語生成: キーワードの最初の1文字＋末尾の1文字 で曖昧化
-    // または、簡易な「変形」
-    hints.push(dcSimpleAssociate(kw,i));
+    const kw=keywords[num-1];
+    let hint=dcBotMakeHintForKeyword(kw,forbiddenChars,usedHints);
+    hints.push(hint);
+    usedHints.add(hint);
   }
   return hints;
 }
 
+// キーワードに対する連想ヒントを生成（禁止文字を回避）
+function dcBotMakeHintForKeyword(keyword,forbiddenChars,usedHints){
+  // 連想語の候補リストを作る（事前定義）
+  // 各キーワードに対する固有の連想は難しいので、汎用的な「カテゴリ語」「形容詞」を試す
+  const candidates=dcGetAssociationCandidates(keyword);
+  // 禁止文字を含まないもの、使用済みでないものを優先
+  for(const c of candidates){
+    if(usedHints.has(c)) continue;
+    let bad=false;
+    for(const ch of c){
+      if(forbiddenChars.has(ch)){bad=true;break;}
+    }
+    if(!bad) return c;
+  }
+  // 候補がない場合は汎用フォールバック
+  const fallbacks=['もの','こと','ような','感じ','物体','存在','イメージ','要素','種類'];
+  for(const f of fallbacks){
+    if(usedHints.has(f)) continue;
+    let bad=false;
+    for(const ch of f){
+      if(forbiddenChars.has(ch)){bad=true;break;}
+    }
+    if(!bad) return f;
+  }
+  // 最終フォールバック
+  return '？';
+}
+
+// キーワードから連想語の候補を返す（簡易辞書）
+function dcGetAssociationCandidates(keyword){
+  // キーワードのカテゴリを推定して関連語を返す
+  // 完璧な辞書ではないので、汎用語＋一部のキーワード固有語のセット
+  const generalCands=['アイテム','イメージ','カテゴリ','タイプ','要素','存在','感覚','種類','様子','物','場面','形','色','概念','風景','時代','分野','作品'];
+  // キーワード固有のヒント案（一部のみ用意）
+  const specificMap={
+    '宇宙':['星空','スペース','無限','広がり','銀','天体'],
+    '銀河':['星雲','コスモ','宇'],
+    '星':['天','輝き','夜空','光'],
+    '月':['夜','地球','満ち欠け','輝き'],
+    '太陽':['昼','光','熱','エネルギー','輝き'],
+    '地球':['惑星','陸地','海','大気'],
+    '海':['水','波','青','広い','深い'],
+    '山':['高い','登る','緑','頂上','岩'],
+    '川':['水','流れる','長い','岸'],
+    '森':['木','緑','深い','静か'],
+    '空':['青','雲','広い','飛ぶ'],
+    '雲':['白','浮かぶ','雨','天気'],
+    '雨':['水','降る','傘','天気','濡れる'],
+    '雪':['白','冷たい','降る','冬'],
+    '火':['熱い','赤','燃える','炎'],
+    '光':['明るい','輝く','見える','色'],
+    '音':['聞こえる','響く','声','楽器'],
+    '色':['見える','様々','明るい','濃い'],
+    '時間':['経つ','長い','短い','流れ'],
+    '夢':['寝る','想像','幻','希望'],
+    '愛':['気持ち','大切','心','人'],
+    '心':['気持ち','感情','人','大切'],
+    '人':['誰か','個人','存在','社会'],
+    '友':['仲間','親しい','信頼'],
+    '家':['住む','建物','部屋','家族'],
+    '本':['読む','文字','物語','学ぶ'],
+    '紙':['白い','書く','薄い','破れる'],
+    '車':['乗る','道路','走る','タイヤ'],
+    '電車':['乗る','線路','駅','長い'],
+    '飛行機':['空','飛ぶ','空港','速い'],
+    '船':['海','水','浮かぶ','大きい'],
+    '猫':['動物','可愛い','鳴く','尻尾'],
+    '犬':['動物','吠える','尻尾','友達'],
+    '魚':['泳ぐ','水','鱗','尾'],
+    '鳥':['飛ぶ','羽','空','鳴く'],
+    '花':['咲く','綺麗','色','春'],
+    '木':['緑','高い','葉','森'],
+    '草':['緑','短い','地面','野原'],
+    '虫':['小さい','動く','飛ぶ','足'],
+    '食':['食べる','美味しい','栄養'],
+    '水':['飲む','透明','流れる','液体'],
+    '味':['感じる','美味しい','種類'],
+    '色':['見える','明るい','様々'],
+    '形':['丸','四角','三角','様々'],
+    '数':['数える','多い','少ない','個'],
+    '言葉':['話す','伝える','意味','音'],
+    '声':['出す','響く','話す','音'],
+    '歌':['歌う','音','メロディ','楽しい'],
+    '踊り':['動く','楽しい','音楽','体'],
+    '絵':['描く','見る','色','美しい'],
+    '映画':['見る','物語','時間','映像'],
+    '音楽':['聞く','楽器','メロディ','心地よい'],
+    '料理':['作る','食べる','美味しい','レシピ'],
+    '旅':['行く','遠い','楽しい','新しい'],
+    '夏':['暑い','海','花火','緑'],
+    '冬':['寒い','雪','白','静か'],
+    '春':['暖かい','花','緑','新しい'],
+    '秋':['涼しい','紅葉','収穫','静か'],
+    '朝':['始まり','光','新しい','早い'],
+    '夜':['暗い','静か','星','寝る'],
+    '昼':['明るい','活動','太陽','暖かい'],
+    '夕方':['赤い','暗くなる','時間'],
+  };
+  const specific=specificMap[keyword]||[];
+  return [...specific, ...generalCands];
+}
+
 function dcSimpleAssociate(word,idx){
-  // 中級レベルの連想：単語に固有のヒントを返す
-  // 単純な戦略: 単語そのものか、その一部を少し変えたもの
-  // 完全に同じだと丸見えなので、一部を抜く・略すなどで難しくする
-  const variants=[
-    word, // そのまま (60%)
-    word, 
-    word,
-    word.length>2?word.slice(0,Math.ceil(word.length*0.7)):word, // 短縮
-    word+'的', // 形容詞化
-  ];
-  return variants[Math.floor(Math.random()*variants.length)];
+  // 後方互換用に残す。基本的にdcBotGenerateHints経由
+  return word;
 }
 
 // BOT推測（自チーム）: ヒント3つと自チームのキーワード4つから番号順を推測
@@ -1127,6 +1228,19 @@ function onPrivate(d){
     dcBackToLobby();
     return;
   }
+  // ヒントエラー通知
+  if(d&&d.hintError){
+    alert('ヒント提出エラー: '+d.hintError);
+    // 送信ボタンを復活
+    const allBtns=document.querySelectorAll('button.btn-primary');
+    for(const btn of allBtns){
+      if(btn.textContent==='送信中…'){
+        btn.disabled=false;
+        btn.textContent='📤 ヒント提出';
+      }
+    }
+    return;
+  }
   dcPrv=d;
   if(g('screen-game').classList.contains('active')){
     dcRenderGame();
@@ -1344,11 +1458,72 @@ async function dcSendPrivates(){
 // ====================
 // ヒント提出処理
 // ====================
+// ヒントに禁止文字（コードに該当するキーワードの文字）が含まれていないかチェック
+// 戻り値: NGならエラーメッセージ、OKならnull
+function dcCheckForbiddenChars(hints, team){
+  if(!dcFs||!dcFs.keywords||!dcFs.codes) return null;
+  const keywords=dcFs.keywords[team];
+  const code=dcFs.codes[team];
+  if(!keywords||!code) return null;
+  // コードに該当するキーワードの文字セットを作る
+  const forbiddenChars=new Set();
+  for(const num of code){
+    const kw=keywords[num-1]; // 1-indexed
+    if(!kw) continue;
+    for(const ch of kw) forbiddenChars.add(ch);
+  }
+  // 各ヒントをチェック
+  for(let i=0;i<hints.length;i++){
+    const hint=String(hints[i]||'');
+    for(const ch of hint){
+      if(forbiddenChars.has(ch)){
+        return `ヒント${i+1}に禁止文字「${ch}」が含まれています`;
+      }
+    }
+  }
+  return null;
+}
+
+// BOTのヒントが禁止文字を含む場合の修正（最低限の対応）
+function dcSanitizeBotHints(hints,team){
+  const keywords=dcFs.keywords[team];
+  const code=dcFs.codes[team];
+  const forbiddenChars=new Set();
+  for(const num of code){
+    const kw=keywords[num-1];
+    if(!kw) continue;
+    for(const ch of kw) forbiddenChars.add(ch);
+  }
+  return hints.map((hint,i)=>{
+    // 禁止文字を除去
+    let cleaned='';
+    for(const ch of String(hint||'')){
+      if(!forbiddenChars.has(ch)) cleaned+=ch;
+    }
+    // 空になったら「？」を返す
+    if(!cleaned) cleaned='？';
+    return cleaned;
+  });
+}
+
 async function dcHostHandleHint(pid,team,hints){
   if(!isHost||!dcFs) return;
   if(dcFs.phase!=='hint') return;
   if(dcFs.encoders[team]!==pid) return;
   if(dcFs.hintsSubmitted[team]) return;
+  // 禁止文字チェック
+  const errMsg=dcCheckForbiddenChars(hints,team);
+  if(errMsg){
+    const enc=dcFs.players.find(p=>p.id===pid);
+    if(enc&&enc.isBot){
+      // BOTの場合: フォールバック（禁止文字を除去）
+      hints=dcSanitizeBotHints(hints,team);
+    } else {
+      // 人間: エラー通知してreturn
+      await fbSendTo(pid,{hintError:errMsg});
+      return;
+    }
+  }
   dcFs.currentHints[team]=hints;
   dcFs.hintsSubmitted[team]=true;
   const teamName=team==='white'?'白チーム':'黒チーム';
@@ -1652,6 +1827,20 @@ function dcRenderHintInput(pa){
     codeBox.appendChild(d);
   });
   card.appendChild(codeBox);
+  // 禁止文字を計算して表示
+  const forbiddenChars=new Set();
+  for(const n of code){
+    const k=kw[n-1];
+    if(!k) continue;
+    for(const ch of k) forbiddenChars.add(ch);
+  }
+  const forbiddenStr=Array.from(forbiddenChars).join('・');
+  if(forbiddenStr){
+    const warn=mk('div');
+    warn.style.cssText='background:rgba(255,80,80,0.15);border:1px solid rgba(255,80,80,0.4);border-radius:8px;padding:8px 10px;margin:6px 0;font-size:0.82rem;';
+    warn.innerHTML=`⚠️ <strong>使えない文字:</strong> ${forbiddenStr}<br><span style="font-size:0.75rem;color:var(--muted);">（コードに該当するキーワードの文字）</span>`;
+    card.appendChild(warn);
+  }
   // ヒント3つ入力
   const wrap=mk('div','');
   code.forEach((n,i)=>{
@@ -1665,9 +1854,32 @@ function dcRenderHintInput(pa){
     inp.placeholder='ヒントを入力';
     inp.maxLength=30;
     inp.value=dcHintInputs[i]||''; // 既存入力を復元
-    inp.oninput=(e)=>{dcHintInputs[i]=e.target.value;}; // 入力毎に保存
+    inp.oninput=(e)=>{
+      dcHintInputs[i]=e.target.value;
+      // リアルタイムバリデーション
+      const errEl=g('hint-err-'+i);
+      const v=e.target.value;
+      let bad=null;
+      for(const ch of v){
+        if(forbiddenChars.has(ch)){bad=ch;break;}
+      }
+      if(bad){
+        errEl.textContent='❌ 禁止文字「'+bad+'」が含まれています';
+        errEl.style.display='block';
+        inp.style.borderColor='var(--red,#ff5555)';
+      } else {
+        errEl.textContent='';
+        errEl.style.display='none';
+        inp.style.borderColor='';
+      }
+    };
     row.appendChild(inp);
     wrap.appendChild(row);
+    // エラー表示エリア
+    const errDiv=mk('div');
+    errDiv.id='hint-err-'+i;
+    errDiv.style.cssText='color:#ff7777;font-size:0.78rem;margin-top:-4px;margin-bottom:6px;padding-left:4px;display:none;';
+    wrap.appendChild(errDiv);
   });
   card.appendChild(wrap);
   const btn=mk('button','btn btn-primary btn-block','📤 ヒント提出');
@@ -1677,6 +1889,13 @@ function dcRenderHintInput(pa){
       const v=g('hint-input-'+i).value.trim();
       if(!v){alert(`ヒント${i+1}が空です`);return;}
       if(v.length>30){alert('ヒントは30文字以内');return;}
+      // 禁止文字チェック
+      for(const ch of v){
+        if(forbiddenChars.has(ch)){
+          alert(`ヒント${i+1}に禁止文字「${ch}」が含まれています`);
+          return;
+        }
+      }
       hints.push(v);
     }
     btn.disabled=true;
