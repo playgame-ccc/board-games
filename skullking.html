@@ -2169,6 +2169,11 @@ function ttRenderPlay(){
   const lead = ttGs.leadSuit;
   // 通常カードでリードスートを持っているか（特殊カードは無視）
   const hasLeadSuit = lead && ttMyCards.some(c=>c.kind==='normal' && c.suit === lead);
+  debugLog(`📛 renderPlay手札描画: ttMyCards=${ttMyCards.length}枚, hand要素=${hand?'OK':'null'}`);
+  if(ttMyCards.length > 0){
+    const sample = ttMyCards[0];
+    debugLog(`📛 1枚目: kind=${sample.kind} ${sample.suit||''}${sample.num!==undefined?sample.num:''}`);
+  }
   ttRenderGroupedHand(ttMyCards, hand, (c)=>{
     let canPlay = myTurn;
     // 特殊カードは常に出せる。通常カードのみマストフォロー対象。
@@ -2180,6 +2185,7 @@ function ttRenderPlay(){
       onClick: canPlay ? ()=>ttPlayMyCard(c.id, c) : null,
     };
   });
+  debugLog(`📛 描画後hand子要素数: ${hand.children.length}`);
 
   // Action hint
   if(myTurn){
