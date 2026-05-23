@@ -449,6 +449,13 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
 </head>
 <body>
 
+<!-- デバッグログ表示エリア（折りたたみ式・画面下部固定） -->
+<details id="debug-log-panel" style="position:fixed; bottom:0; right:0; width:100%; max-width:400px; z-index:200; background:rgba(0,0,0,0.85); border-top:1px solid var(--gold); border-left:1px solid var(--gold);">
+  <summary style="cursor:pointer; padding:6px 10px; color:var(--gold); font-size:0.75rem; font-family:monospace;">🐛 DEBUG LOG（タップで開閉）</summary>
+  <pre id="debug-log-content" style="margin:0; padding:8px; color:#7fef7f; font-size:0.7rem; font-family:monospace; max-height:200px; overflow-y:auto; white-space:pre-wrap; line-height:1.4;"></pre>
+</details>
+
+
 <!-- ============================================================ LOBBY ============================================================ -->
 <div id="screen-lobby" class="screen active">
   <h1 class="title-main">🏴‍☠️ スカルキング</h1>
@@ -812,20 +819,36 @@ async function fbDel(sub){
   if(!fbRoom) return;
   try { await fetch(`${FB_URL}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){}
 }
-function fbBroadcast(msg){
+async function fbBroadcast(msg){
   if(!fbRoom) return;
   const k = 'b_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  fbPut('broadcast/' + k, {...msg, ts:Date.now()});
+  await fbPut('broadcast/' + k, {...msg, ts:Date.now()});
 }
-function fbSendTo(pid, msg){
+async function fbSendTo(pid, msg){
   if(!fbRoom) return;
   const k = 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  fbPut(`private/${pid}/${k}`, {...msg, ts:Date.now()});
+  await fbPut(`private/${pid}/${k}`, {...msg, ts:Date.now()});
 }
-function fbSendToHost(msg){
+async function fbSendToHost(msg){
   if(!fbRoom) return;
   const k = 'h_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  fbPut(`action/${k}`, {...msg, sender:myId, ts:Date.now()});
+  await fbPut(`action/${k}`, {...msg, sender:myId, ts:Date.now()});
+}
+
+// ============================================================
+// DEBUG LOG (画面上に表示。スマホでconsoleが見えない時用)
+// ============================================================
+const debugLogs = [];
+function debugLog(msg){
+  const t = new Date().toLocaleTimeString();
+  debugLogs.push(`${t} ${msg}`);
+  if(debugLogs.length > 30) debugLogs.shift();
+  const el = document.getElementById('debug-log-content');
+  if(el){
+    el.textContent = debugLogs.slice(-15).join('\n');
+    el.scrollTop = el.scrollHeight;
+  }
+  console.log('[debug]', msg);
 }
 function fbListen(){
   if(fbListener) clearInterval(fbListener);
@@ -1296,7 +1319,7 @@ function ttStartGameInternal(){
   ttStartRound();
 }
 
-function ttStartRound(){
+async function ttStartRound(){
   const n = ttFs.players.length;
   const deck = shuffle(makeDeck(ttFs.specials));
   // 山札不足を防ぐため、配布枚数を制限
@@ -1336,27 +1359,36 @@ function ttStartRound(){
   ttFs.log.push(`━━ ラウンド ${ttFs.round}/${ttFs.totalRounds}（${cardsPerPlayer}枚配布） ━━`);
   ttFs.log.push(`🎯 スタートプレイヤー: ${startPlayer.name}`);
 
-  // Send private hands を確実に送ってから状態更新
-  // 手札を先に書き込む（非同期だが Promise.all で待たない場合でも、
-  // setTimeout を入れて少し時間を稼いでから ttBcast を呼ぶ）
-  ttFs.players.forEach(p=>{
-    if(!p.isCpu && !isSolo){
-      fbSendTo(p.id, {type:'tt_private', hand:p.hand});
-    } else if(p.id === myId){
-      ttMyCards = p.hand.slice();
-      ttMyBid = null;
-    }
-  });
-
-  // 手札送信の書き込みを待ってから状態をbroadcast
-  if(isSolo){
-    ttBcast();
-    if(isHost) ttScheduleCpuBids();
+  // 手札送信を確実に待ってから状態broadcast
+  if(!isSolo){
+    const sendPromises = [];
+    ttFs.players.forEach(p=>{
+      if(!p.isCpu){
+        sendPromises.push(fbSendTo(p.id, {type:'tt_private', hand:p.hand}));
+      }
+      if(p.id === myId){
+        ttMyCards = p.hand.slice();
+        ttMyBid = null;
+      }
+    });
+    debugLog(`手札送信: ${sendPromises.length}件`);
+    await Promise.all(sendPromises);
+    debugLog(`手札送信完了`);
   } else {
-    setTimeout(()=>{
-      ttBcast();
-      if(isHost) ttScheduleCpuBids();
-    }, 400);
+    // ソロ：自分のみ
+    ttFs.players.forEach(p=>{
+      if(p.id === myId){
+        ttMyCards = p.hand.slice();
+        ttMyBid = null;
+      }
+    });
+  }
+
+  ttBcast();
+
+  // CPU auto-bid
+  if(isHost){
+    ttScheduleCpuBids();
   }
 }
 
@@ -1846,16 +1878,20 @@ function ttRenderRematchPanel(voters, total){
 // ============================================================
 function onMsg(d, senderId){
   if(!d || !d.type) return;
-  // デバッグ用：ゲスト側のメッセージ受信をconsoleに記録
+  // デバッグ用：ゲスト側のメッセージ受信を画面に表示
   if(!isHost && (d.type === 'tt_gs' || d.type === 'tt_private')){
-    console.log('[guest]', d.type, d.type === 'tt_private' ? `hand:${d.hand?.length}` : `phase:${d.s?.phase} curIdx:${d.s?.curIdx} cur:${d.s?.players?.[d.s?.curIdx]?.name}`);
+    if(d.type === 'tt_private'){
+      debugLog(`📥 tt_private hand:${d.hand?.length}`);
+    } else {
+      debugLog(`📥 tt_gs phase:${d.s?.phase} curIdx:${d.s?.curIdx}`);
+    }
   }
   // Host-side actions
   if(isHost){
     if(d.type === 'tt_join'){ ttHostJoin(d, senderId); return; }
     if(d.type === 'tt_action_bid'){ ttHostBidSubmit(senderId, d.bid); return; }
     if(d.type === 'tt_action_play'){ 
-      console.log('[host] received tt_action_play from', senderId, 'cardId:', d.cardId);
+      debugLog(`📥 tt_action_play from ${senderId.slice(-6)}`);
       ttHostPlayCard(senderId, d.cardId, {tigressMode:d.tigressMode}); 
       return; 
     }
@@ -1863,10 +1899,13 @@ function onMsg(d, senderId){
     if(d.type === 'tt_action_rematch'){ ttHostRematch(senderId); return; }
     if(d.type === 'tt_request_hand'){
       // ゲストから手札再送リクエスト
-      console.log('[host] hand re-request from', senderId);
+      debugLog(`📥 hand re-request from ${senderId.slice(-6)}`);
       const p = ttFs?.players?.find(x=>x.id===senderId);
       if(p && p.hand){
+        debugLog(`📤 hand resend (${p.hand.length}枚)`);
         fbSendTo(senderId, {type:'tt_private', hand:p.hand});
+      } else {
+        debugLog(`❌ hand not found for ${senderId.slice(-6)}`);
       }
       return;
     }
@@ -1874,7 +1913,10 @@ function onMsg(d, senderId){
   // Public broadcasts
   if(d.type === 'tt_gs'){ ttGs = d.s; ttOnGsUpdate(); return; }
   if(d.type === 'tt_private'){
-    if(d.hand) ttMyCards = d.hand;
+    if(d.hand) {
+      ttMyCards = d.hand;
+      debugLog(`✅ ttMyCards更新: ${d.hand.length}枚`);
+    }
     ttUpdateGame();
     return;
   }
@@ -1919,7 +1961,7 @@ function ttOnGsUpdate(){
   if(!isHost && !isSolo && (ph === 'bid' || ph === 'play')){
     const me = ttGs.players.find(p=>p.id===myId);
     if(me && me.handCount > 0 && ttMyCards.length === 0){
-      console.log('[guest] 手札が空のため再リクエスト送信');
+      debugLog(`⚠️ 手札空・再リクエスト送信（期待${me.handCount}枚）`);
       fbSendToHost({type:'tt_request_hand'});
     }
   }

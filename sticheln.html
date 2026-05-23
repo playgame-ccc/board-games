@@ -426,6 +426,13 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
 </head>
 <body>
 
+<!-- デバッグログ表示エリア -->
+<details id="debug-log-panel" style="position:fixed; bottom:0; right:0; width:100%; max-width:400px; z-index:200; background:rgba(0,0,0,0.85); border-top:1px solid var(--accent); border-left:1px solid var(--accent);">
+  <summary style="cursor:pointer; padding:6px 10px; color:var(--accent); font-size:0.75rem; font-family:monospace;">🐛 DEBUG LOG（タップで開閉）</summary>
+  <pre id="debug-log-content" style="margin:0; padding:8px; color:#7fef7f; font-size:0.7rem; font-family:monospace; max-height:200px; overflow-y:auto; white-space:pre-wrap; line-height:1.4;"></pre>
+</details>
+
+
 <!-- ============================================================ LOBBY ============================================================ -->
 <div id="screen-lobby" class="screen active">
   <h1 class="title-main">🎯 シュティッヒルン</h1>
@@ -709,20 +716,36 @@ async function fbDel(sub){
   if(!fbRoom) return;
   try { await fetch(`${FB_URL}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){}
 }
-function fbBroadcast(msg){
+async function fbBroadcast(msg){
   if(!fbRoom) return;
   const k = 'b_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  fbPut('broadcast/' + k, {...msg, ts:Date.now()});
+  await fbPut('broadcast/' + k, {...msg, ts:Date.now()});
 }
-function fbSendTo(pid, msg){
+async function fbSendTo(pid, msg){
   if(!fbRoom) return;
   const k = 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  fbPut(`private/${pid}/${k}`, {...msg, ts:Date.now()});
+  await fbPut(`private/${pid}/${k}`, {...msg, ts:Date.now()});
 }
-function fbSendToHost(msg){
+async function fbSendToHost(msg){
   if(!fbRoom) return;
   const k = 'h_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-  fbPut(`action/${k}`, {...msg, sender:myId, ts:Date.now()});
+  await fbPut(`action/${k}`, {...msg, sender:myId, ts:Date.now()});
+}
+
+// ============================================================
+// DEBUG LOG（画面上に表示。スマホでconsoleが見えない時用）
+// ============================================================
+const debugLogs = [];
+function debugLog(msg){
+  const t = new Date().toLocaleTimeString();
+  debugLogs.push(`${t} ${msg}`);
+  if(debugLogs.length > 30) debugLogs.shift();
+  const el = document.getElementById('debug-log-content');
+  if(el){
+    el.textContent = debugLogs.slice(-15).join('\n');
+    el.scrollTop = el.scrollHeight;
+  }
+  console.log('[debug]', msg);
 }
 function fbListen(){
   if(fbListener) clearInterval(fbListener);
@@ -1115,7 +1138,7 @@ function stStartGame(){
   stStartGameInternal();
 }
 
-function stStartGameInternal(){
+async function stStartGameInternal(){
   const n = stFs.players.length;
   const deck = shuffle(makeDeck(n));
 
@@ -1140,22 +1163,36 @@ function stStartGameInternal(){
   // フェーズ
   stFs.phase = 'minus';
   stFs.trick = 1;
-  stFs.totalTricks = HAND_SIZE - 1; // マイナスカード提出で1枚減る、残り14トリック
+  stFs.totalTricks = HAND_SIZE - 1; // マイナスカード1枚を提出するため、残り14トリック
   stFs.leadSuit = null;
   stFs.trickCards = [];
   stFs.lastTrickWinnerId = null;
   stFs.log.push(`━━ ラウンド ${stFs.currentRound}/${stFs.totalRounds}（${n}人、各15枚配布） ━━`);
   stFs.log.push(`📮 マイナスカラーを各自選んでください`);
 
-  // 手札送信
-  stFs.players.forEach(p=>{
-    if(!p.isCpu && !isSolo){
-      fbSendTo(p.id, {type:'st_private', hand:p.hand});
-    } else if(p.id === myId){
-      stMyCards = p.hand.slice();
-      stMySelectedMinusId = null;
-    }
-  });
+  // 手札送信を確実に待ってから状態broadcast
+  if(!isSolo){
+    const sendPromises = [];
+    stFs.players.forEach(p=>{
+      if(!p.isCpu){
+        sendPromises.push(fbSendTo(p.id, {type:'st_private', hand:p.hand}));
+      }
+      if(p.id === myId){
+        stMyCards = p.hand.slice();
+        stMySelectedMinusId = null;
+      }
+    });
+    debugLog(`手札送信: ${sendPromises.length}件`);
+    await Promise.all(sendPromises);
+    debugLog(`手札送信完了`);
+  } else {
+    stFs.players.forEach(p=>{
+      if(p.id === myId){
+        stMyCards = p.hand.slice();
+        stMySelectedMinusId = null;
+      }
+    });
+  }
 
   stBcast();
 
@@ -1505,15 +1542,38 @@ function stRenderRematchPanel(voters, total){
 // ============================================================
 function onMsg(d, senderId){
   if(!d || !d.type) return;
+  // デバッグ用：ゲスト側のメッセージ受信を画面に表示
+  if(!isHost && (d.type === 'st_gs' || d.type === 'st_private')){
+    if(d.type === 'st_private'){
+      debugLog(`📥 st_private hand:${d.hand?.length}`);
+    } else {
+      debugLog(`📥 st_gs phase:${d.s?.phase}`);
+    }
+  }
   if(isHost){
     if(d.type === 'st_join'){ stHostJoin(d, senderId); return; }
     if(d.type === 'st_action_minus'){ stHostMinusSubmit(senderId, d.cardId); return; }
     if(d.type === 'st_action_play'){ stHostPlayCard(senderId, d.cardId); return; }
     if(d.type === 'st_action_rematch'){ stHostRematch(senderId); return; }
+    if(d.type === 'st_request_hand'){
+      // ゲストから手札再送リクエスト
+      debugLog(`📥 hand re-request from ${senderId.slice(-6)}`);
+      const p = stFs?.players?.find(x=>x.id===senderId);
+      if(p && p.hand){
+        debugLog(`📤 hand resend (${p.hand.length}枚)`);
+        fbSendTo(senderId, {type:'st_private', hand:p.hand});
+      } else {
+        debugLog(`❌ hand not found for ${senderId.slice(-6)}`);
+      }
+      return;
+    }
   }
   if(d.type === 'st_gs'){ stGs = d.s; stOnGsUpdate(); return; }
   if(d.type === 'st_private'){
-    if(d.hand) stMyCards = d.hand;
+    if(d.hand){
+      stMyCards = d.hand;
+      debugLog(`✅ stMyCards更新: ${d.hand.length}枚`);
+    }
     stUpdateGame();
     return;
   }
@@ -1542,6 +1602,14 @@ function stHostJoin(d){
 function stOnGsUpdate(){
   if(!stGs) return;
   const ph = stGs.phase;
+  // ゲスト側で手札が空のままminus/playフェーズに入った場合、手札を再リクエスト
+  if(!isHost && !isSolo && (ph === 'minus' || ph === 'play')){
+    const me = stGs.players.find(p=>p.id===myId);
+    if(me && me.handCount > 0 && stMyCards.length === 0){
+      debugLog(`⚠️ 手札空・再リクエスト送信（期待${me.handCount}枚）`);
+      fbSendToHost({type:'st_request_hand'});
+    }
+  }
   if(ph === 'waiting'){
     if(!g('screen-waiting').classList.contains('active')) show('waiting');
     stRenderWaiting();
