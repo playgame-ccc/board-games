@@ -1336,7 +1336,9 @@ function ttStartRound(){
   ttFs.log.push(`━━ ラウンド ${ttFs.round}/${ttFs.totalRounds}（${cardsPerPlayer}枚配布） ━━`);
   ttFs.log.push(`🎯 スタートプレイヤー: ${startPlayer.name}`);
 
-  // Send private hands
+  // Send private hands を確実に送ってから状態更新
+  // 手札を先に書き込む（非同期だが Promise.all で待たない場合でも、
+  // setTimeout を入れて少し時間を稼いでから ttBcast を呼ぶ）
   ttFs.players.forEach(p=>{
     if(!p.isCpu && !isSolo){
       fbSendTo(p.id, {type:'tt_private', hand:p.hand});
@@ -1346,11 +1348,15 @@ function ttStartRound(){
     }
   });
 
-  ttBcast();
-
-  // CPU auto-bid
-  if(isHost){
-    ttScheduleCpuBids();
+  // 手札送信の書き込みを待ってから状態をbroadcast
+  if(isSolo){
+    ttBcast();
+    if(isHost) ttScheduleCpuBids();
+  } else {
+    setTimeout(()=>{
+      ttBcast();
+      if(isHost) ttScheduleCpuBids();
+    }, 400);
   }
 }
 
@@ -1840,13 +1846,30 @@ function ttRenderRematchPanel(voters, total){
 // ============================================================
 function onMsg(d, senderId){
   if(!d || !d.type) return;
+  // デバッグ用：ゲスト側のメッセージ受信をconsoleに記録
+  if(!isHost && (d.type === 'tt_gs' || d.type === 'tt_private')){
+    console.log('[guest]', d.type, d.type === 'tt_private' ? `hand:${d.hand?.length}` : `phase:${d.s?.phase} curIdx:${d.s?.curIdx} cur:${d.s?.players?.[d.s?.curIdx]?.name}`);
+  }
   // Host-side actions
   if(isHost){
     if(d.type === 'tt_join'){ ttHostJoin(d, senderId); return; }
     if(d.type === 'tt_action_bid'){ ttHostBidSubmit(senderId, d.bid); return; }
-    if(d.type === 'tt_action_play'){ ttHostPlayCard(senderId, d.cardId, {tigressMode:d.tigressMode}); return; }
+    if(d.type === 'tt_action_play'){ 
+      console.log('[host] received tt_action_play from', senderId, 'cardId:', d.cardId);
+      ttHostPlayCard(senderId, d.cardId, {tigressMode:d.tigressMode}); 
+      return; 
+    }
     if(d.type === 'tt_action_next'){ ttHostNext(senderId); return; }
     if(d.type === 'tt_action_rematch'){ ttHostRematch(senderId); return; }
+    if(d.type === 'tt_request_hand'){
+      // ゲストから手札再送リクエスト
+      console.log('[host] hand re-request from', senderId);
+      const p = ttFs?.players?.find(x=>x.id===senderId);
+      if(p && p.hand){
+        fbSendTo(senderId, {type:'tt_private', hand:p.hand});
+      }
+      return;
+    }
   }
   // Public broadcasts
   if(d.type === 'tt_gs'){ ttGs = d.s; ttOnGsUpdate(); return; }
@@ -1892,6 +1915,14 @@ function ttHostNext(pid){
 function ttOnGsUpdate(){
   if(!ttGs) return;
   const ph = ttGs.phase;
+  // ゲスト側で手札が空のままbid/playフェーズに入った場合、手札を再リクエスト
+  if(!isHost && !isSolo && (ph === 'bid' || ph === 'play')){
+    const me = ttGs.players.find(p=>p.id===myId);
+    if(me && me.handCount > 0 && ttMyCards.length === 0){
+      console.log('[guest] 手札が空のため再リクエスト送信');
+      fbSendToHost({type:'tt_request_hand'});
+    }
+  }
   if(ph === 'waiting'){
     if(!g('screen-waiting').classList.contains('active')) show('waiting');
     ttRenderWaiting();
