@@ -1252,13 +1252,19 @@ function ttBcast(){
   // ホスト自身の表示用：自分視点のttGsを更新
   ttGs = ttPub(ttFs, myId);
   // 全プレイヤー（CPU除く）に個別送信
+  // 公開状態と一緒に「自分の手札」も含めて送る（ttGsの中にmyHandを埋め込む）
   ttFs.players.forEach(p=>{
     if(p.isCpu) return;
     if(p.id === myId){
-      ttOnGsUpdate(); // 自分はもう ttGs を更新済み
+      // ホスト自身は ttMyCards をttFsから直接更新
+      const myFs = ttFs.players.find(x=>x.id===myId);
+      if(myFs && myFs.hand) ttMyCards = myFs.hand.slice();
+      ttOnGsUpdate();
       return;
     }
-    fbSendTo(p.id, {type:'tt_gs', s:ttPub(ttFs, p.id)});
+    const payload = ttPub(ttFs, p.id);
+    payload._myHand = p.hand || []; // 自分の手札を埋め込み
+    fbSendTo(p.id, {type:'tt_gs', s:payload});
   });
 }
 
@@ -1911,7 +1917,16 @@ function onMsg(d, senderId){
     }
   }
   // Public broadcasts
-  if(d.type === 'tt_gs'){ ttGs = d.s; ttOnGsUpdate(); return; }
+  if(d.type === 'tt_gs'){ 
+    ttGs = d.s; 
+    // ペイロードに手札が含まれていれば更新
+    if(d.s && d.s._myHand){
+      ttMyCards = d.s._myHand;
+      debugLog(`✅ 手札を tt_gs から取得: ${d.s._myHand.length}枚`);
+    }
+    ttOnGsUpdate(); 
+    return; 
+  }
   if(d.type === 'tt_private'){
     if(d.hand) {
       ttMyCards = d.hand;

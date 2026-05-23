@@ -1059,10 +1059,15 @@ function stBcast(){
   stFs.players.forEach(p=>{
     if(p.isCpu) return;
     if(p.id === myId){
+      // ホスト自身の手札も同期
+      const myFs = stFs.players.find(x=>x.id===myId);
+      if(myFs && myFs.hand) stMyCards = myFs.hand.slice();
       stOnGsUpdate();
       return;
     }
-    fbSendTo(p.id, {type:'st_gs', s:stPub(stFs, p.id)});
+    const payload = stPub(stFs, p.id);
+    payload._myHand = p.hand || []; // 自分の手札を埋め込み
+    fbSendTo(p.id, {type:'st_gs', s:payload});
   });
 }
 
@@ -1568,7 +1573,15 @@ function onMsg(d, senderId){
       return;
     }
   }
-  if(d.type === 'st_gs'){ stGs = d.s; stOnGsUpdate(); return; }
+  if(d.type === 'st_gs'){ 
+    stGs = d.s; 
+    if(d.s && d.s._myHand){
+      stMyCards = d.s._myHand;
+      debugLog(`✅ 手札を st_gs から取得: ${d.s._myHand.length}枚`);
+    }
+    stOnGsUpdate(); 
+    return; 
+  }
   if(d.type === 'st_private'){
     if(d.hand){
       stMyCards = d.hand;
