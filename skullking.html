@@ -1259,14 +1259,16 @@ function ttBcast(){
   ttFs.players.forEach(p=>{
     if(p.isCpu) return;
     if(p.id === myId){
-      // ホスト自身は ttMyCards をttFsから直接更新
+      // ホスト自身は ttMyCards をttFsから直接更新（空配列でも反映）
       const myFs = ttFs.players.find(x=>x.id===myId);
-      if(myFs && myFs.hand) ttMyCards = myFs.hand.slice();
+      if(myFs) ttMyCards = (myFs.hand || []).slice();
       ttOnGsUpdate();
       return;
     }
     const payload = ttPub(ttFs, p.id);
-    payload._myHand = p.hand || []; // 自分の手札を埋め込み
+    // 手札を埋め込む。空配列はFirebaseで消えるので、空のときは特殊マーカー文字列を入れる
+    const myHand = p.hand || [];
+    payload._myHand = myHand.length > 0 ? myHand : '__empty__';
     fbSendTo(p.id, {type:'tt_gs', s:payload});
   });
 }
@@ -1930,9 +1932,14 @@ function onMsg(d, senderId){
       if(!ttGs.specials) ttGs.specials = {};
     }
     // ペイロードに手札が含まれていれば更新
-    if(d.s && d.s._myHand){
-      ttMyCards = d.s._myHand;
-      debugLog(`✅ 手札を tt_gs から取得: ${d.s._myHand.length}枚`);
+    if(d.s && d.s._myHand !== undefined){
+      if(d.s._myHand === '__empty__'){
+        ttMyCards = [];
+        debugLog(`✅ 手札を tt_gs から取得: 0枚（空）`);
+      } else if(Array.isArray(d.s._myHand)){
+        ttMyCards = d.s._myHand;
+        debugLog(`✅ 手札を tt_gs から取得: ${d.s._myHand.length}枚`);
+      }
     }
     ttOnGsUpdate(); 
     return; 

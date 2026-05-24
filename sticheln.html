@@ -1062,14 +1062,15 @@ function stBcast(){
   stFs.players.forEach(p=>{
     if(p.isCpu) return;
     if(p.id === myId){
-      // ホスト自身の手札も同期
+      // ホスト自身の手札も同期（空配列でも反映）
       const myFs = stFs.players.find(x=>x.id===myId);
-      if(myFs && myFs.hand) stMyCards = myFs.hand.slice();
+      if(myFs) stMyCards = (myFs.hand || []).slice();
       stOnGsUpdate();
       return;
     }
     const payload = stPub(stFs, p.id);
-    payload._myHand = p.hand || []; // 自分の手札を埋め込み
+    const myHand = p.hand || [];
+    payload._myHand = myHand.length > 0 ? myHand : '__empty__';
     fbSendTo(p.id, {type:'st_gs', s:payload});
   });
 }
@@ -1584,9 +1585,14 @@ function onMsg(d, senderId){
       if(!stGs.players) stGs.players = [];
       if(!stGs.log) stGs.log = [];
     }
-    if(d.s && d.s._myHand){
-      stMyCards = d.s._myHand;
-      debugLog(`✅ 手札を st_gs から取得: ${d.s._myHand.length}枚`);
+    if(d.s && d.s._myHand !== undefined){
+      if(d.s._myHand === '__empty__'){
+        stMyCards = [];
+        debugLog(`✅ 手札を st_gs から取得: 0枚（空）`);
+      } else if(Array.isArray(d.s._myHand)){
+        stMyCards = d.s._myHand;
+        debugLog(`✅ 手札を st_gs から取得: ${d.s._myHand.length}枚`);
+      }
     }
     stOnGsUpdate(); 
     return; 
