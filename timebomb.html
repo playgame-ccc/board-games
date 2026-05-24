@@ -551,18 +551,62 @@ h3 { font-size: 1rem; font-weight: 600; }
   border-radius: 7px;
   display: flex; align-items: center; justify-content: center;
   font-size: 1rem;
-  border: 1px solid transparent;
-  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+  border: 2px solid transparent;
+  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s, opacity 0.2s;
   cursor: default;
   -webkit-tap-highlight-color: transparent;
   box-sizing: border-box;
+  position: relative;
 }
-.sm-card.unknown { background: var(--surface2); border-color: var(--surface3); }
-.sm-card.cuttable { cursor: pointer; }
-.sm-card.cuttable:active { transform: scale(1.1); border-color: var(--red); box-shadow: 0 4px 14px var(--red-glow); }
-.sm-card.safe-r  { background: rgba(45,255,138,0.1); border-color: rgba(45,255,138,0.4); }
-.sm-card.bomb-r  { background: rgba(255,45,74,0.1); border-color: var(--red); }
-.sm-card.silence-r { background: var(--surface2); border-color: var(--surface3); color: var(--muted); font-size: 0.85rem; opacity: 0.65; }
+/* 未切断: アクティブ・立体感あり・はっきり */
+.sm-card.unknown {
+  background: linear-gradient(160deg, #4a5775, #2f3a52);
+  border-color: #6b7a99;
+  color: #fff;
+  font-weight: 900;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.sm-card.cuttable {
+  cursor: pointer;
+  animation: card-pulse 2s ease-in-out infinite;
+}
+.sm-card.cuttable:active {
+  transform: scale(1.1);
+  border-color: var(--red);
+  box-shadow: 0 4px 14px var(--red-glow);
+  animation: none;
+}
+@keyframes card-pulse {
+  0%, 100% { box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15); }
+  50% { box-shadow: 0 2px 12px rgba(255,176,32,0.4), inset 0 1px 0 rgba(255,255,255,0.2); }
+}
+/* 切断済み: 平坦・縮小・くすんで「使用済み」感 */
+.sm-card.safe-r,
+.sm-card.bomb-r,
+.sm-card.silence-r {
+  transform: scale(0.92);
+  box-shadow: none;
+  opacity: 0.85;
+}
+.sm-card.safe-r {
+  background: rgba(45,255,138,0.15);
+  border-color: rgba(45,255,138,0.6);
+  border-style: dashed;
+}
+.sm-card.bomb-r {
+  background: rgba(255,45,74,0.18);
+  border-color: var(--red);
+  border-style: dashed;
+}
+.sm-card.silence-r {
+  background: rgba(110,120,140,0.18);
+  border-color: rgba(110,120,140,0.5);
+  color: var(--muted);
+  font-size: 0.85rem;
+  opacity: 0.55;
+  border-style: dashed;
+}
 
 
 /* ── Game selector ── */
@@ -1788,6 +1832,9 @@ function onGsUpdate() {
   // フェーズが進んだ瞬間に最後の切ったカードをアナウンス（ゲスト側）
   if(!isHost && gs.phase==='playing' && gs.phasenum > (onGsUpdate._lastPhase||0)){
     if(onGsUpdate._lastPhase){
+      // フェーズが進んだ → ステッパー編集フラグをリセット（新フェーズで前回入力が残らないように）
+      tbDeclUserEdited = false;
+      tbDeclDefuse = 0; tbDeclBomb = 0;
       // 直前のlogから最後の切断記録を取得してアナウンス
       const lastCut = (gs.log||[]).slice().reverse().find(l=>
         l.includes('解除ワイヤー')||l.includes('爆弾')||l.includes('し〜ん'));
@@ -2129,6 +2176,7 @@ function bcast() {
 // ============================================================
 // ステッパー値
 let tbDeclDefuse=0, tbDeclBomb=0;
+let tbDeclUserEdited=false; // ユーザーがステッパー操作中（他人の更新で上書きしない）
 function tbDeclStep(type, delta){
   // 自分の手札枚数を上限とする
   const myPlayer=gs?.players?.find(p=>p.id===myId);
@@ -2142,6 +2190,7 @@ function tbDeclStep(type, delta){
     tbDeclBomb=Math.max(0,Math.min(max,tbDeclBomb+delta));
     const el=g('decl-bomb-val'); if(el) el.textContent=tbDeclBomb;
   }
+  tbDeclUserEdited=true; // ユーザーが操作した
 }
 function submitDeclaration() {
   // 手札枚数チェック
@@ -2155,6 +2204,7 @@ function submitDeclaration() {
   const msg={type:'declaration', id:myId, name:myName, defuse, bomb};
   if(isHost) hMsg(msg, myId);
   else fbSendToHost(msg);
+  tbDeclUserEdited=false; // 申告完了 → 同期OK
 }
 function renderDeclarations() {
   const decls = gs?.declarations || {};
@@ -2253,8 +2303,9 @@ function renderDeclarations() {
 
   // 自分の最新申告値をステッパーに同期
   // simultaneous モードで未公開時は myLastDecl (private で受信した値) を使う
+  // ★ ユーザーがステッパーを操作中（tbDeclUserEdited=true）は上書きしない
   const myDecl = isSimulHidden ? myLastDecl : decls[myId];
-  if(myDecl){
+  if(myDecl && !tbDeclUserEdited){
     tbDeclDefuse=myDecl.defuse; tbDeclBomb=myDecl.bomb;
     const dv=g('decl-defuse-val'); if(dv && typeof tbDeclDefuse==='number') dv.textContent=tbDeclDefuse;
     const bv=g('decl-bomb-val');   if(bv && typeof tbDeclBomb==='number') bv.textContent=tbDeclBomb;
@@ -2359,9 +2410,14 @@ function renderGame() {
     mini.style.cssText='display:flex;gap:5px;flex:1;flex-wrap:nowrap;';
     p.cards.forEach((card,ci)=>{
       const sm=mk('div','sm-card');
-      if(card.rev) sm.classList.add(card.type==='defuse'?'safe-r':card.type==='bomb'?'bomb-r':'silence-r');
+      if(card.rev) {
+        sm.classList.add(card.type==='defuse'?'safe-r':card.type==='bomb'?'bomb-r':'silence-r');
+      } else {
+        sm.classList.add('unknown');
+      }
       sm.textContent=card.rev?(card.type==='defuse'?'✅':card.type==='bomb'?'💣':'〜'):'？';
       if(myTurn&&!card.rev){
+        sm.classList.add('cuttable');
         sm.style.cursor='pointer'; sm.onclick=()=>sendCut(p.id,ci);
         sm.addEventListener('touchstart',e=>e.target.style.background='rgba(255,45,74,0.2)',{passive:true});
       }
@@ -2404,9 +2460,13 @@ function renderGame() {
 function sendCut(tid, ci) {
   if(!gs||gs.phase!=='playing') return;
   if(gs.players[gs.cur]?.id!==myId) return;
-  const msg={type:'cut', actor:myId, tid, ci};
+  // 確認ダイアログ
+  const target = gs.players.find(p=>p.id===tid);
+  const targetName = target ? target.name : '？';
+  if(!confirm(`${targetName}さんのカードを切りますか？`)) return;
+  const cutMsg={type:'cut', actor:myId, tid, ci};
   if(isHost) doCut(myId, tid, ci);
-  else fbSendToHost(msg);
+  else fbSendToHost(cutMsg);
 }
 
 // ============================================================
