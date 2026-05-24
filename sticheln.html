@@ -1578,6 +1578,12 @@ function onMsg(d, senderId){
   }
   if(d.type === 'st_gs'){ 
     stGs = d.s; 
+    // Firebaseで空配列が消える対策：必須プロパティを補正
+    if(stGs){
+      if(!stGs.trickCards) stGs.trickCards = [];
+      if(!stGs.players) stGs.players = [];
+      if(!stGs.log) stGs.log = [];
+    }
     if(d.s && d.s._myHand){
       stMyCards = d.s._myHand;
       debugLog(`✅ 手札を st_gs から取得: ${d.s._myHand.length}枚`);

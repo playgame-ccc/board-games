@@ -1922,6 +1922,13 @@ function onMsg(d, senderId){
   // Public broadcasts
   if(d.type === 'tt_gs'){ 
     ttGs = d.s; 
+    // Firebaseで空配列が消える対策：必須プロパティを補正
+    if(ttGs){
+      if(!ttGs.trickCards) ttGs.trickCards = [];
+      if(!ttGs.players) ttGs.players = [];
+      if(!ttGs.log) ttGs.log = [];
+      if(!ttGs.specials) ttGs.specials = {};
+    }
     // ペイロードに手札が含まれていれば更新
     if(d.s && d.s._myHand){
       ttMyCards = d.s._myHand;
