@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>🏴‍☠️ スカルキング</title>
 <style>
 :root {
@@ -2110,6 +2113,14 @@ function ttRenderBid(){
 }
 
 function ttRenderPlay(){
+  try {
+    _ttRenderPlay();
+  } catch(e){
+    debugLog(`💥 ttRenderPlayエラー: ${e.message}`);
+    debugLog(`   at: ${(e.stack||'').split('\n')[1] || ''}`);
+  }
+}
+function _ttRenderPlay(){
   if(!ttGs) {
     debugLog(`⛔ ttRenderPlay: ttGsがnull`);
     return;
@@ -2117,7 +2128,7 @@ function ttRenderPlay(){
   debugLog(`▶️ ttRenderPlay呼出 ttMyCards=${ttMyCards.length}`);
   g('play-round-info').textContent = `R ${ttGs.round}/${ttGs.totalRounds}`;
   g('play-trick-info').textContent = `T ${ttGs.trick}/${ttGs.tricksThisRound}`;
-
+  debugLog(`  step1 OK`);
   // Scoreboard
   const sb = g('play-scoreboard');
   sb.innerHTML = '';
@@ -2136,12 +2147,14 @@ function ttRenderPlay(){
     `;
     sb.appendChild(row);
   });
+  debugLog(`  step2 scoreboard OK`);
 
   // Turn info
   const cur = ttGs.players[ttGs.curIdx];
   if(cur){
     g('play-turn-info').textContent = cur.id === myId ? '🎯 あなたの手番です' : `⏳ ${cur.name} の手番...`;
   }
+  debugLog(`  step3 turn OK cur=${cur?.name}`);
 
   // Lead info
   if(ttGs.leadSuit){
@@ -2150,6 +2163,7 @@ function ttRenderPlay(){
   } else {
     g('play-lead-info').textContent = '最初のカードを出してください（自由）';
   }
+  debugLog(`  step4 lead OK`);
 
   // Trick area
   const ta = g('play-trick-area');
@@ -2166,6 +2180,7 @@ function ttRenderPlay(){
   if(ttGs.trickCards.length === 0){
     ta.innerHTML = '<div style="color:var(--muted); font-size:0.85rem;">（カードが出されるとここに表示）</div>';
   }
+  debugLog(`  step5 trick OK`);
 
   // Hand（色ごとグループ表示）
   const hand = g('play-my-hand');
