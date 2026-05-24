@@ -2110,7 +2110,11 @@ function ttRenderBid(){
 }
 
 function ttRenderPlay(){
-  if(!ttGs) return;
+  if(!ttGs) {
+    debugLog(`⛔ ttRenderPlay: ttGsがnull`);
+    return;
+  }
+  debugLog(`▶️ ttRenderPlay呼出 ttMyCards=${ttMyCards.length}`);
   g('play-round-info').textContent = `R ${ttGs.round}/${ttGs.totalRounds}`;
   g('play-trick-info').textContent = `T ${ttGs.trick}/${ttGs.tricksThisRound}`;
 
