@@ -554,7 +554,9 @@ h3 { font-size: 1rem; font-weight: 600; }
   border: 2px solid transparent;
   transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s, opacity 0.2s;
   cursor: default;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: rgba(255,45,74,0.25);
+  -webkit-touch-callout: none;
+  user-select: none;
   box-sizing: border-box;
   position: relative;
 }
@@ -576,6 +578,17 @@ h3 { font-size: 1rem; font-weight: 600; }
   border-color: var(--red);
   box-shadow: 0 4px 14px var(--red-glow);
   animation: none;
+}
+.sm-card.pending-cut {
+  border-color: var(--amber) !important;
+  background: linear-gradient(160deg, #6a5520, #3f3110) !important;
+  box-shadow: 0 0 16px rgba(255,176,32,0.7), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+  transform: scale(1.08);
+  animation: cut-pending-pulse 0.8s ease-in-out infinite;
+}
+@keyframes cut-pending-pulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(255,176,32,0.7); }
+  50% { box-shadow: 0 0 24px rgba(255,176,32,1); }
 }
 @keyframes card-pulse {
   0%, 100% { box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15); }
@@ -2318,6 +2331,11 @@ function renderDeclarations() {
 function renderGame() {
   if(!gs||gs.phase!=='playing') return;
   const cur=gs.players[gs.cur]; const myTurn=cur?.id===myId;
+  // 自分のターンでない場合は切断選択をクリア
+  if(!myTurn && tbPendingCut){
+    tbPendingCut = null;
+    updateCutConfirmBar();
+  }
   // ニッパーバナー
   const banner=g('nipper-banner'), nipName=g('nipper-name');
   if(banner&&nipName&&cur){
@@ -2418,8 +2436,14 @@ function renderGame() {
       sm.textContent=card.rev?(card.type==='defuse'?'✅':card.type==='bomb'?'💣':'〜'):'？';
       if(myTurn&&!card.rev){
         sm.classList.add('cuttable');
-        sm.style.cursor='pointer'; sm.onclick=()=>sendCut(p.id,ci);
-        sm.addEventListener('touchstart',e=>e.target.style.background='rgba(255,45,74,0.2)',{passive:true});
+        sm.style.cursor='pointer';
+        sm.dataset.tid = p.id;
+        sm.dataset.ci = ci;
+        sm.onclick=()=>sendCut(p.id,ci);
+        // 選択中のカードならハイライト復元
+        if(tbPendingCut && tbPendingCut.tid===p.id && tbPendingCut.ci===ci){
+          sm.classList.add('pending-cut');
+        }
       }
       mini.appendChild(sm);
     });
@@ -2457,16 +2481,67 @@ function renderGame() {
   const logEl=g('game-log'); if(logEl){ logEl.innerHTML=''; const last=gs.log.slice(-15); last.forEach(l=>{ const d=mk('div','log-entry'); d.textContent=l; logEl.appendChild(d); }); logEl.scrollTop=logEl.scrollHeight; }
 }
 
+// ニッパー切断: 2段階確認方式
+let tbPendingCut = null; // {tid, ci, targetName, cardIdx}
+
 function sendCut(tid, ci) {
   if(!gs||gs.phase!=='playing') return;
   if(gs.players[gs.cur]?.id!==myId) return;
-  // 確認ダイアログ
+  // 同じカードを再タップ → 切断確定
+  if(tbPendingCut && tbPendingCut.tid===tid && tbPendingCut.ci===ci){
+    confirmCut();
+    return;
+  }
+  // 別のカードをタップ → 選択先変更
   const target = gs.players.find(p=>p.id===tid);
   const targetName = target ? target.name : '？';
-  if(!confirm(`${targetName}さんのカードを切りますか？`)) return;
+  tbPendingCut = {tid, ci, targetName};
+  updateCutConfirmBar();
+  // 該当カードに「pending-cut」クラスを付与（再描画なしでDOM更新）
+  applyPendingCutHighlight();
+}
+
+function cancelCut() {
+  tbPendingCut = null;
+  updateCutConfirmBar();
+  applyPendingCutHighlight();
+}
+
+function confirmCut() {
+  if(!tbPendingCut) return;
+  if(!gs||gs.phase!=='playing') return;
+  if(gs.players[gs.cur]?.id!==myId) return;
+  const {tid, ci} = tbPendingCut;
+  tbPendingCut = null;
+  updateCutConfirmBar();
   const cutMsg={type:'cut', actor:myId, tid, ci};
   if(isHost) doCut(myId, tid, ci);
   else fbSendToHost(cutMsg);
+}
+
+function updateCutConfirmBar(){
+  const bar = g('tb-cut-confirm-bar');
+  const msg = g('tb-cut-confirm-msg');
+  if(!bar) return;
+  if(tbPendingCut){
+    bar.style.display = '';
+    if(msg) msg.textContent = `${tbPendingCut.targetName}さんのカードを切断しますか？`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function applyPendingCutHighlight(){
+  // 全カードから pending-cut を外し、選択中のカードだけ付与
+  document.querySelectorAll('.sm-card.pending-cut').forEach(el=>el.classList.remove('pending-cut'));
+  if(!tbPendingCut) return;
+  // DOM から該当カードを探して付与
+  const cardEls = document.querySelectorAll('.sm-card.cuttable');
+  cardEls.forEach(el=>{
+    if(el.dataset && el.dataset.tid===tbPendingCut.tid && String(el.dataset.ci)===String(tbPendingCut.ci)){
+      el.classList.add('pending-cut');
+    }
+  });
 }
 
 // ============================================================
@@ -5543,5 +5618,17 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 </script>
+
+<!-- ニッパー切断 確認バー（タップ→確認→確定の2段階） -->
+<div id="tb-cut-confirm-bar" style="display:none;position:fixed;left:0;right:0;bottom:0;background:linear-gradient(180deg, rgba(0,0,0,0.92), rgba(20,20,30,0.98));border-top:2px solid var(--amber);padding:14px 16px;z-index:9999;box-shadow:0 -8px 24px rgba(0,0,0,0.5);">
+  <div style="text-align:center;font-size:0.85rem;color:var(--amber);margin-bottom:8px;font-weight:700;">
+    <span id="tb-cut-confirm-msg">○○さんのカードを切断しますか？</span>
+  </div>
+  <div style="display:flex;gap:10px;max-width:480px;margin:0 auto;">
+    <button class="btn btn-ghost" style="flex:1;padding:11px;font-size:0.9rem;" onclick="cancelCut()">キャンセル</button>
+    <button class="btn btn-red" style="flex:1;padding:11px;font-size:0.95rem;font-weight:900;background:var(--red);color:#fff;border:1px solid var(--red);" onclick="confirmCut()">✂ 切断する</button>
+  </div>
+</div>
+
 </body>
 </html>
