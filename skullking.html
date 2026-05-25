@@ -959,6 +959,12 @@ function shuffle(arr){
 function suitInfo(k){ return TT_SUITS.find(s=>s.key===k); }
 function specialInfo(k){ return TT_SPECIALS.find(s=>s.key===k); }
 
+// bid表示用ヘルパー：null/undefined/-1は「-」、それ以外は数字
+function fmtBid(bid){
+  if(bid === undefined || bid === null || bid === -1) return '-';
+  return String(bid);
+}
+
 // Card object: normal = {id, suit, num, kind:'normal'}
 //               special = {id, kind:'sk'|'pirate'|'mermaid'|'escape'|'tigress', special:true}
 function makeDeck(specials){
@@ -1278,10 +1284,11 @@ function ttPub(f, viewerId){
     phase: f.phase,
     players: f.players.map(p=>{
       // 宣言フェーズ中は、自分以外の宣言数を隠す
-      let visibleBid = null;
+      // Firebaseでnullは消えるため、-1を「未宣言/非公開」マーカーとして使う
+      let visibleBid = -1;
       if(p.bid !== undefined && p.bid !== null){
         if(f.phase === 'bid' && p.id !== viewerId){
-          visibleBid = null; // 数字は見せない
+          visibleBid = -1; // 数字は見せない（マーカー）
         } else {
           visibleBid = p.bid;
         }
@@ -1336,6 +1343,8 @@ async function ttStartRound(){
   // 山札不足を防ぐため、配布枚数を制限
   const maxPerPlayer = Math.floor(deck.length / n);
   const cardsPerPlayer = Math.min(ttFs.round, maxPerPlayer);
+  // 次へ投票リセット
+  ttNextVoters = [];
 
   // Deal cards
   ttFs.players.forEach((p, i)=>{
@@ -1791,20 +1800,20 @@ function ttEndRound(){
 }
 
 function ttNextRound(){
-  if(!isHost){
+  if(isSolo){
+    // ソロは即進行
+    if(ttFs.round >= ttFs.totalRounds){ ttEndGame(); }
+    else { ttFs.round++; ttStartRound(); }
+    return;
+  }
+  // オンライン：ホストもゲストも投票方式
+  if(isHost){
+    ttHostNext(myId);
+  } else {
     fbSendToHost({type:'tt_action_next'});
-    g('btn-next-round').disabled = true;
-    g('btn-next-round').textContent = '他のプレイヤー待ち...';
-    return;
   }
-  if(!ttFs) return;
-  if(ttFs.round >= ttFs.totalRounds){
-    // Game end
-    ttEndGame();
-    return;
-  }
-  ttFs.round++;
-  ttStartRound();
+  g('btn-next-round').disabled = true;
+  g('btn-next-round').textContent = '⏳ 他プレイヤー待ち...';
 }
 
 function ttEndGame(){
@@ -1960,6 +1969,10 @@ function onMsg(d, senderId){
     ttRematchGo();
     return;
   }
+  if(d.type === 'tt_next_update'){
+    ttRenderNextVotersInfo(d.voters || [], d.total || 0);
+    return;
+  }
 }
 
 function ttHostJoin(d){
@@ -1976,10 +1989,27 @@ let ttNextVoters = [];
 function ttHostNext(pid){
   if(!ttFs || ttFs.phase !== 'roundend') return;
   if(!ttNextVoters.includes(pid)) ttNextVoters.push(pid);
-  if(ttNextVoters.length >= ttFs.players.filter(p=>!p.isCpu).length){
+  const humanCount = ttFs.players.filter(p=>!p.isCpu).length;
+  // 投票状況を全員にブロードキャスト
+  const voterNames = ttNextVoters.map(id=>{
+    const p = ttFs.players.find(x=>x.id===id);
+    return p ? p.name : '?';
+  });
+  fbBroadcast({type:'tt_next_update', voters:voterNames, total:humanCount});
+  ttRenderNextVotersInfo(voterNames, humanCount);
+  if(ttNextVoters.length >= humanCount){
     ttNextVoters = [];
     if(ttFs.round >= ttFs.totalRounds){ ttEndGame(); }
     else { ttFs.round++; ttStartRound(); }
+  }
+}
+
+// 「次へ」投票状況の表示
+function ttRenderNextVotersInfo(voters, total){
+  const el = g('roundend-next-info');
+  if(!el) return;
+  if(voters && voters.length){
+    el.innerHTML = `次へ希望: ${voters.length} / ${total} 人<br><span style="font-size:0.75rem; color:var(--green);">${voters.join(', ')}</span>`;
   }
 }
 
@@ -2155,7 +2185,7 @@ function _ttRenderPlay(){
     const isTurn = cur && cur.id === p.id;
     row.innerHTML = `
       <div class="score-cell name">${isTurn?'▶ ':''}${p.name}${p.isCpu?' (CPU)':''}</div>
-      <div class="score-cell">${p.bid}</div>
+      <div class="score-cell">${fmtBid(p.bid)}</div>
       <div class="score-cell">${p.tricks}</div>
       <div class="score-cell total">${p.score}</div>
     `;
@@ -2287,7 +2317,7 @@ function ttRenderRoundEnd(){
     const bonusColor = p.bonus >= 0 ? 'var(--green)' : 'var(--red)';
     row.innerHTML = `
       <div class="score-cell name">${p.name}${p.isCpu?' (CPU)':''}</div>
-      <div class="score-cell">${p.bid}</div>
+      <div class="score-cell">${fmtBid(p.bid)}</div>
       <div class="score-cell">${p.tricks} <span style="color:${bonusColor}; font-size:0.78rem;">(${bonusStr})</span></div>
       <div class="score-cell total">${p.score}</div>
     `;
@@ -2304,6 +2334,7 @@ function ttRenderRoundEnd(){
   // Next info
   if(ttGs.round >= ttGs.totalRounds){
     g('btn-next-round').textContent = '🏆 結果を見る';
+    g('btn-next-round').disabled = false;
     g('roundend-next-info').textContent = '最終ラウンド終了';
   } else {
     g('btn-next-round').textContent = '▶ 次のラウンドへ';
