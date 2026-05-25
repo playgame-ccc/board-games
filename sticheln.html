@@ -1168,6 +1168,8 @@ async function stStartGameInternal(){
     p.minusPts = 0;
     p.plusPts = 0;
   });
+  // 次へ投票リセット
+  stNextVoters = [];
 
   // フェーズ
   stFs.phase = 'minus';
@@ -1289,14 +1291,27 @@ function stStartPlay(){
   }
   if(!stFs || stFs.phase !== 'reveal') return;
   stFs.phase = 'play';
-  // ランダムにスタートプレイヤーを決定
-  stFs.leadIdx = Math.floor(Math.random() * stFs.players.length);
-  stFs.curIdx = stFs.leadIdx;
+
+  // スタートプレイヤー決定
+  // ラウンド1：ランダム
+  // ラウンド2以降：前ラウンドのトップスコア（同点なら最初の人）
+  let leadIdx;
+  let reason;
+  if(stFs.currentRound === 1 || !stFs.lastRoundTopId){
+    leadIdx = Math.floor(Math.random() * stFs.players.length);
+    reason = 'ラウンド1：ランダム抽選';
+  } else {
+    const idx = stFs.players.findIndex(p=>p.id === stFs.lastRoundTopId);
+    leadIdx = idx >= 0 ? idx : 0;
+    reason = '前ラウンドのトップスコア';
+  }
+  stFs.leadIdx = leadIdx;
+  stFs.curIdx = leadIdx;
   stFs.trick = 1;
   stFs.leadSuit = null;
   stFs.trickCards = [];
-  const startPlayer = stFs.players[stFs.leadIdx];
-  stFs.log.push(`🎯 スタートプレイヤー: ${startPlayer.name}`);
+  const startPlayer = stFs.players[leadIdx];
+  stFs.log.push(`🎯 スタートプレイヤー: ${startPlayer.name}（${reason}）`);
   stBcast();
   if(isHost) stScheduleCpuPlay();
 }
@@ -1451,22 +1466,56 @@ function stEndRound(){
     p.totalScore = (p.totalScore || 0) + p.score;
     stFs.log.push(`📊 ${p.name}: +${plusPts} −${minusPts} = ${p.score}点（累計 ${p.totalScore}）`);
   });
+  // このラウンドのトップスコアを記録（次ラウンドのスタート決定用）
+  const sorted = stFs.players.slice().sort((a,b)=>b.score - a.score);
+  stFs.lastRoundTopId = sorted[0].id;
+  stFs.log.push(`🏅 今ラウンドのトップ: ${sorted[0].name}（${sorted[0].score}点）`);
   stFs.phase = 'roundend';
   stBcast();
 }
 
+let stNextVoters = [];
+
 function stNextRound(){
-  if(!isHost){
-    // ゲスト側は何もしない（ホストが進行）
+  if(isSolo){
+    // ソロは即進行
+    if(stFs.currentRound >= stFs.totalRounds){ stEndGame(); }
+    else { stFs.currentRound++; stStartGameInternal(); }
     return;
   }
+  // オンライン：全員投票
+  if(isHost){
+    stHostNext(myId);
+  } else {
+    fbSendToHost({type:'st_action_next'});
+  }
+  g('btn-next-round').disabled = true;
+  g('btn-next-round').textContent = '⏳ 他プレイヤー待ち...';
+}
+
+function stHostNext(pid){
   if(!stFs || stFs.phase !== 'roundend') return;
-  if(stFs.currentRound >= stFs.totalRounds){
-    stEndGame();
-    return;
+  if(!stNextVoters.includes(pid)) stNextVoters.push(pid);
+  const humanCount = stFs.players.filter(p=>!p.isCpu).length;
+  const voterNames = stNextVoters.map(id=>{
+    const p = stFs.players.find(x=>x.id===id);
+    return p ? p.name : '?';
+  });
+  fbBroadcast({type:'st_next_update', voters:voterNames, total:humanCount});
+  stRenderNextVotersInfo(voterNames, humanCount);
+  if(stNextVoters.length >= humanCount){
+    stNextVoters = [];
+    if(stFs.currentRound >= stFs.totalRounds){ stEndGame(); }
+    else { stFs.currentRound++; stStartGameInternal(); }
   }
-  stFs.currentRound++;
-  stStartGameInternal();
+}
+
+function stRenderNextVotersInfo(voters, total){
+  const el = g('roundend-next-info');
+  if(!el) return;
+  if(voters && voters.length){
+    el.innerHTML = `次へ希望: ${voters.length} / ${total} 人<br><span style="font-size:0.75rem; color:var(--green);">${voters.join(', ')}</span>`;
+  }
 }
 
 function stEndGame(){
@@ -1564,6 +1613,7 @@ function onMsg(d, senderId){
     if(d.type === 'st_action_minus'){ stHostMinusSubmit(senderId, d.cardId); return; }
     if(d.type === 'st_action_play'){ stHostPlayCard(senderId, d.cardId); return; }
     if(d.type === 'st_action_rematch'){ stHostRematch(senderId); return; }
+    if(d.type === 'st_action_next'){ stHostNext(senderId); return; }
     if(d.type === 'st_request_hand'){
       // ゲストから手札再送リクエスト
       debugLog(`📥 hand re-request from ${senderId.slice(-6)}`);
@@ -1611,6 +1661,10 @@ function onMsg(d, senderId){
   }
   if(d.type === 'st_rematch_go'){
     stRematchGo();
+    return;
+  }
+  if(d.type === 'st_next_update'){
+    stRenderNextVotersInfo(d.voters || [], d.total || 0);
     return;
   }
 }
@@ -1978,7 +2032,7 @@ function stRenderRoundEnd(){
     if(parent) parent.style.display = 'none';
   }
 
-  // 次へ進むボタンの表示
+  // 次へ進むボタンの表示（全員投票方式に統一）
   const isLast = stGs.currentRound >= stGs.totalRounds;
   if(isLast){
     g('btn-next-round').textContent = '🏆 最終結果を見る';
@@ -1987,13 +2041,8 @@ function stRenderRoundEnd(){
     g('btn-next-round').textContent = `▶ ラウンド ${stGs.currentRound+1} へ`;
     g('roundend-next-info').textContent = `次は ラウンド ${stGs.currentRound+1}`;
   }
-  if(isHost){
-    g('btn-next-round').style.display = '';
-    g('btn-next-round').disabled = false;
-  } else {
-    g('btn-next-round').style.display = 'none';
-    g('roundend-next-info').textContent = 'ホストの操作を待っています...';
-  }
+  g('btn-next-round').style.display = '';
+  g('btn-next-round').disabled = false;
 }
 
 function stRenderResult(){
