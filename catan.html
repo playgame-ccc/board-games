@@ -2177,8 +2177,7 @@ async function ctHostPlaceSettlement(pid,vid){
     checkPortAccess(p,vid);
     ctFs.buildAction=null;
     ctFs.log.push(`🏠 ${p.name} が開拓地を建設`);
-    // 最長交易路を再計算（道が切断される可能性）
-    recomputeLongestRoad();
+    // 最長交易路はターン終了時に計算（道分断含む）
     // 勝利チェック
     if(checkVictory(p)){
       await ctEndGame(pid);
@@ -2263,11 +2262,7 @@ async function ctHostPlaceRoad(pid,eid){
     p.roadCount--;
     ctFs.buildAction=null;
     ctFs.log.push(`🛤️ ${p.name} が道を建設`);
-    recomputeLongestRoad();
-    if(checkVictory(p)){
-      await ctEndGame(pid);
-      return;
-    }
+    // 最長交易路はターン終了時に計算（即時計算しない）
     await ctBcast();
     await ctSendPrivates();
     return;
@@ -2285,11 +2280,7 @@ async function ctHostPlaceRoad(pid,eid){
       ctFs.subPhase='turn';
       ctFs.roadBuildingCount=0;
     }
-    recomputeLongestRoad();
-    if(checkVictory(p)){
-      await ctEndGame(pid);
-      return;
-    }
+    // 最長交易路はターン終了時に計算
     await ctBcast();
     await ctSendPrivates();
     return;
@@ -2459,6 +2450,14 @@ async function ctHostEndTurn(pid){
   p.devUsedThisTurn=false;
   ctFs.buildAction=null;
   ctFs.tradeOffer=null;
+  // ターン終了時に賞ボーナスを計算（最大騎士力・最長交易路）
+  recomputeLargestArmy();
+  recomputeLongestRoad();
+  // 勝利判定（VPはctBcast内で再計算される）
+  if(checkVictory(p)){
+    await ctEndGame(pid);
+    return;
+  }
   // 次のプレイヤー
   ctFs.currentPlayerIdx=(ctFs.currentPlayerIdx+1)%ctFs.players.length;
   ctFs.subPhase='rollDice';
@@ -2565,16 +2564,12 @@ async function ctHostPlayDev(pid,cardType,params){
     p.knightsPlayed++;
     p.devUsedThisTurn=true;
     ctFs.log.push(`⚔️ ${p.name} が騎士カードを使用`);
-    // 最大騎士力チェック
-    recomputeLargestArmy();
+    // 最大騎士力はターン終了時に計算（即時計算しない）
     // 盗賊移動前のフェーズを保存（rollDice 中だった場合、戻る）
     ctFs.preRobberPhase=ctFs.subPhase;
     // 盗賊移動フェーズに入る
     ctFs.subPhase='robberMove';
-    if(checkVictory(p)){
-      await ctEndGame(pid);
-      return;
-    }
+    // 注意: ここでは勝利判定もしない（ターン終了時の最大騎士力計算後に判定される）
   } else if(cardType==='roadBuilding'){
     p.devCards[cardIdx].played=true;
     p.devUsedThisTurn=true;
@@ -2622,24 +2617,50 @@ async function ctHostPlayDev(pid,cardType,params){
 // 最大騎士力
 // ====================
 function recomputeLargestArmy(){
-  // 3枚以上騎士を使った中で最多のプレイヤーが「最大騎士力」
-  let maxKnights=2; // 3以上で取得
-  let owner=ctFs.largestArmyOwner||null;
+  // 各プレイヤーの騎士使用枚数を集計
+  const knights={};
   for(const p of ctFs.players){
-    if(p.knightsPlayed>maxKnights){
-      maxKnights=p.knightsPlayed;
-      owner=p.id;
-    }
+    knights[p.id]=p.knightsPlayed||0;
   }
-  if(owner!==ctFs.largestArmyOwner){
-    const newOwner=ctFs.players.find(p=>p.id===owner);
-    if(newOwner){
+  
+  if(ctFs.largestArmyOwner){
+    // 既に保持者がいる場合：保持者より多い騎士数の挑戦者のみ奪取可能（同数では奪取不可）
+    const curOwnerKnights=knights[ctFs.largestArmyOwner]||0;
+    // 保持者が騎士を増やしていたら自分の記録を更新
+    if(curOwnerKnights>ctFs.largestArmySize){
+      ctFs.largestArmySize=curOwnerKnights;
+    }
+    let challenger=null,challengerKnights=ctFs.largestArmySize;
+    for(const pid in knights){
+      if(pid===ctFs.largestArmyOwner) continue;
+      // 「保持者の枚数を超える」必要がある
+      if(knights[pid]>challengerKnights){
+        challenger=pid;
+        challengerKnights=knights[pid];
+      }
+    }
+    if(challenger){
+      const newOwner=ctFs.players.find(p=>p.id===challenger);
+      ctFs.largestArmyOwner=challenger;
+      ctFs.largestArmySize=challengerKnights;
+      ctFs.log.push(`🏆 ${newOwner.name} が最大騎士力を奪取（${challengerKnights}枚）`);
+    }
+  } else {
+    // 保持者なし：3枚以上で最多のプレイヤーが取得
+    let maxKnights=2; // 3以上で取得
+    let owner=null;
+    for(const pid in knights){
+      if(knights[pid]>maxKnights){
+        maxKnights=knights[pid];
+        owner=pid;
+      }
+    }
+    if(owner){
+      const newOwner=ctFs.players.find(p=>p.id===owner);
       ctFs.largestArmyOwner=owner;
       ctFs.largestArmySize=maxKnights;
       ctFs.log.push(`🏆 ${newOwner.name} が最大騎士力を獲得（${maxKnights}枚）`);
     }
-  } else if(owner){
-    ctFs.largestArmySize=ctFs.players.find(p=>p.id===owner).knightsPlayed;
   }
 }
 
