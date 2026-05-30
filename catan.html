@@ -994,7 +994,10 @@ async function fbPoll(){
   if(bc&&bc.ts&&bc.ts!==fbLastTs.broadcast){
     fbLastTs.broadcast=bc.ts;
     ctLastBcastSeenAt=Date.now();
-    onBroadcast(bc.data);
+    // ホストは ctBcast 内で既に onBroadcast 済みなので二重処理しない
+    if(!isHost){
+      onBroadcast(bc.data);
+    }
   }
   const prv=await fbGet('prv/'+myId);
   if(prv&&prv.ts&&prv.ts!==fbLastTs.prv){
@@ -1942,10 +1945,9 @@ async function ctBcast(){
     pub.winner=ctFs.winner;
   }
   await Promise.all([fbBcast(pub),fbSaveState()]);
-  // ソロモード時はonBroadcastを直接呼んで画面更新
-  if(!fbRoom){
-    onBroadcast(pub);
-  }
+  // ホスト自身の画面を即座に更新（fbPollの遅延を待たない）
+  // これによりホストの操作後すぐにUIが反映される
+  onBroadcast(pub);
   // BOT行動スケジュール
   if(isHost&&ctFs&&ctFs.phase==='playing'){
     ctScheduleBotAction();

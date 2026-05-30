@@ -2,6 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>血と刃の白薔薇</title>
 <style>
@@ -466,7 +470,8 @@ h3 { font-size:1.0rem; color:var(--rose-dark); margin:8px 0; }
   </div>
   <button class="btn btn-blood" onclick="srShowSoloLobby()">🤖 ひとりで遊ぶ（CPU対戦）</button>
   <div id="lobby-status" class="status-txt"></div>
-  <div id="lobby-error" class="error"></div>
+    <div id="lobby-error" class="error"></div>
+  <button id="btn-reconnect" class="btn" style="display:none; margin-top:10px; background:var(--gold,#ffb020); color:#000; font-weight:700;" onclick="srReconnectToRoom()">🔄 前のルームに戻る</button>
 </div>
 
 <!-- ============================================================ SOLO SETUP ============================================================ -->
@@ -713,11 +718,11 @@ const SR_DIST = {
 // ============================================================
 const SR_WIN = {
   5:  {winBudRose:3, winBudBlood:4},
-  6:  {winBudRose:4, winBudBlood:5},
+  6:  {winBudRose:4, winBudBlood:4},
   7:  {winBudRose:4, winBudBlood:6},
-  8:  {winBudRose:5, winBudBlood:7},
-  9:  {winBudRose:6, winBudBlood:7},
-  10: {winBudRose:6, winBudBlood:9},
+  8:  {winBudRose:5, winBudBlood:6},
+  9:  {winBudRose:5, winBudBlood:7},
+  10: {winBudRose:6, winBudBlood:7},
 };
 
 // 人数別に配分+勝利条件をマージして取得
@@ -838,6 +843,7 @@ async function srJoinRoom(){
     if(!meta){ setErr('ルームが見つかりません'); return; }
     if(meta.game !== 'shirobara'){ setErr('ゲームの種類が違います'); return; }
     fbListen();
+    srSaveSession();
     fbSendToHost({type:'sr_join', name:myName, id:myId});
     setErr(''); setSt('接続しました');
     show('waiting');
@@ -1026,6 +1032,7 @@ function srHostAction(d, senderId){
 // BROADCAST
 // ============================================================
 function srBcast(){
+  if(isHost) srSaveSession();
   if(!srFs) return;
   srGs = srPub(srFs);
   if(isSolo){ srOnGsUpdate(); return; }
@@ -3215,6 +3222,87 @@ window.addEventListener('beforeunload', (e) => {
     return e.returnValue;
   }
 });
+
+
+// ============================================================
+// SESSION SAVE / RESTORE（ページ更新後の再接続）pgReconnect
+// ============================================================
+const PG_SESSION_KEY = 'pgSession_shirobara';
+function srSaveSession() {
+  try {
+    sessionStorage.setItem(PG_SESSION_KEY, JSON.stringify({
+      myId, myName, roomCode, fbRoom, isHost, ts: Date.now()
+    }));
+  } catch(e){}
+}
+function srClearSession() { try { sessionStorage.removeItem(PG_SESSION_KEY); } catch(e){} }
+function srLoadSession() {
+  try {
+    const raw = sessionStorage.getItem(PG_SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(Date.now() - s.ts > 3*60*60*1000) { srClearSession(); return null; }
+    return s;
+  } catch(e) { return null; }
+}
+function srShowReconnectOption() {
+  const s = srLoadSession();
+  const btn = g('btn-reconnect');
+  if(!btn) return;
+  if(!s || !s.roomCode) { btn.style.display='none'; return; }
+  btn.style.display = '';
+  btn.textContent = '🔄 前のルームに戻る（🌹白薔薇 #' + s.roomCode + '）';
+}
+async function srReconnectToRoom() {
+  const s = srLoadSession();
+  if(!s) { setErr('セッションが見つかりません'); return; }
+  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
+  fbRoom = s.fbRoom; isHost = s.isHost;
+  setSt('再接続中...');
+  try {
+    const meta = await fbGet('meta');
+    if(!meta) { srClearSession(); setErr('ルームが見つかりません（終了済みの可能性）'); setSt(''); srShowReconnectOption(); return; }
+    fbListen();
+    if(isHost) {
+      const bc = await fbGet('broadcast');
+      const savedGs = bc?.msg?.s;
+      if(savedGs) {
+        srGs = savedGs;
+        if(srGs.phase === 'waiting') {
+          show('waiting');
+          g('disp-code').textContent = roomCode;
+          const sb = g('btn-start'); if(sb) sb.style.display = '';
+          if(typeof srRenderWait === 'function') srRenderWait();
+        } else {
+          setErr('ゲーム進行中のホスト復帰は制限があります');
+          srGs = savedGs; srOnGsUpdate();
+        }
+      } else {
+        show('waiting');
+        g('disp-code').textContent = roomCode;
+        const sb = g('btn-start'); if(sb) sb.style.display = '';
+      }
+    } else {
+      fbSendToHost({type:'sr_join', name:myName, id:myId});
+      setSt('接続しました！');
+      show('waiting');
+      g('disp-code').textContent = roomCode;
+      const sb = g('btn-start'); if(sb) sb.style.display = 'none';
+      let retries = 0;
+      const retry = setInterval(()=>{
+        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
+        if(srGs?.players?.find(p=>p.id===myId)) { clearInterval(retry); return; }
+        fbSendToHost({type:'sr_join', name:myName, id:myId});
+        retries++;
+      }, 2000);
+    }
+    setSt('');
+  } catch(e) {
+    setErr('再接続失敗: ' + (e.message||e));
+    setSt(''); srShowReconnectOption();
+  }
+}
+window.addEventListener('DOMContentLoaded', () => { try { srShowReconnectOption(); } catch(e){} });
 
 </script>
 </body>
