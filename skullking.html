@@ -701,6 +701,11 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
   </div>
 
   <div class="panel">
+    <h3>💰 累計スコア</h3>
+    <div class="scoreboard" id="bid-scoreboard"></div>
+  </div>
+
+  <div class="panel">
     <h3>📋 宣言状況</h3>
     <div id="bid-status-list" class="player-list"></div>
   </div>
@@ -931,6 +936,7 @@ let ttGs = null;           // public state
 let ttMyCards = [];        // private hand
 let ttMyBid = null;        // pending bid before confirmed
 let ttPendingTigressCardId = null; // when user clicks tigress, show modal
+let ttSelectedCardId = null; // 確認のため、1回目タップで選択、2回目タップで確定
 let ttAiTimer = null;
 let ttRematchVoters = [];
 
@@ -2132,7 +2138,28 @@ function ttRenderBid(){
     cBtn.textContent = '宣言を確定する';
   }
 
-  // Status list
+  // 累計スコアボード（順位付き）
+  const sb = g('bid-scoreboard');
+  sb.innerHTML = '';
+  const header = mk('div', 'score-row header');
+  header.innerHTML = '<div class="score-cell name">順位</div><div class="score-cell name">プレイヤー</div><div class="score-cell total">累計</div>';
+  header.style.gridTemplateColumns = '50px 1fr 80px';
+  sb.appendChild(header);
+  const sortedByScore = ttGs.players.slice().sort((a,b)=>b.score - a.score);
+  sortedByScore.forEach((p, idx)=>{
+    const row = mk('div', 'score-row' + (p.id===myId?' me':''));
+    row.style.gridTemplateColumns = '50px 1fr 80px';
+    const medal = idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':`${idx+1}位`;
+    const scoreColor = p.score >= 0 ? 'var(--gold)' : 'var(--red)';
+    row.innerHTML = `
+      <div class="score-cell name">${medal}</div>
+      <div class="score-cell name">${p.name}${p.isCpu?' (CPU)':''}${p.id===myId?' ★':''}</div>
+      <div class="score-cell total" style="color:${scoreColor};">${p.score}</div>
+    `;
+    sb.appendChild(row);
+  });
+
+  // Status list（宣言状況 + 累計点数）
   const list = g('bid-status-list');
   list.innerHTML = '';
   ttGs.players.forEach(p=>{
@@ -2145,10 +2172,11 @@ function ttRenderBid(){
     } else {
       bidStr = '✅ 宣言済み';
     }
+    const scoreColor = p.score >= 0 ? 'var(--gold)' : 'var(--red)';
     item.innerHTML = `
       <div class="p-info">
         <div class="p-name">${p.name}${p.id===myId?' (あなた)':''}</div>
-        <div class="p-sub">${p.isCpu?'CPU':''}</div>
+        <div class="p-sub">${p.isCpu?'CPU':''} <span style="color:${scoreColor}; font-weight:700;">累計 ${p.score}点</span></div>
       </div>
       <span class="p-bid${p.bidConfirmed?' met':''}">${bidStr}</span>
     `;
@@ -2232,6 +2260,11 @@ function _ttRenderPlay(){
   const lead = ttGs.leadSuit;
   // 通常カードでリードスートを持っているか（特殊カードは無視）
   const hasLeadSuit = lead && ttMyCards.some(c=>c.kind==='normal' && c.suit === lead);
+  // 手番が来てない、もしくは選択カードが既に手札にない場合は選択リセット
+  if(!myTurn) ttSelectedCardId = null;
+  else if(ttSelectedCardId && !ttMyCards.some(c=>c.id===ttSelectedCardId)){
+    ttSelectedCardId = null;
+  }
   debugLog(`📛 renderPlay手札描画: ttMyCards=${ttMyCards.length}枚, hand要素=${hand?'OK':'null'}`);
   if(ttMyCards.length > 0){
     const sample = ttMyCards[0];
@@ -2243,8 +2276,16 @@ function _ttRenderPlay(){
     if(myTurn && c.kind === 'normal' && lead && hasLeadSuit && c.suit !== lead){
       canPlay = false;
     }
+    const isSelected = ttSelectedCardId === c.id;
+    let extra = '';
+    if(canPlay){
+      extra = 'playable';
+      if(isSelected) extra += ' selected';
+    } else if(myTurn){
+      extra = 'disabled';
+    }
     return {
-      extra: canPlay ? 'playable' : (myTurn ? 'disabled' : ''),
+      extra: extra,
       onClick: canPlay ? ()=>ttPlayMyCard(c.id, c) : null,
     };
   });
@@ -2252,7 +2293,9 @@ function _ttRenderPlay(){
 
   // Action hint
   if(myTurn){
-    if(lead && hasLeadSuit){
+    if(ttSelectedCardId){
+      g('play-action-hint').innerHTML = '<strong style="color:var(--gold);">⚠️ 選択中のカードをもう一度タップして確定</strong>';
+    } else if(lead && hasLeadSuit){
       const s = suitInfo(lead);
       g('play-action-hint').textContent = `${s.icon} ${s.label}（または特殊カード）を出してください`;
     } else if(lead){
@@ -2276,17 +2319,25 @@ function _ttRenderPlay(){
 }
 
 function ttPlayMyCard(cardId, card){
-  // ティグリスの場合はモーダルで選択させる
-  if(card && card.kind === 'tigress'){
-    ttPendingTigressCardId = cardId;
-    g('modal-tigress').classList.add('active');
+  // 既に同じカードが選択中なら確定して出す
+  if(ttSelectedCardId === cardId){
+    ttSelectedCardId = null;
+    // ティグリスの場合はモーダル
+    if(card && card.kind === 'tigress'){
+      ttPendingTigressCardId = cardId;
+      g('modal-tigress').classList.add('active');
+      return;
+    }
+    if(isSolo || isHost){
+      ttHostPlayCard(myId, cardId);
+    } else {
+      fbSendToHost({type:'tt_action_play', cardId});
+    }
     return;
   }
-  if(isSolo || isHost){
-    ttHostPlayCard(myId, cardId);
-  } else {
-    fbSendToHost({type:'tt_action_play', cardId});
-  }
+  // 1回目タップ：選択状態にする
+  ttSelectedCardId = cardId;
+  ttRenderPlay();
 }
 
 function ttSubmitTigress(mode){

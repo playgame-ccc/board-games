@@ -826,6 +826,7 @@ let stFs = null;           // host-side full state
 let stGs = null;           // shared public state
 let stMyCards = [];        // private hand
 let stMySelectedMinusId = null; // pending minus card before confirmed
+let stSelectedCardId = null; // プレイ中の確認用：1回目で選択、2回目で確定
 let stAiTimer = null;
 let stRematchVoters = [];
 
@@ -1944,13 +1945,32 @@ function stRenderPlay(){
   const myTurn = cur && cur.id === myId;
   const me2 = stGs.players.find(p=>p.id===myId);
   const minusSuit = me2 && me2.minusCard ? me2.minusCard.suit : null;
-  stRenderGroupedHand(stMyCards, hand, minusSuit, (c)=>({
-    extra: myTurn ? 'playable' : 'disabled',
-    onClick: myTurn ? ()=>stPlayMyCard(c.id) : null,
-  }));
+  // 手番外、もしくは選択カードが手札にない場合は選択リセット
+  if(!myTurn) stSelectedCardId = null;
+  else if(stSelectedCardId && !stMyCards.some(c=>c.id===stSelectedCardId)){
+    stSelectedCardId = null;
+  }
+  stRenderGroupedHand(stMyCards, hand, minusSuit, (c)=>{
+    const isSelected = stSelectedCardId === c.id;
+    let extra = '';
+    if(myTurn){
+      extra = 'playable';
+      if(isSelected) extra += ' selected';
+    } else {
+      extra = 'disabled';
+    }
+    return {
+      extra: extra,
+      onClick: myTurn ? ()=>stPlayMyCard(c.id) : null,
+    };
+  });
 
   if(myTurn){
-    g('play-action-hint').textContent = stGs.leadSuit ? '好きなカードを出せます' : 'リードカードを出してください';
+    if(stSelectedCardId){
+      g('play-action-hint').innerHTML = '<strong style="color:var(--accent);">⚠️ 選択中のカードをもう一度タップして確定</strong>';
+    } else {
+      g('play-action-hint').textContent = stGs.leadSuit ? '好きなカードを出せます' : 'リードカードを出してください';
+    }
   } else {
     g('play-action-hint').textContent = '';
   }
@@ -1967,11 +1987,19 @@ function stRenderPlay(){
 }
 
 function stPlayMyCard(cardId){
-  if(isSolo || isHost){
-    stHostPlayCard(myId, cardId);
-  } else {
-    fbSendToHost({type:'st_action_play', cardId});
+  // 既に同じカードが選択中なら確定して出す
+  if(stSelectedCardId === cardId){
+    stSelectedCardId = null;
+    if(isSolo || isHost){
+      stHostPlayCard(myId, cardId);
+    } else {
+      fbSendToHost({type:'st_action_play', cardId});
+    }
+    return;
   }
+  // 1回目タップ：選択状態にする
+  stSelectedCardId = cardId;
+  stRenderPlay();
 }
 
 function stRenderRoundEnd(){
