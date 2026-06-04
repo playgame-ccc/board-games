@@ -618,7 +618,8 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
   </div>
   <button class="btn btn-red" onclick="ttShowSoloLobby()">🤖 ひとりで遊ぶ（CPU対戦）</button>
   <div id="lobby-status" class="status-txt"></div>
-  <div id="lobby-error" class="error"></div>
+    <div id="lobby-error" class="error"></div>
+  <button id="btn-reconnect" class="btn" style="display:none; margin-top:10px; background:#ffb020; color:#000; font-weight:700;" onclick="ttReconnectToRoom()">🔄 前のルームに戻る</button>
 </div>
 
 <!-- ============================================================ SOLO SETUP ============================================================ -->
@@ -1247,6 +1248,7 @@ async function ttJoinRoom(){
     if(meta.game !== 'skullking'){ setErr('ゲームの種類が違います'); return; }
     fbListen();
     fbSendToHost({type:'tt_join', name:myName, id:myId});
+    ttSaveSession();
     setErr(''); setSt('接続しました');
     show('waiting');
     g('disp-code').textContent = code;
@@ -1304,6 +1306,7 @@ function ttStartSoloGame(){
 // BROADCAST
 // ============================================================
 function ttBcast(){
+  if(isHost) ttSaveSession();
   if(!ttFs) return;
   // ソロモード：自分視点で1回だけ生成
   if(isSolo){
@@ -2563,6 +2566,80 @@ function ttDismissRejoin(){
   const banner = g('rejoin-banner');
   if(banner) banner.style.display = 'none';
 }
+
+// ============================================================
+// SESSION SAVE / RESTORE（再接続）pgReconnect
+// ============================================================
+const PG_SESSION_KEY_tt = 'pgSession_skullking';
+function ttSaveSession() {
+  try { sessionStorage.setItem(PG_SESSION_KEY_tt, JSON.stringify({ myId, myName, roomCode, fbRoom, isHost, ts: Date.now() })); } catch(e){}
+}
+function ttClearSession() { try { sessionStorage.removeItem(PG_SESSION_KEY_tt); } catch(e){} }
+function ttLoadSession() {
+  try {
+    const raw = sessionStorage.getItem(PG_SESSION_KEY_tt);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(Date.now() - s.ts > 3*60*60*1000) { ttClearSession(); return null; }
+    return s;
+  } catch(e) { return null; }
+}
+function ttShowReconnectOption() {
+  const s = ttLoadSession();
+  const btn = g('btn-reconnect');
+  if(!btn) return;
+  if(!s || !s.roomCode) { btn.style.display='none'; return; }
+  btn.style.display = '';
+  btn.textContent = '🔄 前のルームに戻る（🏴‍☠️ スカルキング #' + s.roomCode + '）';
+}
+async function ttReconnectToRoom() {
+  const s = ttLoadSession();
+  if(!s) { setErr('セッションが見つかりません'); return; }
+  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
+  fbRoom = s.fbRoom; isHost = s.isHost;
+  setSt('再接続中...');
+  try {
+    const meta = await fbGet('meta');
+    if(!meta) { ttClearSession(); setErr('ルームが見つかりません（終了済みの可能性）'); setSt(''); ttShowReconnectOption(); return; }
+    fbListen();
+    if(isHost) {
+      const bc = await fbGet('broadcast');
+      const savedGs = bc?.msg?.s;
+      if(savedGs) {
+        ttGs = savedGs;
+        if(ttGs.phase === 'waiting') {
+          show('waiting');
+          if(g('disp-code')) g('disp-code').textContent = roomCode;
+          if(typeof ttRenderWait==="function") ttRenderWait();
+        } else {
+          setErr('ゲーム進行中のホスト復帰は制限があります');
+          ttOnGsUpdate();
+        }
+      } else {
+        show('waiting');
+        if(g('disp-code')) g('disp-code').textContent = roomCode;
+      }
+    } else {
+      fbSendToHost({type:'tt_join', name:myName, id:myId});
+      setSt('接続しました！');
+      show('waiting');
+      if(g('disp-code')) g('disp-code').textContent = roomCode;
+      let retries = 0;
+      const retry = setInterval(()=>{
+        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
+        if(ttGs?.players?.find(p=>p.id===myId)) { clearInterval(retry); return; }
+        fbSendToHost({type:'tt_join', name:myName, id:myId});
+        retries++;
+      }, 2000);
+    }
+    setSt('');
+  } catch(e) {
+    setErr('再接続失敗: ' + (e.message||e));
+    setSt(''); ttShowReconnectOption();
+  }
+}
+window.addEventListener('DOMContentLoaded', () => { try { ttShowReconnectOption(); } catch(e){} });
+
 </script>
 </body>
 </html>

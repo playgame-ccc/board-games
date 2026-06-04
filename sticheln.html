@@ -530,7 +530,8 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
   </div>
   <button class="btn btn-red" onclick="stShowSoloLobby()">🤖 ひとりで遊ぶ（CPU対戦）</button>
   <div id="lobby-status" class="status-txt"></div>
-  <div id="lobby-error" class="error"></div>
+    <div id="lobby-error" class="error"></div>
+  <button id="btn-reconnect" class="btn" style="display:none; margin-top:10px; background:#ffb020; color:#000; font-weight:700;" onclick="stReconnectToRoom()">🔄 前のルームに戻る</button>
 </div>
 
 <!-- ============================================================ SOLO SETUP ============================================================ -->
@@ -1044,6 +1045,7 @@ async function stJoinRoom(){
     if(meta.game !== 'sticheln'){ setErr('ゲームの種類が違います'); return; }
     fbListen();
     fbSendToHost({type:'st_join', name:myName, id:myId});
+    stSaveSession();
     setErr(''); setSt('接続しました');
     show('waiting');
     g('disp-code').textContent = code;
@@ -1099,6 +1101,7 @@ function stStartSoloGame(){
 // BROADCAST
 // ============================================================
 function stBcast(){
+  if(isHost) stSaveSession();
   if(!stFs) return;
   // ソロ：自分視点で1回だけ
   if(isSolo){
@@ -2234,6 +2237,80 @@ function stDismissRejoin(){
   const banner = g('rejoin-banner');
   if(banner) banner.style.display = 'none';
 }
+
+// ============================================================
+// SESSION SAVE / RESTORE（再接続）pgReconnect
+// ============================================================
+const PG_SESSION_KEY_st = 'pgSession_sticheln';
+function stSaveSession() {
+  try { sessionStorage.setItem(PG_SESSION_KEY_st, JSON.stringify({ myId, myName, roomCode, fbRoom, isHost, ts: Date.now() })); } catch(e){}
+}
+function stClearSession() { try { sessionStorage.removeItem(PG_SESSION_KEY_st); } catch(e){} }
+function stLoadSession() {
+  try {
+    const raw = sessionStorage.getItem(PG_SESSION_KEY_st);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(Date.now() - s.ts > 3*60*60*1000) { stClearSession(); return null; }
+    return s;
+  } catch(e) { return null; }
+}
+function stShowReconnectOption() {
+  const s = stLoadSession();
+  const btn = g('btn-reconnect');
+  if(!btn) return;
+  if(!s || !s.roomCode) { btn.style.display='none'; return; }
+  btn.style.display = '';
+  btn.textContent = '🔄 前のルームに戻る（🎯 シュティッヒルン #' + s.roomCode + '）';
+}
+async function stReconnectToRoom() {
+  const s = stLoadSession();
+  if(!s) { setErr('セッションが見つかりません'); return; }
+  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
+  fbRoom = s.fbRoom; isHost = s.isHost;
+  setSt('再接続中...');
+  try {
+    const meta = await fbGet('meta');
+    if(!meta) { stClearSession(); setErr('ルームが見つかりません（終了済みの可能性）'); setSt(''); stShowReconnectOption(); return; }
+    fbListen();
+    if(isHost) {
+      const bc = await fbGet('broadcast');
+      const savedGs = bc?.msg?.s;
+      if(savedGs) {
+        stGs = savedGs;
+        if(stGs.phase === 'waiting') {
+          show('waiting');
+          if(g('disp-code')) g('disp-code').textContent = roomCode;
+          if(typeof stRenderWait==="function") stRenderWait();
+        } else {
+          setErr('ゲーム進行中のホスト復帰は制限があります');
+          stOnGsUpdate();
+        }
+      } else {
+        show('waiting');
+        if(g('disp-code')) g('disp-code').textContent = roomCode;
+      }
+    } else {
+      fbSendToHost({type:'st_join', name:myName, id:myId});
+      setSt('接続しました！');
+      show('waiting');
+      if(g('disp-code')) g('disp-code').textContent = roomCode;
+      let retries = 0;
+      const retry = setInterval(()=>{
+        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
+        if(stGs?.players?.find(p=>p.id===myId)) { clearInterval(retry); return; }
+        fbSendToHost({type:'st_join', name:myName, id:myId});
+        retries++;
+      }, 2000);
+    }
+    setSt('');
+  } catch(e) {
+    setErr('再接続失敗: ' + (e.message||e));
+    setSt(''); stShowReconnectOption();
+  }
+}
+window.addEventListener('DOMContentLoaded', () => { try { stShowReconnectOption(); } catch(e){} });
+
 </script>
 </body>
 </html>
