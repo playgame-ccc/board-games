@@ -187,6 +187,15 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
   border-color: var(--gold); box-shadow: 0 0 12px var(--gold-glow);
 }
 .count-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+/* ルール選択ボタン（テキスト用・横長） */
+.rule-btn, .solo-rule-btn {
+  width: auto;
+  min-width: 96px;
+  height: 44px;
+  padding: 0 18px;
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
 .count-label { text-align: center; margin-top: 10px; font-family: var(--mono); color: var(--sea); font-size: 0.9rem; }
 
 /* Cards */
@@ -660,7 +669,7 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
       <button class="count-btn rule-btn selected" data-rule="normal" onclick="ttSetRule('normal')">通常</button>
       <button class="count-btn rule-btn" data-rule="triangle" onclick="ttSetRule('triangle')">三すくみ</button>
     </div>
-    <div id="rule-desc" style="margin-top:8px; padding:6px; background:var(--surface2); border-radius:6px; font-size:0.74rem; color:var(--muted); text-align:center;">通常: 🧜‍♀️マーメイド &gt; 👑SK &gt; 🗡️海賊</div>
+    <div id="rule-desc" style="margin-top:8px; padding:8px 10px; background:var(--surface2); border-radius:6px; font-size:0.76rem; color:var(--muted); text-align:center; line-height:1.6;">通常ルール：🧜‍♀️ &gt; 👑 &gt; 🗡️</div>
   </div>
 
   <button class="btn btn-gold" onclick="ttCreateRoom()">🏠 部屋を作る（ホスト）</button>
@@ -703,7 +712,7 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
       <button class="count-btn solo-rule-btn selected" data-rule="normal" onclick="ttSetSoloRule('normal')">通常</button>
       <button class="count-btn solo-rule-btn" data-rule="triangle" onclick="ttSetSoloRule('triangle')">三すくみ</button>
     </div>
-    <div id="solo-rule-desc" style="margin-top:8px; padding:6px; background:var(--surface2); border-radius:6px; font-size:0.74rem; color:var(--muted); text-align:center;">通常: 🧜‍♀️マーメイド &gt; 👑SK &gt; 🗡️海賊</div>
+    <div id="solo-rule-desc" style="margin-top:8px; padding:8px 10px; background:var(--surface2); border-radius:6px; font-size:0.76rem; color:var(--muted); text-align:center; line-height:1.6;">通常ルール：🧜‍♀️ &gt; 👑 &gt; 🗡️</div>
   </div>
   <details class="panel">
     <summary style="cursor:pointer; color:var(--gold); font-size:0.88rem;">⚙️ 特殊カード設定</summary>
@@ -1190,8 +1199,8 @@ function ttSetRounds(r){
   });
 }
 const TT_RULE_DESC = {
-  normal:   '通常: 🧜‍♀️マーメイド > 👑SK > 🗡️海賊',
-  triangle: '三すくみ: 🧜‍♀️→👑→🗡️→🧜‍♀️（3種揃えば🧜‍♀️勝ち）',
+  normal:   '通常ルール：🧜‍♀️ > 👑 > 🗡️',
+  triangle: '三すくみ：🧜‍♀️→👑→🗡️→🧜‍♀️（3種揃えば🧜‍♀️勝ち）',
 };
 function ttSetRule(rule){
   ttSelectedRule = rule;
