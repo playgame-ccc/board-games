@@ -505,6 +505,14 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
 
   <input class="input" id="in-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12">
 
+  <!-- 再接続バナー（前回のセッションがあるとき表示） -->
+  <div id="rejoin-banner" class="panel" style="display:none; border-color:var(--accent); background:rgba(185,76,140,0.08);">
+    <div style="text-align:center; color:var(--accent); font-size:0.9rem; margin-bottom:8px;">🔁 前回の部屋に戻れます</div>
+    <div id="rejoin-info" style="text-align:center; color:var(--muted); font-size:0.8rem; margin-bottom:10px;"></div>
+    <button class="btn btn-accent" onclick="stRejoin()">▶ 前回の部屋に再接続</button>
+    <button class="btn btn-ghost" style="margin-top:6px; font-size:0.75rem;" onclick="stDismissRejoin()">× このバナーを消す</button>
+  </div>
+
   <div class="panel">
     <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">ラウンド数（部屋を作る場合）</div>
     <div class="count-selector">
@@ -833,6 +841,35 @@ let stRematchVoters = [];
 function genId(){ return 'p_' + Math.random().toString(36).substr(2,9) + '_' + Date.now().toString(36); }
 
 // ============================================================
+// 再接続用：セッション情報をlocalStorageに保存
+// ============================================================
+const ST_SESSION_KEY = 'st_session';
+const ST_SESSION_TTL_MS = 30 * 60 * 1000; // 30分
+
+function stSaveSession(){
+  try {
+    const data = {
+      roomCode, myName, myId, isHost,
+      ts: Date.now(),
+    };
+    localStorage.setItem(ST_SESSION_KEY, JSON.stringify(data));
+  } catch(e){}
+}
+function stLoadSession(){
+  try {
+    const raw = localStorage.getItem(ST_SESSION_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    if(!data || !data.roomCode || !data.myName) return null;
+    if(Date.now() - data.ts > ST_SESSION_TTL_MS) return null;
+    return data;
+  } catch(e){ return null; }
+}
+function stClearSession(){
+  try { localStorage.removeItem(ST_SESSION_KEY); } catch(e){}
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 function g(id){ return document.getElementById(id); }
@@ -980,6 +1017,7 @@ async function stCreateRoom(){
     g('disp-code').textContent = code;
     show('waiting');
     stRenderWaiting();
+    stSaveSession();
   } catch(e){ setErr('エラー: ' + e.message); }
 }
 
@@ -993,7 +1031,14 @@ async function stJoinRoom(){
   fbRoom = 'ST-' + code;
   setSt('接続中...');
   try {
-    myId = genId();
+    // 同じ部屋+同じ名前で参加済みなら以前のmyIdを再利用（再接続）
+    const saved = stLoadSession();
+    if(saved && saved.roomCode === code && saved.myName === name && !saved.isHost){
+      myId = saved.myId;
+      debugLog && debugLog(`🔁 myId再利用: ${myId.slice(-6)}`);
+    } else {
+      myId = genId();
+    }
     const meta = await fbGet('meta');
     if(!meta){ setErr('ルームが見つかりません'); return; }
     if(meta.game !== 'sticheln'){ setErr('ゲームの種類が違います'); return; }
@@ -1003,6 +1048,7 @@ async function stJoinRoom(){
     show('waiting');
     g('disp-code').textContent = code;
     g('btn-start').style.display = 'none';
+    stSaveSession();
     let retries = 0;
     const retryJoin = setInterval(()=>{
       if(!fbRoom || retries>=5) { clearInterval(retryJoin); return; }
@@ -1013,10 +1059,12 @@ async function stJoinRoom(){
   } catch(e){ setErr('参加失敗'); }
 }
 
-function stLeaveRoom(){ fbClose(); stReset(); show('lobby'); }
+function stLeaveRoom(){ stClearSession(); fbClose(); stReset(); show('lobby'); stCheckRejoinBanner(); }
 function stLeaveGame(){
   if(stAiTimer){ clearTimeout(stAiTimer); stAiTimer=null; }
+  stClearSession();
   fbClose(); stReset(); show('lobby');
+  stCheckRejoinBanner();
 }
 function stReset(){
   stFs = null; stGs = null; stMyCards = []; stMySelectedMinusId = null;
@@ -1355,6 +1403,11 @@ function stHostPlayCard(senderId, cardId){
   const p = stFs.players.find(x=>x.id===senderId);
   if(!p) return;
   if(stFs.players[stFs.curIdx].id !== senderId) return;
+  // 重複ガード：既にこのカードが今のトリックに出ていれば無視
+  if(stFs.trickCards && stFs.trickCards.some(t=>t.card && t.card.id === cardId)){
+    debugLog && debugLog(`⚠️ 重複出札を無視: ${cardId.slice(-8)}`);
+    return;
+  }
   const card = p.hand.find(c=>c.id===cardId);
   if(!card) return;
 
@@ -1671,9 +1724,31 @@ function onMsg(d, senderId){
 }
 
 function stHostJoin(d){
-  if(!stFs || stFs.phase !== 'waiting') return;
+  if(!stFs) return;
+  // 同じIDの既存プレイヤーがあれば「再接続」として扱う
+  const sameById = stFs.players.find(p=>p.id===d.id);
+  if(sameById){
+    if(d.name) sameById.name = d.name;
+    debugLog && debugLog(`🔁 再接続: ${d.name?.slice(0,8)}（id一致）`);
+    stBcast();
+    return;
+  }
+  // 同じ名前の既存プレイヤーがあればIDを差し替え（再接続）
+  const sameByName = stFs.players.find(p=>p.name === d.name && !p.isCpu);
+  if(sameByName){
+    const oldId = sameByName.id;
+    sameByName.id = d.id;
+    debugLog && debugLog(`🔁 再接続: ${d.name?.slice(0,8)}（名前一致, ${oldId.slice(-6)}→${d.id.slice(-6)}）`);
+    if(typeof stNextVoters !== 'undefined'){
+      const idx = stNextVoters.indexOf(oldId);
+      if(idx >= 0) stNextVoters[idx] = d.id;
+    }
+    stBcast();
+    return;
+  }
+  // 新規参加：phase==='waiting'のみ受け入れ
+  if(stFs.phase !== 'waiting') return;
   if(stFs.players.length >= 6){ fbSendTo(d.id, {type:'st_full'}); return; }
-  if(stFs.players.find(p=>p.id===d.id)) return;
   stFs.players.push({id:d.id, name:d.name, isHost:false, isCpu:false});
   stFs.log.push(`👤 ${d.name} が参加しました`);
   stBcast();
@@ -1989,6 +2064,7 @@ function stRenderPlay(){
 function stPlayMyCard(cardId){
   // 既に同じカードが選択中なら確定して出す
   if(stSelectedCardId === cardId){
+    debugLog && debugLog(`🎯 確定タップ: ${cardId.slice(-8)}`);
     stSelectedCardId = null;
     if(isSolo || isHost){
       stHostPlayCard(myId, cardId);
@@ -2121,7 +2197,43 @@ window.addEventListener('DOMContentLoaded', ()=>{
   stSetSoloCount(3);
   stSetRounds(1);
   stSetSoloRounds(1);
+  stCheckRejoinBanner();
 });
+
+function stCheckRejoinBanner(){
+  const saved = stLoadSession();
+  const banner = g('rejoin-banner');
+  if(!banner) return;
+  if(saved){
+    banner.style.display = '';
+    const role = saved.isHost ? 'ホスト' : 'ゲスト';
+    const minAgo = Math.floor((Date.now() - saved.ts) / 60000);
+    g('rejoin-info').textContent = `部屋 ${saved.roomCode}（${saved.myName}・${role}） ${minAgo}分前`;
+    if(g('in-name') && !g('in-name').value) g('in-name').value = saved.myName;
+    if(g('in-code') && !g('in-code').value) g('in-code').value = saved.roomCode;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+async function stRejoin(){
+  const saved = stLoadSession();
+  if(!saved){ stDismissRejoin(); return; }
+  if(saved.isHost){
+    alert('ホスト席は再接続できません。新しい部屋を作るか、ゲストとして参加してください。');
+    stDismissRejoin();
+    return;
+  }
+  g('in-name').value = saved.myName;
+  g('in-code').value = saved.roomCode;
+  await stJoinRoom();
+}
+
+function stDismissRejoin(){
+  stClearSession();
+  const banner = g('rejoin-banner');
+  if(banner) banner.style.display = 'none';
+}
 </script>
 </body>
 </html>

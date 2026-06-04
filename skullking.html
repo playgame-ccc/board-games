@@ -593,6 +593,14 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
 
   <input class="input" id="in-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12">
 
+  <!-- 再接続バナー（前回のセッションがあるとき表示） -->
+  <div id="rejoin-banner" class="panel" style="display:none; border-color:var(--gold); background:rgba(212,175,55,0.08);">
+    <div style="text-align:center; color:var(--gold); font-size:0.9rem; margin-bottom:8px;">🔁 前回の部屋に戻れます</div>
+    <div id="rejoin-info" style="text-align:center; color:var(--muted); font-size:0.8rem; margin-bottom:10px;"></div>
+    <button class="btn btn-gold" onclick="ttRejoin()">▶ 前回の部屋に再接続</button>
+    <button class="btn btn-ghost" style="margin-top:6px; font-size:0.75rem;" onclick="ttDismissRejoin()">× このバナーを消す</button>
+  </div>
+
   <div class="panel">
     <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">ラウンド数（部屋を作る場合）</div>
     <div class="count-selector">
@@ -943,6 +951,35 @@ let ttRematchVoters = [];
 function genId(){ return 'p_' + Math.random().toString(36).substr(2,9) + '_' + Date.now().toString(36); }
 
 // ============================================================
+// 再接続用：セッション情報をlocalStorageに保存
+// ============================================================
+const TT_SESSION_KEY = 'tt_session';
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30分
+
+function ttSaveSession(){
+  try {
+    const data = {
+      roomCode, myName, myId, isHost,
+      ts: Date.now(),
+    };
+    localStorage.setItem(TT_SESSION_KEY, JSON.stringify(data));
+  } catch(e){}
+}
+function ttLoadSession(){
+  try {
+    const raw = localStorage.getItem(TT_SESSION_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    if(!data || !data.roomCode || !data.myName) return null;
+    if(Date.now() - data.ts > SESSION_TTL_MS) return null;
+    return data;
+  } catch(e){ return null; }
+}
+function ttClearSession(){
+  try { localStorage.removeItem(TT_SESSION_KEY); } catch(e){}
+}
+
+// ============================================================
 // HELPERS
 // ============================================================
 function g(id){ return document.getElementById(id); }
@@ -1183,6 +1220,7 @@ async function ttCreateRoom(){
     g('disp-code').textContent = code;
     show('waiting');
     ttRenderWaiting();
+    ttSaveSession();
   } catch(e){ setErr('エラー: ' + e.message); }
 }
 
@@ -1196,7 +1234,14 @@ async function ttJoinRoom(){
   fbRoom = 'TT-' + code;
   setSt('接続中...');
   try {
-    myId = genId();
+    // 同じ部屋+同じ名前で参加済みなら以前のmyIdを再利用（再接続）
+    const saved = ttLoadSession();
+    if(saved && saved.roomCode === code && saved.myName === name && !saved.isHost){
+      myId = saved.myId;
+      debugLog && debugLog(`🔁 myId再利用: ${myId.slice(-6)}`);
+    } else {
+      myId = genId();
+    }
     const meta = await fbGet('meta');
     if(!meta){ setErr('ルームが見つかりません'); return; }
     if(meta.game !== 'skullking'){ setErr('ゲームの種類が違います'); return; }
@@ -1206,6 +1251,7 @@ async function ttJoinRoom(){
     show('waiting');
     g('disp-code').textContent = code;
     g('btn-start').style.display = 'none';
+    ttSaveSession();
     // Retry join
     let retries = 0;
     const retryJoin = setInterval(()=>{
@@ -1217,10 +1263,12 @@ async function ttJoinRoom(){
   } catch(e){ setErr('参加失敗'); }
 }
 
-function ttLeaveRoom(){ fbClose(); ttReset(); show('lobby'); }
+function ttLeaveRoom(){ ttClearSession(); fbClose(); ttReset(); show('lobby'); ttCheckRejoinBanner(); }
 function ttLeaveGame(){
   if(ttAiTimer){ clearTimeout(ttAiTimer); ttAiTimer=null; }
+  ttClearSession();
   fbClose(); ttReset(); show('lobby');
+  ttCheckRejoinBanner();
 }
 function ttReset(){
   ttFs = null; ttGs = null; ttMyCards = []; ttMyBid = null;
@@ -1581,6 +1629,11 @@ function ttHostPlayCard(senderId, cardId, opts={}){
   const p = ttFs.players.find(x=>x.id===senderId);
   if(!p) return;
   if(ttFs.players[ttFs.curIdx].id !== senderId) return;
+  // 重複ガード：既にこのカードが今のトリックに出ていれば無視
+  if(ttFs.trickCards && ttFs.trickCards.some(t=>t.card && t.card.id === cardId)){
+    debugLog && debugLog(`⚠️ 重複出札を無視: ${cardId.slice(-8)}`);
+    return;
+  }
   const card = p.hand.find(c=>c.id===cardId);
   if(!card) return;
 
@@ -1745,8 +1798,9 @@ function ttResolveTrick(){
 
   ttFs.log.push(`🏆 ${wp.name} がトリック獲得（計${wp.tricks}）`);
 
-  // Next trick or round end
-  if(wp.hand.length === 0){
+  // Next trick or round end（全員の手札が空ならラウンド終了）
+  const allHandsEmpty = ttFs.players.every(p=>!p.hand || p.hand.length === 0);
+  if(allHandsEmpty){
     // ラウンドの最後のトリック勝者を保存（次ラウンドのスタートプレイヤー）
     ttFs.lastRoundWinnerId = wp.id;
     ttBcast();
@@ -1982,9 +2036,33 @@ function onMsg(d, senderId){
 }
 
 function ttHostJoin(d){
-  if(!ttFs || ttFs.phase !== 'waiting') return;
+  if(!ttFs) return;
+  // 同じIDの既存プレイヤーがあれば「再接続」として扱う（phaseに関わらず）
+  const sameById = ttFs.players.find(p=>p.id===d.id);
+  if(sameById){
+    // 同一ID再接続。名前更新だけして状態を再送
+    if(d.name) sameById.name = d.name;
+    debugLog && debugLog(`🔁 再接続: ${d.name?.slice(0,8)}（id一致）`);
+    ttBcast();
+    return;
+  }
+  // 同じ名前の既存プレイヤーがあれば、IDを差し替えて再接続として扱う
+  const sameByName = ttFs.players.find(p=>p.name === d.name && !p.isCpu);
+  if(sameByName){
+    const oldId = sameByName.id;
+    sameByName.id = d.id;
+    debugLog && debugLog(`🔁 再接続: ${d.name?.slice(0,8)}（名前一致, ${oldId.slice(-6)}→${d.id.slice(-6)}）`);
+    // 投票関連リストも置き換え
+    if(typeof ttNextVoters !== 'undefined'){
+      const idx = ttNextVoters.indexOf(oldId);
+      if(idx >= 0) ttNextVoters[idx] = d.id;
+    }
+    ttBcast();
+    return;
+  }
+  // 新規参加：phase==='waiting'のみ受け入れ
+  if(ttFs.phase !== 'waiting') return;
   if(ttFs.players.length >= 6){ fbSendTo(d.id, {type:'tt_full'}); return; }
-  if(ttFs.players.find(p=>p.id===d.id)) return;
   ttFs.players.push({id:d.id, name:d.name, isHost:false, isCpu:false});
   ttFs.log.push(`👤 ${d.name} が参加しました`);
   ttBcast();
@@ -2321,6 +2399,7 @@ function _ttRenderPlay(){
 function ttPlayMyCard(cardId, card){
   // 既に同じカードが選択中なら確定して出す
   if(ttSelectedCardId === cardId){
+    debugLog && debugLog(`🎯 確定タップ: ${cardId.slice(-8)}`);
     ttSelectedCardId = null;
     // ティグリスの場合はモーダル
     if(card && card.kind === 'tigress'){
@@ -2443,7 +2522,47 @@ window.addEventListener('DOMContentLoaded', ()=>{
   ttSetSoloRounds(5);
   // 特殊カードパネル初期描画（ソロ用は ttShowSoloLobby で描画される）
   ttRenderSpecialsPanel('solo-specials-body', 'solo-specials-info', ttSoloSpecials, true);
+  // 再接続バナーの表示判定
+  ttCheckRejoinBanner();
 });
+
+function ttCheckRejoinBanner(){
+  const saved = ttLoadSession();
+  const banner = g('rejoin-banner');
+  if(!banner) return;
+  if(saved){
+    banner.style.display = '';
+    const role = saved.isHost ? 'ホスト' : 'ゲスト';
+    const minAgo = Math.floor((Date.now() - saved.ts) / 60000);
+    g('rejoin-info').textContent = `部屋 ${saved.roomCode}（${saved.myName}・${role}） ${minAgo}分前`;
+    // 名前と部屋コードを入力欄にも自動入力
+    if(g('in-name') && !g('in-name').value) g('in-name').value = saved.myName;
+    if(g('in-code') && !g('in-code').value) g('in-code').value = saved.roomCode;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+async function ttRejoin(){
+  const saved = ttLoadSession();
+  if(!saved){ ttDismissRejoin(); return; }
+  if(saved.isHost){
+    // ホストは新規部屋作成のみ（前回の部屋データは消えている）
+    alert('ホスト席は再接続できません。新しい部屋を作るか、ゲストとして参加してください。');
+    ttDismissRejoin();
+    return;
+  }
+  // ゲスト再接続：名前と部屋コードをセットして参加
+  g('in-name').value = saved.myName;
+  g('in-code').value = saved.roomCode;
+  await ttJoinRoom();
+}
+
+function ttDismissRejoin(){
+  ttClearSession();
+  const banner = g('rejoin-banner');
+  if(banner) banner.style.display = 'none';
+}
 </script>
 </body>
 </html>
