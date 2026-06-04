@@ -610,6 +610,15 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
     </div>
   </div>
 
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">特殊カードのルール</div>
+    <div class="count-selector">
+      <button class="count-btn rule-btn selected" data-rule="normal" onclick="ttSetRule('normal')">通常</button>
+      <button class="count-btn rule-btn" data-rule="triangle" onclick="ttSetRule('triangle')">三すくみ</button>
+    </div>
+    <div id="rule-desc" style="margin-top:8px; padding:6px; background:var(--surface2); border-radius:6px; font-size:0.74rem; color:var(--muted); text-align:center;">通常: 🧜‍♀️マーメイド &gt; 👑SK &gt; 🗡️海賊</div>
+  </div>
+
   <button class="btn btn-gold" onclick="ttCreateRoom()">🏠 部屋を作る（ホスト）</button>
   <div class="divider"></div>
   <div class="row">
@@ -644,6 +653,14 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
       <button class="count-btn solo-round-btn" data-r="10" onclick="ttSetSoloRounds(10)">10</button>
     </div>
   </div>
+  <div class="panel">
+    <div style="text-align:center; margin-bottom:8px; color:var(--muted); font-size:0.85rem;">特殊カードのルール</div>
+    <div class="count-selector">
+      <button class="count-btn solo-rule-btn selected" data-rule="normal" onclick="ttSetSoloRule('normal')">通常</button>
+      <button class="count-btn solo-rule-btn" data-rule="triangle" onclick="ttSetSoloRule('triangle')">三すくみ</button>
+    </div>
+    <div id="solo-rule-desc" style="margin-top:8px; padding:6px; background:var(--surface2); border-radius:6px; font-size:0.74rem; color:var(--muted); text-align:center;">通常: 🧜‍♀️マーメイド &gt; 👑SK &gt; 🗡️海賊</div>
+  </div>
   <details class="panel">
     <summary style="cursor:pointer; color:var(--gold); font-size:0.88rem;">⚙️ 特殊カード設定</summary>
     <div id="solo-specials-body" style="margin-top:10px;"></div>
@@ -667,6 +684,7 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
   </div>
   <div id="wait-list" class="player-list"></div>
   <div id="wait-rounds-info" style="text-align:center; color:var(--gold); font-family:var(--mono); font-size:0.9rem;"></div>
+  <div id="wait-rule-info" style="text-align:center; color:var(--sea); font-size:0.82rem; margin-top:4px;"></div>
 
   <details class="panel" id="wait-specials-panel">
     <summary style="cursor:pointer; color:var(--gold); font-size:0.88rem;">⚙️ 特殊カード設定（ホスト）</summary>
@@ -940,6 +958,8 @@ let ttSoloCount = 3;
 let ttSoloRounds = 5;
 let ttSelectedSpecials = {sk:false, pirate:false, mermaid:false, escape:false, tigress:false}; // for room create
 let ttSoloSpecials = {sk:false, pirate:false, mermaid:false, escape:false, tigress:false};      // for solo
+let ttSelectedRule = 'normal';   // 'normal' or 'triangle' (lobby)
+let ttSoloRule = 'normal';       // 'normal' or 'triangle' (solo)
 let ttFs = null;           // full state (host only)
 let ttGs = null;           // public state
 let ttMyCards = [];        // private hand
@@ -1125,6 +1145,24 @@ function ttSetRounds(r){
     b.classList.toggle('selected', parseInt(b.dataset.r)===r);
   });
 }
+const TT_RULE_DESC = {
+  normal:   '通常: 🧜‍♀️マーメイド > 👑SK > 🗡️海賊',
+  triangle: '三すくみ: 🧜‍♀️→👑→🗡️→🧜‍♀️（3種揃えば🧜‍♀️勝ち）',
+};
+function ttSetRule(rule){
+  ttSelectedRule = rule;
+  document.querySelectorAll('.rule-btn').forEach(b=>{
+    b.classList.toggle('selected', b.dataset.rule===rule);
+  });
+  const d = g('rule-desc'); if(d) d.textContent = TT_RULE_DESC[rule];
+}
+function ttSetSoloRule(rule){
+  ttSoloRule = rule;
+  document.querySelectorAll('.solo-rule-btn').forEach(b=>{
+    b.classList.toggle('selected', b.dataset.rule===rule);
+  });
+  const d = g('solo-rule-desc'); if(d) d.textContent = TT_RULE_DESC[rule];
+}
 function ttSetSoloCount(n){
   ttSoloCount = n;
   document.querySelectorAll('.solo-count-btn').forEach(b=>{
@@ -1213,6 +1251,7 @@ async function ttCreateRoom(){
       totalRounds: ttSelectedRounds,
       round: 1,
       specials: {...ttSelectedSpecials},
+      rule: ttSelectedRule,
       log: ['🏴‍☠️ 部屋を作成しました'],
     };
     ttBcast();
@@ -1297,6 +1336,7 @@ function ttStartSoloGame(){
     totalRounds: ttSoloRounds,
     round: 1,
     specials: {...ttSoloSpecials},
+    rule: ttSoloRule,
     log: ['🏴‍☠️ CPU対戦を開始'],
   };
   ttStartGameInternal();
@@ -1373,6 +1413,7 @@ function ttPub(f, viewerId){
     trickCards: f.trickCards || [],
     lastTrickWinnerId: f.lastTrickWinnerId,
     specials: f.specials || {},
+    rule: f.rule || 'normal',
     log: (f.log || []).slice(-40),
     winnerId: f.winnerId,
   };
@@ -1732,24 +1773,55 @@ function ttResolveTrick(){
   // 勝者判定（強さ順、循環関係を含む）
   let winner = null;
   let mermaidBeatsSk = false;
+  const rule = ttFs.rule || 'normal';
 
-  // 1. SK と マーメイドの組み合わせチェック（マーメイドがSKに勝つ特殊ケース）
   const hasSk = items.find(t=>t.ek === 'sk');
   const mermaids = items.filter(t=>t.ek === 'mermaid');
-  if(hasSk && mermaids.length){
-    // 最初のマーメイドが勝つ（複数なら先出し優先）
-    winner = mermaids[0];
-    mermaidBeatsSk = true;
-  } else if(hasSk){
-    winner = hasSk;
-  } else if(mermaids.length){
-    winner = mermaids[0];
-  }
+  const pirates = items.filter(t=>t.ek === 'pirate');
 
-  // 2. 海賊
-  if(!winner){
-    const pirates = items.filter(t=>t.ek === 'pirate');
-    if(pirates.length){
+  if(rule === 'triangle'){
+    // ===== 三すくみルール =====
+    // 🧜‍♀️マーメイド > 👑SK > 🗡️海賊 > 🧜‍♀️マーメイド（循環）
+    const hasM = mermaids.length > 0;
+    const hasP = pirates.length > 0;
+    const hasK = !!hasSk;
+    const kinds = (hasM?1:0) + (hasP?1:0) + (hasK?1:0);
+
+    if(kinds === 3){
+      // 3種すべて揃った → マーメイドが勝つ（特別ルール）
+      winner = mermaids[0]; // 複数なら先出しのマーメイド
+      mermaidBeatsSk = true; // SKを倒したボーナス対象
+    } else if(kinds === 2){
+      // 2種 → 三すくみの勝ち負けで判定
+      if(hasM && hasK){
+        // マーメイド > SK
+        winner = mermaids[0]; mermaidBeatsSk = true;
+      } else if(hasK && hasP){
+        // SK > 海賊
+        winner = hasSk;
+      } else if(hasP && hasM){
+        // 海賊 > マーメイド
+        winner = pirates[0];
+      }
+    } else if(kinds === 1){
+      // 1種のみ → その特殊カードが勝つ（先出し優先）
+      if(hasK) winner = hasSk;
+      else if(hasM) winner = mermaids[0];
+      else if(hasP) winner = pirates[0];
+    }
+  } else {
+    // ===== 通常ルール =====
+    // 1. SK と マーメイドの組み合わせチェック（マーメイドがSKに勝つ特殊ケース）
+    if(hasSk && mermaids.length){
+      winner = mermaids[0];
+      mermaidBeatsSk = true;
+    } else if(hasSk){
+      winner = hasSk;
+    } else if(mermaids.length){
+      winner = mermaids[0];
+    }
+    // 2. 海賊
+    if(!winner && pirates.length){
       winner = pirates[0]; // 先出し優先
     }
   }
@@ -1790,12 +1862,37 @@ function ttResolveTrick(){
       wp.bonusDetail.push({type:'sk_pirate', pts:piratesCount*30, note:`👑 が海賊${piratesCount}人撃破`});
     }
   }
+  // 三すくみルール: 海賊がマーメイドを撃破したボーナス（+20/体）
+  if((ttFs.rule||'normal') === 'triangle' && winner.ek === 'pirate'){
+    const mermaidCount = items.filter(t=>t.ek === 'mermaid').length;
+    if(mermaidCount > 0){
+      wp.bonusDetail.push({type:'pirate_mermaid', pts:mermaidCount*20, note:`🗡️ が🧜‍♀️${mermaidCount}体撃破`});
+    }
+  }
   // 14のカードでトリック取得時のボーナス
-  if(winner.ek === 'normal' && winner.card.num === 14){
-    if(winner.card.suit === TT_TRUMP){
-      wp.bonusDetail.push({type:'trump14', pts:20, note:'🏴‍☠️14でトリック取得'});
-    } else {
-      wp.bonusDetail.push({type:'normal14', pts:10, note:'14でトリック取得'});
+  if((ttFs.rule||'normal') === 'triangle'){
+    // 三すくみ版: トリック内に含まれる14を全部数える（自分が出していなくても、取れば加算）
+    let trump14 = 0, normal14 = 0;
+    items.forEach(t=>{
+      if(t.ek === 'normal' && t.card.num === 14){
+        if(t.card.suit === TT_TRUMP) trump14++;
+        else normal14++;
+      }
+    });
+    if(trump14 > 0){
+      wp.bonusDetail.push({type:'trump14', pts:trump14*20, note:`🏴‍☠️14を${trump14}枚獲得`});
+    }
+    if(normal14 > 0){
+      wp.bonusDetail.push({type:'normal14', pts:normal14*10, note:`14を${normal14}枚獲得`});
+    }
+  } else {
+    // 通常版: 勝者のカードが14の場合のみ
+    if(winner.ek === 'normal' && winner.card.num === 14){
+      if(winner.card.suit === TT_TRUMP){
+        wp.bonusDetail.push({type:'trump14', pts:20, note:'🏴‍☠️14でトリック取得'});
+      } else {
+        wp.bonusDetail.push({type:'normal14', pts:10, note:'14でトリック取得'});
+      }
     }
   }
 
@@ -2142,6 +2239,13 @@ function ttRenderWaiting(){
   if(!ttGs) return;
   g('p-count').textContent = ttGs.players.length + '人';
   g('wait-rounds-info').textContent = `ラウンド数: ${ttGs.totalRounds}`;
+  // ルール表示
+  const ruleInfo = g('wait-rule-info');
+  if(ruleInfo){
+    ruleInfo.textContent = (ttGs.rule==='triangle')
+      ? '⚔️ 三すくみルール（🧜‍♀️→👑→🗡️→🧜‍♀️）'
+      : '通常ルール（🧜‍♀️ > 👑 > 🗡️）';
+  }
   const list = g('wait-list');
   list.innerHTML = '';
   ttGs.players.forEach(p=>{
