@@ -591,6 +591,50 @@ h3 { font-size: 1.0rem; color: var(--sea); margin: 8px 0; }
     </div>
   </details>
 
+  <details class="panel" style="border-color:var(--sea);">
+    <summary style="cursor:pointer; color:var(--sea); font-weight:700; font-size:0.95rem;">⚔️ 三すくみルール（別ルール）</summary>
+    <div style="margin-top:10px; font-size:0.82rem; line-height:1.8; color:var(--text);">
+      <div style="padding:8px; background:var(--surface2); border-radius:6px; margin-bottom:10px;">
+        <strong style="color:var(--sea);">特殊カードの強弱が「じゃんけん」になります</strong><br>
+        <span style="color:var(--muted); font-size:0.78rem;">
+          🧜‍♀️ マーメイド が 👑 スカルキング に勝つ<br>
+          👑 スカルキング が 🗡️ 海賊 に勝つ<br>
+          🗡️ 海賊 が 🧜‍♀️ マーメイド に勝つ
+        </span>
+      </div>
+      <div style="padding:8px; background:rgba(94,200,232,0.1); border:1px solid rgba(94,200,232,0.3); border-radius:6px; margin-bottom:10px; font-size:0.78rem;">
+        💡 <strong style="color:var(--sea);">3種すべて同じトリックに揃った場合 → 🧜‍♀️ マーメイドが勝ち</strong>
+      </div>
+      <div style="font-weight:700; color:var(--gold); margin-bottom:6px;">点数（ピタリ達成時のみ加算）</div>
+      <div style="padding:6px 0; border-bottom:1px solid var(--surface3);">
+        通常カード（黄・紫・緑）の 14 を獲得<br>
+        <span style="color:var(--gold); font-family:var(--mono);">+10点</span> <span style="color:var(--muted); font-size:0.75rem;">（自分が出していなくても、そのトリックを取ればOK）</span>
+      </div>
+      <div style="padding:6px 0; border-bottom:1px solid var(--surface3);">
+        🏴‍☠️ 黒（切り札）の 14 を獲得<br>
+        <span style="color:var(--gold); font-family:var(--mono);">+20点</span> <span style="color:var(--muted); font-size:0.75rem;">（自分が出していなくてもOK）</span>
+      </div>
+      <div style="padding:6px 0; border-bottom:1px solid var(--surface3);">
+        🗡️ 海賊で 🧜‍♀️ マーメイドに勝った<br>
+        <span style="color:var(--gold); font-family:var(--mono);">マーメイド1枚につき +20点</span>
+      </div>
+      <div style="padding:6px 0; border-bottom:1px solid var(--surface3);">
+        👑 スカルキングで 🗡️ 海賊を倒した<br>
+        <span style="color:var(--gold); font-family:var(--mono);">海賊1人につき +30点</span>
+      </div>
+      <div style="padding:6px 0;">
+        🧜‍♀️ マーメイドで 👑 スカルキングを倒した<br>
+        <span style="color:var(--gold); font-family:var(--mono);">+50点</span>
+      </div>
+      <div style="margin-top:10px; padding:8px; background:rgba(214,50,67,0.1); border:1px solid rgba(214,50,67,0.3); border-radius:6px; font-size:0.78rem; color:var(--red);">
+        ⚠️ <strong>宣言を外したラウンドはボーナス全て無効</strong>
+      </div>
+      <div style="margin-top:8px; padding:6px; background:var(--surface2); border-radius:6px; font-size:0.74rem; color:var(--muted);">
+        ※ このルールは部屋を作るとき／CPU対戦設定で「三すくみ」を選んだ場合のみ適用されます
+      </div>
+    </div>
+  </details>
+
   <input class="input" id="in-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12">
 
   <!-- 再接続バナー（前回のセッションがあるとき表示） -->
