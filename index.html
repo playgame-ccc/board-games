@@ -596,6 +596,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="catan"]      { --tab-color:#3a6b1f; }
 .game-tab[data-game="stichlen"]   { --tab-color:#b94c8c; }
 .game-tab[data-game="splendor"]   { --tab-color:#ffd84d; }
+.game-tab[data-game="mixpoker"]   { --tab-color:#2fd4b2; }
 
 .game-tab.active {
   border-color: var(--tab-color);
@@ -617,6 +618,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="catan"].active      { background:rgba(58,107,31,0.12); }
 .game-tab[data-game="stichlen"].active   { background:rgba(185,76,140,0.12); }
 .game-tab[data-game="splendor"].active   { background:rgba(255,216,77,0.12); }
+.game-tab[data-game="mixpoker"].active   { background:rgba(47,212,178,0.12); }
 .game-tab.active .game-tab-name { color:var(--text); }
 .game-tab.active .game-tab-icon { filter:drop-shadow(0 0 6px var(--tab-color)); }
 
@@ -928,6 +930,10 @@ h3 { font-size: 1rem; font-weight: 600; }
         <span class="game-tab-icon">💎</span>
         <span class="game-tab-name">宝石の煌めき</span>
       </button>
+      <button class="game-tab" id="tab-mx" data-game="mixpoker" onclick="selectLobbyGame('mixpoker')">
+        <span class="game-tab-icon">🃏</span>
+        <span class="game-tab-name">MIXポーカー</span>
+      </button>
     </div>
 
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
@@ -1232,6 +1238,25 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- MIXPOKER section（別ページ誘導） -->
+    <div id="lobby-mx" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(47,212,178,0.05); border:1px solid rgba(47,212,178,0.3); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">🃏</div>
+          <div style="font-family:var(--mono); color:#2fd4b2; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">MIXポーカー</div>
+          <div style="color:var(--muted); font-size:0.72rem;">MIX POKER · 10 GAMES</div>
+        </div>
+        <a href="mixpoker.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(47,212,178,0.12); color:#2fd4b2; border:1px solid rgba(47,212,178,0.5);">
+            🃏 MIXポーカーのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
+          ※ MIXポーカーは専用のページで動作します<br>2〜8人で遊べます（ソロはCPU対戦・マルチは途中参加OK）
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1336,6 +1361,14 @@ h3 { font-size: 1rem; font-weight: 600; }
         カードを買うとボーナス宝石が増え、次回以降のカードが割引で買える。<br>
         条件を満たせば貴族の訪問で追加得点。<br>
         <strong style="color:#ffd84d;">15点（威信ポイント）</strong>に最初に到達した人がそのラウンド終了時に勝利。
+      </p>
+      <p id="rules-mx" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        <strong style="color:#2fd4b2;">10種目</strong>を切り替えながら遊ぶポーカーのミックスゲーム（2〜8人）。<br>
+        <strong style="color:#2fd4b2;">コミュニティ系</strong>：ホールデム（NL）/ PLO（PL）/ PLO8（PL）<br>
+        <strong style="color:#2fd4b2;">ドロー系</strong>：A-5 / 2-7シングル（NL）/ 2-7トリプル / バドゥーギ<br>
+        <strong style="color:#2fd4b2;">スタッド系</strong>：7スタッド / スタッド8 / ラズ（アンティ＋ブリングイン、表札公開）<br>
+        ゲーム中いつでも種目変更OK（次のハンドから適用）。<br>
+        フィックスリミット種目はベット額固定・1ラウンド4ベットまで。ハンドごとに収支を表示。
       </p>
     </div>
   </div>
@@ -3818,12 +3851,12 @@ function oldScheduleAI() {
 // ============================================================
 function selectLobbyGame(game) {
   ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor'};
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
