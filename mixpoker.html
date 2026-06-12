@@ -528,6 +528,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
 <div class="wrap">
 
   <!-- ===== ロビー ===== -->
@@ -2188,54 +2189,199 @@ function cpuPostflopStrength(hole, board){
   return Math.min(1, s + 0.1);
 }
 
+// ===== GTO近似エンジン =====
+// モンテカルロでエクイティ（ポット取得期待割合）を計算
+let CPU_ITER = 120; // シミュレーション回数
+
+function calcEquity(h, idx, iterations){
+  const iters = iterations || CPU_ITER;
+  const gd = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
+  const me = h.players[idx];
+  const opps = h.players.filter((p,i)=>i!==idx && !p.folded);
+  if(opps.length===0) return 1;
+
+  // デッドカード: 自分の手札 + 公開ボード + スタッドの相手表札
+  const dead = new Set();
+  me.hole.forEach(c=>dead.add(c.r+c.s));
+  (h.board||[]).forEach(c=>dead.add(c.r+c.s));
+  // スタッド: 相手の表札は既知（伏札は未知）
+  const oppKnown = opps.map(p=>{
+    if(gd.type==='stud' && p.faceUp){
+      const ups = p.hole.filter((c,i)=>p.faceUp[i]);
+      ups.forEach(c=>dead.add(c.r+c.s));
+      return {ups, total: p.hole.length};
+    }
+    return {ups:[], total: p.hole.length};
+  });
+
+  // 残りデッキ
+  const pool = [];
+  const SUITS=['s','h','d','c'];
+  for(let r=2;r<=14;r++) for(const s of SUITS){ if(!dead.has(r+s)) pool.push({r,s}); }
+
+  let totalShare = 0;
+  for(let it=0; it<iters; it++){
+    // プールをシャッフル（部分Fisher-Yates: 必要分だけ）
+    const deck = pool.slice();
+    for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
+    let di = 0;
+    const draw1 = ()=> deck[di++];
+
+    let myHole = me.hole.slice();
+    let simBoard = (h.board||[]).slice();
+    const oppHoles = [];
+
+    if(gd.type==='community'){
+      // 相手に手札を配り、ボードを5枚まで補完
+      opps.forEach(()=>{ const oh=[]; for(let k=0;k<gd.holeN;k++) oh.push(draw1()); oppHoles.push(oh); });
+      while(simBoard.length<5) simBoard.push(draw1());
+    } else if(gd.type==='draw'){
+      // 相手にランダム手札。残りドローがあれば双方1回交換シミュレーション
+      opps.forEach(()=>{ const oh=[]; for(let k=0;k<gd.holeN;k++) oh.push(draw1()); oppHoles.push(oh); });
+      const drawsLeft = (gd.drawRounds||1) - (h.drawDone||0);
+      if(drawsLeft > 0){
+        myHole = simDrawOnce(myHole, gd, draw1);
+        for(let oi=0;oi<oppHoles.length;oi++) oppHoles[oi] = simDrawOnce(oppHoles[oi], gd, draw1);
+      }
+    } else { // stud
+      // 相手: 表札既知+伏札ランダム、全員7枚まで補完
+      opps.forEach((p,oi)=>{
+        const oh = oppKnown[oi].ups.slice();
+        while(oh.length < 7) oh.push(draw1());
+        oppHoles.push(oh);
+      });
+      while(myHole.length < 7) myHole.push(draw1());
+    }
+
+    // ショーダウン判定（doShowdownと同じ評価系を流用）
+    const simH = {board: simBoard};
+    const allPlayers = [{hole:myHole}, ...oppHoles.map(oh=>({hole:oh}))];
+    totalShare += simShare(allPlayers, simH, gd);
+  }
+  return totalShare / iters;
+}
+
+// ドロー1回の簡易シミュレーション（CPUと同じキープロジック）
+function simDrawOnce(hole, gd, draw1){
+  let keep;
+  if(gd.evalLo==='badugi') keep = bestBadugiKeep(hole);
+  else keep = bestLowKeep(hole, gd.evalLo);
+  const need = hole.length - keep.length;
+  const nh = keep.slice();
+  for(let i=0;i<need;i++){ const c=draw1(); if(c) nh.push(c); }
+  return nh;
+}
+
+// players[0]（自分）のポット取得割合を返す
+function simShare(players, simH, gd){
+  const n = players.length;
+  if(gd.hi && gd.lo){
+    // Hi-Lo分割
+    const hiEvals = players.map(p=>showdownEvalHi(p, simH, gd));
+    const loEvals = players.map(p=>showdownEvalLo(p, simH, gd));
+    let hiBest=null; hiEvals.forEach(e=>{ if(e&&(!hiBest||compareEval([e.rank,e.tiebreak],[hiBest.rank,hiBest.tiebreak])>0)) hiBest=e; });
+    const hiWin = hiEvals.map(e=> e&&hiBest&&compareEval([e.rank,e.tiebreak],[hiBest.rank,hiBest.tiebreak])===0);
+    let loBest=null; loEvals.forEach(e=>{ if(e&&(!loBest||cmpLoEval(e,loBest)<0)) loBest=e; });
+    const loWin = loEvals.map(e=> e&&loBest&&cmpLoEval(e,loBest)===0);
+    const hiWinners = hiWin.filter(Boolean).length;
+    const loWinners = loWin.filter(Boolean).length;
+    let share = 0;
+    if(loWinners===0){
+      if(hiWin[0]) share = 1/hiWinners;
+    } else {
+      if(hiWin[0]) share += 0.5/hiWinners;
+      if(loWin[0]) share += 0.5/loWinners;
+    }
+    return share;
+  } else if(gd.hi){
+    const evals = players.map(p=>showdownEvalHi(p, simH, gd));
+    let best=null; evals.forEach(e=>{ if(e&&(!best||compareEval([e.rank,e.tiebreak],[best.rank,best.tiebreak])>0)) best=e; });
+    const wins = evals.map(e=> e&&best&&compareEval([e.rank,e.tiebreak],[best.rank,best.tiebreak])===0);
+    const w = wins.filter(Boolean).length;
+    return wins[0] ? 1/w : 0;
+  } else {
+    const evals = players.map(p=>showdownEvalLo(p, simH, gd));
+    let best=null; evals.forEach(e=>{ if(e&&(!best||cmpLoEval(e,best)<0)) best=e; });
+    const wins = evals.map(e=> e&&best&&cmpLoEval(e,best)===0);
+    const w = wins.filter(Boolean).length;
+    return wins[0] ? 1/w : 0;
+  }
+}
+
+// GTO風意思決定
 function cpuDecide(idx){
   const h = HND();
   if(!h || idx < 0 || !h.players[idx]) return {type:'check'};
   const p = h.players[idx];
-  const toCall = h.highBet - p.roundBet;
-  const pot = currentPot();
-  const strength = (h.phase==='preflop')
-    ? cpuPreflopStrength(p.hole)
-    : cpuPostflopStrength(p.hole, h.board);
+  const limits = calcBetLimits(h, p);
+  const toCall = limits.toCall;
+  const pot = limits.pot;
+  const oppCount = h.players.filter((pp,i)=>i!==idx && !pp.folded).length;
 
-  // ランダム性を少し加える
-  const noise = (Math.random()-0.5)*0.15;
-  const s = Math.max(0, Math.min(1, strength + noise));
+  // エクイティ計算（モンテカルロ）
+  const eq = calcEquity(h, idx);
 
-  // チェックできる状況
+  const rnd = Math.random();
+
+  // レイズ額決定（NL/PL: equityに応じてポットの50〜90%、FL: 固定）
+  function raiseAmt(frac){
+    if(limits.betting==='fl') return limits.minRaiseTo;
+    const target = h.highBet + Math.max(h.minRaise, Math.floor(pot * frac));
+    return Math.max(limits.minRaiseTo, Math.min(limits.maxRaiseTo, target));
+  }
+  function canRaiseNow(){
+    return limits.canRaise && (limits.minRaiseTo - p.roundBet) <= p.stack + toCall;
+  }
+
+  // ===== チェック可能 =====
   if(toCall === 0){
-    // 強ければベット
-    if(s > 0.55 && Math.random() < 0.6){
-      const maxTo = potLimitMaxRaiseTo(pot, 0, p.roundBet);
-      const betTo = Math.min(maxTo, p.roundBet + Math.max(h.bbAmount, Math.floor(pot * (0.4+s*0.4))));
-      if(betTo > p.roundBet && betTo - p.roundBet <= p.stack){
-        return {type:'raise', amount: betTo};
-      }
+    if(eq > 0.70){
+      // 強い: 高頻度バリューベット
+      if(canRaiseNow() && rnd < 0.85) return {type:'raise', amount: raiseAmt(0.7)};
+      return {type:'check'}; // たまにスロープレイ
     }
+    if(eq > 0.52){
+      if(canRaiseNow() && rnd < 0.55) return {type:'raise', amount: raiseAmt(0.55)};
+      return {type:'check'};
+    }
+    if(eq > 0.35){
+      // セミブラフ少々
+      if(canRaiseNow() && rnd < 0.22/Math.max(1,oppCount-1+1)) return {type:'raise', amount: raiseAmt(0.5)};
+      return {type:'check'};
+    }
+    // 弱い: 低頻度ブラフ（マルチウェイでは減らす）
+    const bluffF = 0.12 / oppCount;
+    if(canRaiseNow() && rnd < bluffF) return {type:'raise', amount: raiseAmt(0.6)};
     return {type:'check'};
   }
 
-  // コールが必要
+  // ===== コールが必要 =====
   const potOdds = toCall / (pot + toCall);
+  const allInCall = toCall >= p.stack;
 
-  // 弱い → フォールド
-  if(s < 0.25 && potOdds > 0.15){
-    return {type:'fold'};
+  if(allInCall){
+    // オールインコールは純粋にオッズ比較（少しマージン）
+    return eq > potOdds + 0.02 ? {type:'call'} : {type:'fold'};
   }
-  // 強い → レイズ（時々）
-  if(s > 0.65 && Math.random() < 0.45){
-    const maxTo = potLimitMaxRaiseTo(pot, toCall, p.roundBet);
-    const raiseTo = Math.min(maxTo, h.highBet + Math.max(h.minRaise, Math.floor(pot*0.6)));
-    if(raiseTo > h.highBet && raiseTo - p.roundBet <= p.stack){
-      return {type:'raise', amount: raiseTo};
-    }
-  }
-  // 中程度 or コールできる → コール（スタック内なら）
-  if(s > potOdds * 0.8 || s > 0.35){
+
+  if(eq > 0.72){
+    if(canRaiseNow() && rnd < 0.65) return {type:'raise', amount: raiseAmt(0.85)};
     return {type:'call'};
   }
-  // それ以外フォールド（ただしチェック圏ならコール）
-  if(toCall <= p.stack * 0.05) return {type:'call'};
+  if(eq > 0.55){
+    if(canRaiseNow() && rnd < 0.28) return {type:'raise', amount: raiseAmt(0.7)};
+    return {type:'call'};
+  }
+  if(eq > potOdds + 0.03){
+    return {type:'call'}; // オッズに合う: コール
+  }
+  if(eq > potOdds - 0.04){
+    // 境界域: ミックス（MDF風）
+    return rnd < 0.5 ? {type:'call'} : {type:'fold'};
+  }
+  // オッズに合わない: 基本フォールド、低頻度ブラフレイズ
+  const bluffRaiseF = (limits.betting==='nl' ? 0.07 : 0.05) / oppCount;
+  if(canRaiseNow() && rnd < bluffRaiseF) return {type:'raise', amount: raiseAmt(0.9)};
   return {type:'fold'};
 }
 
