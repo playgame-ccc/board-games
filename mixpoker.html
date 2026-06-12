@@ -155,8 +155,8 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   position: relative;
   width: 100%;
   max-width: 440px;
-  margin: 10px auto;
-  aspect-ratio: 3 / 4;
+  margin: 6px auto;
+  aspect-ratio: 14 / 13;
   background: linear-gradient(180deg, var(--felt) 0%, var(--felt2) 100%);
   border-radius: 50% / 40%;
   box-shadow:
@@ -369,8 +369,8 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 
 /* ===== カード（スート色地×白文字、Ten-Four風） ===== */
 .card {
-  width: 50px; height: 70px;
-  border-radius: 9px;
+  width: 44px; height: 62px;
+  border-radius: 8px;
   display: inline-flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 1px;
@@ -445,12 +445,12 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 /* ===== アクションバー ===== */
 .action-bar {
   background: var(--surface);
-  border-radius: 18px;
-  padding: 14px;
-  margin-top: 12px;
+  border-radius: 16px;
+  padding: 10px;
+  margin-top: 8px;
 }
-.action-btns { display: flex; flex-direction: column-reverse; gap: 9px; }
-.action-btns .btn { margin-bottom: 0; padding: 15px; font-size: 1.05rem; border-radius: 14px; }
+.action-btns { display: flex; flex-direction: row; gap: 8px; }
+.action-btns .btn { margin-bottom: 0; padding: 13px 4px; font-size: 0.98rem; border-radius: 14px; flex: 1; min-width: 0; white-space: nowrap; }
 
 .bet-controls { margin-top: 12px; }
 .bet-slider-row { display: flex; align-items: center; gap: 10px; }
@@ -578,6 +578,23 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
     </div>
 
     <div class="panel">
+      <h3 class="center">ゲーム形式</h3>
+      <div class="count-selector" id="format-select">
+        <button class="count-btn selected" data-m="ring" onclick="setGameFormat('ring')" style="width:auto;padding:0 14px;">リング</button>
+        <button class="count-btn" data-m="tourney" onclick="setGameFormat('tourney')" style="width:auto;padding:0 14px;">トーナメント</button>
+      </div>
+      <div id="tourney-opts" style="display:none; margin-top:10px;">
+        <div class="center muted small">ブラインドアップ間隔</div>
+        <div class="count-selector" id="level-select" style="margin-top:6px;">
+          <button class="count-btn" data-lv="1" onclick="setLevelMin(1)" style="width:auto;padding:0 14px;">1分</button>
+          <button class="count-btn selected" data-lv="3" onclick="setLevelMin(3)" style="width:auto;padding:0 14px;">3分</button>
+          <button class="count-btn" data-lv="5" onclick="setLevelMin(5)" style="width:auto;padding:0 14px;">5分</button>
+        </div>
+      </div>
+      <div class="center muted small" id="format-label" style="margin-top:8px;">通常のキャッシュゲーム（リバイあり）</div>
+    </div>
+
+    <div class="panel">
       <input class="input" id="my-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12">
     </div>
 
@@ -645,6 +662,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <button id="btn-change-game" class="btn-ghost" style="display:none; width:auto; padding:5px 12px; margin:0; font-size:0.76rem; border-radius:8px; background:transparent; border:1px solid var(--surface3); color:var(--muted); cursor:pointer; font-family:inherit;" onclick="openGamePicker()">変更 ▼</button>
     </div>
     <div class="phase-label" id="phase-label">PREFLOP</div>
+    <div id="tourney-bar" style="display:none; text-align:center; font-size:0.74rem; color:var(--gold); font-family:'Share Tech Mono',monospace; margin:2px 0 4px;"></div>
 
     <div class="poker-table" id="poker-table">
       <!-- 相手プレイヤー（楕円周囲に配置） -->
@@ -1142,6 +1160,35 @@ function setStack(s){
   g('blind-label').textContent = `SB ${soloSB} / BB ${soloBB}（${bbCount}bb）`;
 }
 
+// ===== ゲーム形式（リング / トーナメント） =====
+let gameFormat = 'ring';
+let tourneyLevelMin = 3;
+function setGameFormat(m){
+  gameFormat = m;
+  document.querySelectorAll('#format-select .count-btn').forEach(b=>b.classList.toggle('selected', b.dataset.m===m));
+  g('tourney-opts').style.display = m==='tourney' ? 'block' : 'none';
+  g('format-label').textContent = m==='tourney'
+    ? `脱落制・ブラインドが${tourneyLevelMin}分ごとに上昇（リバイなし）`
+    : '通常のキャッシュゲーム（リバイあり）';
+}
+function setLevelMin(n){
+  tourneyLevelMin = n;
+  document.querySelectorAll('#level-select .count-btn').forEach(b=>b.classList.toggle('selected', parseInt(b.dataset.lv)===n));
+  g('format-label').textContent = `脱落制・ブラインドが${n}分ごとに上昇（リバイなし）`;
+}
+
+// トーナメントのブラインドストラクチャ（SB/BB）
+const TOURNEY_BLINDS = [[10,20],[15,30],[25,50],[40,80],[60,120],[100,200],[150,300],[250,500],[400,800],[600,1200],[1000,2000]];
+function tourneyBlindsAt(lv){
+  if(lv < TOURNEY_BLINDS.length) return TOURNEY_BLINDS[lv];
+  const last = TOURNEY_BLINDS[TOURNEY_BLINDS.length-1];
+  const mult = Math.pow(2, lv - TOURNEY_BLINDS.length + 1);
+  return [last[0]*mult, last[1]*mult];
+}
+function tourneyCurrentLevel(t){
+  return Math.floor((Date.now() - t.startTs) / (t.levelMin * 60000));
+}
+
 const CPU_NAMES = ['アル','ベラ','カイ','デフ','エコ','フィン','ジン','ハナ'];
 
 // 続きは次のスクリプトブロックで
@@ -1172,22 +1219,45 @@ function startSolo(){
     log: [],
     currentGame: soloSelectedGame || 'holdem',
   };
+  if(gameFormat === 'tourney'){
+    G.tourney = {startTs: Date.now(), levelMin: tourneyLevelMin, level: 0, ranks: {}};
+    soloSB = 10; soloBB = 20;
+    G.log.unshift(`🏆 トーナメント開始！ ${tourneyLevelMin}分ごとにブラインドアップ`);
+  }
   show('game');
+  startTourneyBar();
   startNewHand();
 }
 
 function startNewHand(){
-  // 途中参加者を取り込み（次ハンドから = ここ）
+  // 途中参加者を取り込み（次ハンドから = ここ）。トーナメント中は観戦のみ
   if(isMulti && isHost && pendingJoins.length){
-    pendingJoins.forEach(j=>{
-      if(G.ids.includes(j.id)) return;
-      if(G.ids.length >= 8) return;
-      G.ids.push(j.id);
-      G.names[j.id] = j.name;
-      G.stacks.push(soloStack);
-      G.log.unshift(`✅ ${j.name} が参加しました（スタック${soloStack}）`);
-    });
-    pendingJoins = [];
+    if(G.tourney){
+      pendingJoins.forEach(j=>{ G.log.unshift(`👀 ${j.name} は観戦します（トーナメント進行中）`); });
+      pendingJoins = [];
+    } else {
+      pendingJoins.forEach(j=>{
+        if(G.ids.includes(j.id)) return;
+        if(G.ids.length >= 8) return;
+        G.ids.push(j.id);
+        G.names[j.id] = j.name;
+        G.stacks.push(soloStack);
+        G.log.unshift(`✅ ${j.name} が参加しました（スタック${soloStack}）`);
+      });
+      pendingJoins = [];
+    }
+  }
+
+  // トーナメント: 経過時間からブラインドレベルを更新（次のハンド=ここで適用）
+  if(G.tourney){
+    const lv = tourneyCurrentLevel(G.tourney);
+    if(lv > G.tourney.level){
+      G.tourney.level = lv;
+      const [nsb, nbb] = tourneyBlindsAt(lv);
+      G.log.unshift(`📈 ブラインドアップ → Lv${lv+1}: ${nsb}/${nbb}`);
+    }
+    const [sb, bb] = tourneyBlindsAt(G.tourney.level);
+    soloSB = sb; soloBB = bb;
   }
 
   // スタックが残っている人だけ続行
@@ -1309,10 +1379,20 @@ function startNewHand(){
     }
     postChips(sbIdx, soloSB);
     postChips(bbIdx, soloBB);
+    // トーナメント: BBアンティ（BB担当が全員分=BB額を即ポットへ。BB優先で残りから支払う）
+    let anteToPot = 0;
+    if(G.tourney){
+      const bp = players[bbIdx];
+      const beforeRB = bp.roundBet;
+      postChips(bbIdx, soloBB); // アンティ（最大BB額、スタック不足ならある分だけ）
+      anteToPot = bp.roundBet - beforeRB;
+      bp.roundBet = beforeRB;   // アンティはコール額に含めない（totalBetには残しサイドポット計算に反映）
+      if(anteToPot > 0) G.log.unshift(`🪙 BBアンティ: ${bp.name} が ${anteToPot} をポスト`);
+    }
     highBet = soloBB;
     G.hand = {
       deck, players, board: [],
-      pot: 0, phase: 'preflop',
+      pot: anteToPot, phase: 'preflop',
       sbIdx, bbIdx,
       highBet, minRaise: soloBB,
       bbAmount: soloBB,
@@ -1414,6 +1494,61 @@ function applyAction(playerIdx, action){
   }
 }
 
+// スタッド系: 表札（faceUpカード）の強さで各ストリートの先頭アクターを決める
+// stud/studhi: 最強の表札がアクション開始。razz: 最弱（ベストロー）の表札が開始。
+function studUpScore(p, isRazz){
+  const ups = p.hole.filter((cd,i)=>p.faceUp[i]);
+  const suitOrder = {c:0,d:1,h:2,s:3};
+  // razzはA=1として低い方が強い
+  const rv = cd => isRazz ? (cd.r===14?1:cd.r) : cd.r;
+  const ranks = ups.map(rv).sort((a,b)=>b-a);
+  const counts = {}; ranks.forEach(r=>counts[r]=(counts[r]||0)+1);
+  const groups = Object.entries(counts).map(([r,cnt])=>({r:+r,cnt})).sort((a,b)=> b.cnt-a.cnt || b.r-a.r);
+  let cat = 0;
+  if(groups[0].cnt===4) cat=7;
+  else if(groups[0].cnt===3) cat=3;
+  else if(groups[0].cnt===2) cat=(groups[1]&&groups[1].cnt===2)?2:1;
+  const tb = [];
+  groups.forEach(gr=>{ for(let k=0;k<gr.cnt;k++) tb.push(gr.r); });
+  // タイブレーク用に最高表札のスート（一意化）
+  let topSuit = 0;
+  ups.forEach(cd=>{ const v=rv(cd)*4+suitOrder[cd.s]; if(v>topSuit) topSuit=v; });
+  return {cat, tb, topSuit};
+}
+function studCmpScore(a, b, isRazz){
+  // 戻り値>0: aが先頭アクター候補として上
+  if(isRazz){
+    // razz: ローが良い（catが低い・ランクが低い）方が先頭
+    if(a.cat !== b.cat) return b.cat - a.cat;
+    for(let i=0;i<Math.max(a.tb.length,b.tb.length);i++){
+      const av=a.tb[i]??99, bv=b.tb[i]??99;
+      if(av!==bv) return bv - av;
+    }
+    return b.topSuit - a.topSuit;
+  }
+  // stud/studhi: ハイが強い方が先頭
+  if(a.cat !== b.cat) return a.cat - b.cat;
+  for(let i=0;i<Math.max(a.tb.length,b.tb.length);i++){
+    const av=a.tb[i]??-1, bv=b.tb[i]??-1;
+    if(av!==bv) return av - bv;
+  }
+  return a.topSuit - b.topSuit;
+}
+function studFirstActor(h){
+  const isRazz = (G.currentGame === 'razz');
+  let bestIdx = -1, bestScore = null;
+  h.players.forEach((p,i)=>{
+    if(p.folded) return;
+    const sc = studUpScore(p, isRazz);
+    if(bestScore===null || studCmpScore(sc, bestScore, isRazz) > 0){ bestScore = sc; bestIdx = i; }
+  });
+  if(bestIdx < 0) return h.toActIdx;
+  // 先頭がオールイン済みなら次の有効アクターへ
+  const bp = h.players[bestIdx];
+  if(bp.allIn) return nextActor(bestIdx);
+  return bestIdx;
+}
+
 function advancePhase(){
   const h = HND();
   h.pot += roundBetTotal();
@@ -1434,7 +1569,7 @@ function advancePhase(){
   if(h.phase!=='showdown'){
     // 次のアクター（種目で起点が違う）
     if(gd.type==='stud'){
-      h.toActIdx = nextActor(h.studActStart!==undefined ? h.studActStart : G.buttonIdx);
+      h.toActIdx = studFirstActor(h); // 表札の強さで先頭アクターを決定（razzは最弱表札）
     } else {
       h.toActIdx = nextActor(G.buttonIdx);
     }
@@ -1886,8 +2021,9 @@ function doShowdown(){
     if(lo){
       let loStr = '';
       if(lo.kind==='lo8') loStr = lo.lo.map(v=>v===1?'A':v).reverse().join('');
-      else if(lo.kind==='a5'||lo.kind==='27') loStr = lo.cards.map(c=>rankStr(c.r)).join('');
-      else if(lo.kind==='badugi') loStr = lo.cards.length+'枚';
+      else if(lo.kind==='a5') loStr = lo.cards.slice().sort((a,b)=>(b.r===14?1:b.r)-(a.r===14?1:a.r)).map(c=>c.r===14?'A':rankStr(c.r)).join('');
+      else if(lo.kind==='27') loStr = lo.cards.slice().sort((a,b)=>b.r-a.r).map(c=>rankStr(c.r)).join('');
+      else if(lo.kind==='badugi') loStr = lo.cards.slice().sort((a,b)=>(b.r===14?1:b.r)-(a.r===14?1:a.r)).map(c=>c.r===14?'A':rankStr(c.r)).join('') + '('+lo.cards.length+'枚)';
       label += (label?' / ':'') + 'Lo:' + loStr;
     }
     h.handNames[p.id] = label || '-';
@@ -2050,6 +2186,21 @@ function humanAction(action){
 }
 
 function endHand(){
+  // トーナメント: このハンドで飛んだプレイヤーを脱落として順位記録
+  if(G.tourney){
+    const h0 = HND();
+    const newlyOut = h0.players
+      .filter(p=>p.stack===0 && G.tourney.ranks[p.id]==null)
+      .sort((a,b)=>a.startStack-b.startStack); // 同時脱落は開始時スタックが少ない方が下位
+    if(newlyOut.length){
+      const aliveN = G.ids.filter((id,ix)=>G.stacks[ix]>0).length;
+      newlyOut.forEach((p,k)=>{
+        const rank = aliveN + newlyOut.length - k;
+        G.tourney.ranks[p.id] = rank;
+        G.log.unshift(`💀 ${p.name} 脱落（${rank}位）`);
+      });
+    }
+  }
   // 結果画面に遷移せず、ゲーム画面のままショーダウン表示を維持
   render();
 
@@ -2058,6 +2209,10 @@ function endHand(){
     if(!isHost) return; // ゲストは何もしない（ホストの配信を待つ）
     const aliveCount = G.ids.filter((id,i)=>G.stacks[i] > 0).length;
     if(aliveCount < 2){
+      if(G.tourney){
+        aiTimer = setTimeout(()=>{ startNewHand(); }, 3000); // alive<2 → showFinalResultへ
+        return;
+      }
       aiTimer = setTimeout(()=>{ /* 全員リバイ待ち or 終了 */ broadcastState(); }, 2000);
       // リバイ猶予を与えて、一定時間後に再チェック
       aiTimer = setTimeout(()=>{ tryStartNextMultiHand(); }, 8000);
@@ -2067,9 +2222,9 @@ function endHand(){
     return;
   }
 
-  // ソロ: 自分のチップが0ならリバイUI
+  // ソロ: 自分のチップが0ならリバイUI（トーナメントはリバイなし→観戦継続）
   const meIdx = G.ids.indexOf('human');
-  if(G.stacks[meIdx] <= 0){
+  if(!G.tourney && G.stacks[meIdx] <= 0){
     showRebuyPrompt();
     return;
   }
@@ -2137,17 +2292,77 @@ function quitToLobby(){
   show('lobby');
 }
 
+function tourneyRankingHTML(ranks, names, ids, handNo, level){
+  const medal = r => r===1?'🥇':r===2?'🥈':r===3?'🥉':`${r}位`;
+  const rows = ids.map(id=>({id, rank: ranks[id]||99}))
+    .sort((a,b)=>a.rank-b.rank)
+    .map(e=>`<div style="display:flex; justify-content:space-between; padding:7px 12px; border-bottom:1px solid var(--surface3); ${e.rank===1?'color:var(--gold); font-weight:700;':''}">
+      <span>${medal(e.rank)}</span><span>${names[e.id]||e.id}</span></div>`).join('');
+  return `
+    <h3 class="center">🏆 トーナメント終了</h3>
+    <div style="margin:12px 0;">${rows}</div>
+    <div class="center muted small">全${handNo}ハンド / Lv${(level||0)+1}まで進行</div>`;
+}
 function showFinalResult(){
+  stopTourneyBar();
   show('result');
   const winner = G.ids.find((id,i)=>G.stacks[i]>0);
-  g('result-detail').innerHTML = `
-    <h3 class="center">🏆 ゲーム終了</h3>
-    <div class="center" style="font-size:1.3rem; color:var(--gold); margin:14px 0;">
-      ${winner?G.names[winner]:'(なし)'} の勝利！
-    </div>
-    <div class="center muted">全${G.handNo}ハンド</div>`;
+  if(G.tourney){
+    if(winner) G.tourney.ranks[winner] = 1;
+    g('result-detail').innerHTML = tourneyRankingHTML(G.tourney.ranks, G.names, G.ids, G.handNo, G.tourney.level);
+    if(isMulti && isHost){
+      fbBroadcast({type:'tourney_end', ranks:G.tourney.ranks, names:G.names, ids:G.ids, handNo:G.handNo, level:G.tourney.level});
+    }
+  } else {
+    g('result-detail').innerHTML = `
+      <h3 class="center">🏆 ゲーム終了</h3>
+      <div class="center" style="font-size:1.3rem; color:var(--gold); margin:14px 0;">
+        ${winner?G.names[winner]:'(なし)'} の勝利！
+      </div>
+      <div class="center muted">全${G.handNo}ハンド</div>`;
+  }
   const btn = g('result-detail').parentElement.querySelector('button');
   if(btn) btn.style.display='none';
+}
+
+// ===== トーナメント情報バー（レベル・ブラインド・次レベルまでの残り時間） =====
+let tourneyBarTimer = null;
+function tourneyInfo(){
+  // ソロ/ホストはG.tourney、ゲストはploPub.tourneyを参照
+  if(typeof G!=='undefined' && G && G.tourney) return G.tourney;
+  if(typeof ploPub!=='undefined' && ploPub && ploPub.tourney) return ploPub.tourney;
+  return null;
+}
+function updateTourneyBar(){
+  const bar = g('tourney-bar');
+  if(!bar) return;
+  const t = tourneyInfo();
+  if(!t){ bar.style.display='none'; return; }
+  bar.style.display='block';
+  const lvNow = Math.floor((Date.now() - t.startTs) / (t.levelMin * 60000));
+  const applied = t.level; // 適用中レベル（次のハンドから上がる）
+  const [sb, bb] = tourneyBlindsAt(applied);
+  const nextAt = t.startTs + (lvNow + 1) * t.levelMin * 60000;
+  const remain = Math.max(0, nextAt - Date.now());
+  const mm = Math.floor(remain/60000), ss = Math.floor((remain%60000)/1000);
+  let txt = `🏆 Lv${applied+1} ・ ブラインド ${sb}/${bb} +BBアンティ`;
+  if(lvNow > applied){
+    const [nsb, nbb] = tourneyBlindsAt(lvNow);
+    txt += ` ・ 次のハンドから ${nsb}/${nbb}`;
+  } else {
+    txt += ` ・ アップまで ${mm}:${String(ss).padStart(2,'0')}`;
+  }
+  bar.textContent = txt;
+}
+function startTourneyBar(){
+  stopTourneyBar();
+  updateTourneyBar();
+  tourneyBarTimer = setInterval(updateTourneyBar, 1000);
+}
+function stopTourneyBar(){
+  if(tourneyBarTimer){ clearInterval(tourneyBarTimer); tourneyBarTimer = null; }
+  const bar = g('tourney-bar');
+  if(bar) bar.style.display='none';
 }
 
 // 続きは次のブロック（CPU AI と 描画）
@@ -2206,11 +2421,15 @@ let CPU_ITER = 260; // シミュレーション回数
 // 閾値は cpuPreflopStrength のランダム分布パーセンタイルから校正済み
 function oppRangeFloor(h, opp, holeN){
   const bb = h.bbAmount || 20;
-  const bbInv = ((opp.totalBet||0) + (opp.roundBet||0)) / bb;
+  // 強制投資（ブラインド・BBアンティ）を除いた「自発的な投資」で判定
+  let inv = (opp.totalBet||0) + (opp.roundBet||0);
+  if(opp.idx === h.bbIdx) inv -= bb * ((typeof G!=='undefined' && G && G.tourney) ? 2 : 1);
+  else if(opp.idx === h.sbIdx) inv -= Math.floor(bb/2);
+  const bbInv = inv / bb;
   let tier = 0; // 0=フルレンジ
-  if(bbInv >= 8) tier = 3;        // 大投資 → 上位25%
-  else if(bbInv >= 3) tier = 2;   // レイズ参加 → 上位35%
-  else if(bbInv > 1.05) tier = 1; // コール参加 → 上位55%
+  if(bbInv >= 7) tier = 3;        // 大投資 → 上位25%
+  else if(bbInv >= 2.2) tier = 2; // レイズ参加 → 上位35%
+  else if(bbInv >= 0.9) tier = 1; // コール参加 → 上位55%
   if(tier === 0) return 0;
   if(holeN >= 4) return tier===3 ? 0.45 : tier===2 ? 0.41 : 0.34;
   return tier===3 ? 0.19 : tier===2 ? 0.17 : 0.11;
@@ -2675,17 +2894,17 @@ function renderActionArea(){
   const pot = limits.pot;
 
   let html = '<div class="action-bar">';
-  html += '<div class="action-btns">';
-  html += `<button class="btn btn-fold" onclick="humanAction({type:'fold'})">Fold</button>`;
-  if(toCall === 0){
-    html += `<button class="btn btn-call" onclick="humanAction({type:'check'})">Check</button>`;
-  } else {
-    const callAmt = Math.min(toCall, me.stack);
-    html += `<button class="btn btn-call" onclick="humanAction({type:'call'})">Call ${callAmt}</button>`;
-  }
 
   if(limits.betting === 'fl'){
-    // フィックスリミット: 固定額ボタン（スライダーなし）
+    // フィックスリミット: 固定額（プリセット不要）
+    html += '<div class="action-btns">';
+    html += `<button class="btn btn-fold" onclick="humanAction({type:'fold'})">Fold</button>`;
+    if(toCall === 0){
+      html += `<button class="btn btn-call" onclick="humanAction({type:'check'})">Check</button>`;
+    } else {
+      const callAmt = Math.min(toCall, me.stack);
+      html += `<button class="btn btn-call" onclick="humanAction({type:'call'})">Call ${callAmt}</button>`;
+    }
     if(limits.canRaise){
       html += `<button class="btn btn-raise" onclick="humanAction({type:'raise', amount:${limits.minRaiseTo}})">${toCall>0?'Raise':'Bet'} ${limits.minRaiseTo}</button>`;
     }
@@ -2693,29 +2912,38 @@ function renderActionArea(){
     const cap = (h.raiseCount||0);
     html += `<div class="center muted small" style="margin-top:6px;">固定: ${limits.flUnit} / ベット${cap}/4${cap>=4?'（キャップ）':''}</div>`;
   } else {
-    html += '</div>';
-    // NL/PL: スライダー
+    // NL/PL: プリセット+スライダーを上段、アクション3ボタンを下段横並び
     if(limits.canRaise){
       const initVal = Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, h.highBet + Math.floor(pot*0.5)));
-      const potBtnLabel = limits.betting==='nl' ? 'ポット' : 'ポット(上限)';
+      const allinLabel = limits.betting==='nl' ? 'ALL IN' : '最大';
       html += `
-        <div class="bet-controls">
-          <div class="bet-slider-row">
-            <span class="muted small">${toCall>0?'レイズ':'ベット'}</span>
+        <div class="bet-controls" style="margin-top:0;">
+          <div class="quick-bets">
+            <button onclick="setBet('min')">ミニマム</button>
+            <button onclick="setBet('third')">1/3</button>
+            <button onclick="setBet('half')">1/2</button>
+            <button onclick="setBet('pot')">ポット</button>
+            <button onclick="setBet('max')">${allinLabel}</button>
+          </div>
+          <div class="bet-slider-row" style="margin-top:8px;">
             <input type="range" id="bet-slider" min="${limits.minRaiseTo}" max="${limits.maxRaiseTo}" value="${initVal}" step="${h.bbAmount}" oninput="updateBetLabel()">
             <span class="bet-amount" id="bet-amount">${initVal}</span>
           </div>
-          <div class="quick-bets">
-            <button onclick="setBet('min')">最小</button>
-            <button onclick="setBet('half')">½ポット</button>
-            <button onclick="setBet('pot')">${potBtnLabel}</button>
-            <button onclick="setBet('max')">${limits.betting==='nl'?'オールイン':'最大'}</button>
-          </div>
-          <button class="btn btn-raise btn-sm" style="margin-top:8px;" onclick="confirmRaise()">
-            ${toCall>0?'Raise':'Bet'}
-          </button>
         </div>`;
     }
+    html += '<div class="action-btns" style="margin-top:10px;">';
+    html += `<button class="btn btn-fold" onclick="humanAction({type:'fold'})">Fold</button>`;
+    if(toCall === 0){
+      html += `<button class="btn btn-call" onclick="humanAction({type:'check'})">Check</button>`;
+    } else {
+      const callAmt = Math.min(toCall, me.stack);
+      html += `<button class="btn btn-call" onclick="humanAction({type:'call'})">Call ${callAmt}</button>`;
+    }
+    if(limits.canRaise){
+      const initVal2 = Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, h.highBet + Math.floor(pot*0.5)));
+      html += `<button class="btn btn-raise" id="btn-raise-main" onclick="confirmRaise()">${toCall>0?'Raise':'Bet'} <span id="raise-btn-amt">${initVal2}</span></button>`;
+    }
+    html += '</div>';
   }
   html += '</div>';
   area.innerHTML = html;
@@ -2724,6 +2952,8 @@ function renderActionArea(){
 function updateBetLabel(){
   const v = g('bet-slider').value;
   g('bet-amount').textContent = v;
+  const rb = g('raise-btn-amt');
+  if(rb) rb.textContent = v;
 }
 function setBet(kind){
   const h = HND();
@@ -2734,6 +2964,7 @@ function setBet(kind){
   const min = parseInt(slider.min), max = parseInt(slider.max);
   let val;
   if(kind==='min') val = min;
+  else if(kind==='third') val = h.highBet + Math.floor(pot/3);
   else if(kind==='half') val = h.highBet + Math.floor(pot*0.5);
   else if(kind==='pot') val = potLimitMaxRaiseTo(pot, toCall, me.roundBet);
   else if(kind==='max') val = max;
@@ -2958,8 +3189,15 @@ function onMsg(msg, sender){
       ploPub = ploPub || {};
       ploPub.waitingPlayers = msg.waitingPlayers;
       if(g('screen-waiting').classList.contains('active')) renderWaitingPlayers();
+    } else if(msg.type === 'tourney_end'){
+      stopTourneyBar();
+      show('result');
+      g('result-detail').innerHTML = tourneyRankingHTML(msg.ranks||{}, msg.names||{}, msg.ids||[], msg.handNo||0, msg.level||0);
+      const rbtn = g('result-detail').parentElement.querySelector('button');
+      if(rbtn) rbtn.style.display='none';
     } else if(msg.type === 'state'){
       ploPub = msg.pub;
+      if(ploPub && ploPub.tourney && !tourneyBarTimer) startTourneyBar();
       // Firebase空配列削除対策: 必須配列を正規化
       if(ploPub){
         if(!Array.isArray(ploPub.board)) ploPub.board = [];
@@ -2994,7 +3232,13 @@ function ploHostStart(){
   const names = {};
   waitingPlayers.forEach(p=>names[p.id]=p.name);
   G = { ids, names, stacks: ids.map(()=>soloStack), buttonIdx: Math.floor(Math.random()*ids.length), handNo: 0, log: [], isMulti: true, currentGame: hostSelectedGame || 'holdem' };
+  if(gameFormat === 'tourney'){
+    G.tourney = {startTs: Date.now(), levelMin: tourneyLevelMin, level: 0, ranks: {}};
+    soloSB = 10; soloBB = 20;
+    G.log.unshift(`🏆 トーナメント開始！ ${tourneyLevelMin}分ごとにブラインドアップ`);
+  }
   show('game');
+  startTourneyBar();
   startNewHand();
 }
 
@@ -3008,6 +3252,7 @@ function handleGuestAction(senderId, action){
   scheduleNext();
 }
 function handleGuestRebuy(senderId, amount){
+  if(G && G.tourney) return; // トーナメントはリバイ不可
   const i = G.ids.indexOf(senderId);
   if(i < 0 || G.stacks[i] > 0) return;
   G.stacks[i] += amount;
@@ -3027,6 +3272,7 @@ function ploPub_build(){
     drawDone: h.drawDone, studStreet: h.studStreet, studVisible: h.studVisible,
     raiseCount: h.raiseCount || 0, minRaise: h.minRaise,
     results: h.results, handNames: h.handNames,
+    tourney: G.tourney ? {startTs:G.tourney.startTs, levelMin:G.tourney.levelMin, level:G.tourney.level, ranks:G.tourney.ranks} : null,
     players: (function(){
       const meP = h.players.find(x=>x.id===myId);
       const humanFolded = !isMulti && meP && meP.folded; // ソロで人間がフォールド済み→CPUの手を公開
@@ -3186,7 +3432,7 @@ function renderGuest(){
     ${meActive ? '<div class="act-bar" style="position:absolute; left:14px; right:14px; bottom:-9px;"></div>' : ''}
   </div>`;
   renderGuestActionArea();
-  if(me && me.stack<=0 && pub.phase==='showdown') showGuestRebuyPrompt();
+  if(me && me.stack<=0 && pub.phase==='showdown' && !pub.tourney) showGuestRebuyPrompt();
 }
 
 // ゲスト用ベット制限計算（pubベース）
@@ -3230,12 +3476,13 @@ function renderGuestActionArea(){
   const limits = calcBetLimitsGuest(pub, me);
   const toCall = limits.toCall;
   const pot = limits.pot;
-  let html='<div class="action-bar"><div class="action-btns">';
-  html += `<button class="btn btn-fold" onclick="guestAct({type:'fold'})">Fold</button>`;
-  if(toCall===0) html += `<button class="btn btn-call" onclick="guestAct({type:'check'})">Check</button>`;
-  else { const ca=Math.min(toCall,me.stack); html += `<button class="btn btn-call" onclick="guestAct({type:'call'})">Call ${ca}</button>`; }
+  let html='<div class="action-bar">';
 
   if(limits.betting === 'fl'){
+    html += '<div class="action-btns">';
+    html += `<button class="btn btn-fold" onclick="guestAct({type:'fold'})">Fold</button>`;
+    if(toCall===0) html += `<button class="btn btn-call" onclick="guestAct({type:'check'})">Check</button>`;
+    else { const ca=Math.min(toCall,me.stack); html += `<button class="btn btn-call" onclick="guestAct({type:'call'})">Call ${ca}</button>`; }
     if(limits.canRaise){
       html += `<button class="btn btn-raise" onclick="guestAct({type:'raise', amount:${limits.minRaiseTo}})">${toCall>0?'Raise':'Bet'} ${limits.minRaiseTo}</button>`;
     }
@@ -3243,23 +3490,32 @@ function renderGuestActionArea(){
     const cap = (pub.raiseCount||0);
     html += `<div class="center muted small" style="margin-top:6px;">固定: ${limits.flUnit} / ベット${cap}/4${cap>=4?'（キャップ）':''}</div>`;
   } else {
-    html += '</div>';
     if(limits.canRaise){
       const initVal=Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, pub.highBet+Math.floor(pot*0.5)));
-      const potBtnLabel = limits.betting==='nl' ? 'ポット' : 'ポット(上限)';
-      html += `<div class="bet-controls"><div class="bet-slider-row">
-        <span class="muted small">${toCall>0?'レイズ':'ベット'}</span>
-        <input type="range" id="bet-slider" min="${limits.minRaiseTo}" max="${limits.maxRaiseTo}" value="${initVal}" step="${pub.bbAmount}" oninput="updateBetLabel()">
-        <span class="bet-amount" id="bet-amount">${initVal}</span></div>
+      const allinLabel = limits.betting==='nl' ? 'ALL IN' : '最大';
+      html += `<div class="bet-controls" style="margin-top:0;">
         <div class="quick-bets">
-          <button onclick="setBetGuest('min')">最小</button>
-          <button onclick="setBetGuest('half')">½ポット</button>
-          <button onclick="setBetGuest('pot')">${potBtnLabel}</button>
-          <button onclick="setBetGuest('max')">${limits.betting==='nl'?'オールイン':'最大'}</button>
+          <button onclick="setBetGuest('min')">ミニマム</button>
+          <button onclick="setBetGuest('third')">1/3</button>
+          <button onclick="setBetGuest('half')">1/2</button>
+          <button onclick="setBetGuest('pot')">ポット</button>
+          <button onclick="setBetGuest('max')">${allinLabel}</button>
         </div>
-        <button class="btn btn-raise btn-sm" style="margin-top:8px;" onclick="confirmRaiseGuest()">${toCall>0?'Raise':'Bet'}</button>
+        <div class="bet-slider-row" style="margin-top:8px;">
+          <input type="range" id="bet-slider" min="${limits.minRaiseTo}" max="${limits.maxRaiseTo}" value="${initVal}" step="${pub.bbAmount}" oninput="updateBetLabel()">
+          <span class="bet-amount" id="bet-amount">${initVal}</span>
+        </div>
       </div>`;
     }
+    html += '<div class="action-btns" style="margin-top:10px;">';
+    html += `<button class="btn btn-fold" onclick="guestAct({type:'fold'})">Fold</button>`;
+    if(toCall===0) html += `<button class="btn btn-call" onclick="guestAct({type:'check'})">Check</button>`;
+    else { const ca=Math.min(toCall,me.stack); html += `<button class="btn btn-call" onclick="guestAct({type:'call'})">Call ${ca}</button>`; }
+    if(limits.canRaise){
+      const initVal2=Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, pub.highBet+Math.floor(pot*0.5)));
+      html += `<button class="btn btn-raise" id="btn-raise-main" onclick="confirmRaiseGuest()">${toCall>0?'Raise':'Bet'} <span id="raise-btn-amt">${initVal2}</span></button>`;
+    }
+    html += '</div>';
   }
   html += '</div>';
   area.innerHTML = html;
@@ -3270,6 +3526,7 @@ function setBetGuest(kind){
   const slider=g('bet-slider'); const min=parseInt(slider.min),max=parseInt(slider.max);
   let val;
   if(kind==='min')val=min;
+  else if(kind==='third')val=pub.highBet+Math.floor(pot/3);
   else if(kind==='half')val=pub.highBet+Math.floor(pot*0.5);
   else if(kind==='pot')val=potLimitMaxRaiseTo(pot,toCall,me.roundBet);
   else val=max;
