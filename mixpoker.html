@@ -1930,6 +1930,15 @@ function awardToLastPlayer(){
   h.players.forEach(p=>p.roundBet=0);
   winner.stack += h.pot;
   h.results = [{potIndex:0, amount:h.pot, winnerIds:[winner.id], winnerNames:[winner.name], uncontested:true}];
+  // ソロで人間がフォールド済みなら、CPUの手をログに公開
+  const meP2 = h.players.find(x=>x.id===myId);
+  if(!isMulti && meP2 && meP2.folded){
+    h.players.forEach(p=>{
+      if(p.id===myId) return;
+      const cards = p.hole.map(cd=>rankStr(cd.r)+SUIT_SYM[cd.s]).join(' ');
+      G.log.unshift(`🃏 ${p.name}: ${cards}${p.folded?'（フォールド済）':''}`);
+    });
+  }
   h.players.forEach((p,i)=>{ G.stacks[i]=p.stack; });
   h.toActIdx = -1;
   h.phase = 'showdown'; // アクションUIを閉じる
@@ -2191,7 +2200,21 @@ function cpuPostflopStrength(hole, board){
 
 // ===== GTO近似エンジン =====
 // モンテカルロでエクイティ（ポット取得期待割合）を計算
-let CPU_ITER = 120; // シミュレーション回数
+let CPU_ITER = 260; // シミュレーション回数
+
+// 相手のレンジ下限を投資量から推定（投資が大きい相手ほど強い手を持つ前提でサンプリング）
+// 閾値は cpuPreflopStrength のランダム分布パーセンタイルから校正済み
+function oppRangeFloor(h, opp, holeN){
+  const bb = h.bbAmount || 20;
+  const bbInv = ((opp.totalBet||0) + (opp.roundBet||0)) / bb;
+  let tier = 0; // 0=フルレンジ
+  if(bbInv >= 8) tier = 3;        // 大投資 → 上位25%
+  else if(bbInv >= 3) tier = 2;   // レイズ参加 → 上位35%
+  else if(bbInv > 1.05) tier = 1; // コール参加 → 上位55%
+  if(tier === 0) return 0;
+  if(holeN >= 4) return tier===3 ? 0.45 : tier===2 ? 0.41 : 0.34;
+  return tier===3 ? 0.19 : tier===2 ? 0.17 : 0.11;
+}
 
 function calcEquity(h, idx, iterations){
   const iters = iterations || CPU_ITER;
@@ -2232,8 +2255,19 @@ function calcEquity(h, idx, iterations){
     const oppHoles = [];
 
     if(gd.type==='community'){
-      // 相手に手札を配り、ボードを5枚まで補完
-      opps.forEach(()=>{ const oh=[]; for(let k=0;k<gd.holeN;k++) oh.push(draw1()); oppHoles.push(oh); });
+      // 相手に手札を配り、ボードを5枚まで補完（投資量に応じたレンジで棄却サンプリング）
+      opps.forEach((op)=>{
+        const floor = oppRangeFloor(h, op, gd.holeN);
+        let oh = null;
+        const rejected = [];
+        for(let t=0;t<6;t++){
+          const cand=[]; for(let k=0;k<gd.holeN;k++) cand.push(draw1());
+          if(floor===0 || cpuPreflopStrength(cand) >= floor || t===5){ oh=cand; break; }
+          rejected.push(...cand);
+        }
+        rejected.forEach(rc=>deck.push(rc)); // 棄却分はデッキ末尾へ戻す（枯渇防止）
+        oppHoles.push(oh);
+      });
       while(simBoard.length<5) simBoard.push(draw1());
     } else if(gd.type==='draw'){
       // 相手にランダム手札。残りドローがあれば双方1回交換シミュレーション
@@ -2308,22 +2342,40 @@ function simShare(players, simH, gd){
   }
 }
 
-// GTO風意思決定
+// GTO風意思決定 v2（MDF・ポジション・ベットサイズミックス・最終ストリートのブラフ均衡）
+function isFinalStreet(h, gd){
+  if(gd.type==='community') return (h.board||[]).length >= 5;
+  if(gd.type==='draw') return (h.drawDone||0) >= (gd.drawRounds||1);
+  return (h.studStreet||3) >= 7;
+}
+function posFactor(h, idx){
+  const n = h.players.length;
+  if(n<=2) return 1.0;
+  if(typeof G!=='undefined' && G && idx===G.buttonIdx) return 1.25; // ボタンは広く
+  if(idx===h.sbIdx || idx===h.bbIdx) return 0.85;                  // ブラインドは狭く
+  return 1.0;
+}
+function pickBetFrac(eq){
+  const r = Math.random();
+  if(eq > 0.8) return r<0.35 ? 1.0 : (r<0.75 ? 0.75 : 0.5); // 超強い手は大きめ多め
+  return r<0.25 ? 0.5 : (r<0.70 ? 0.7 : 1.0);                // 共通分布（サイズから手を読まれにくく）
+}
 function cpuDecide(idx){
   const h = HND();
   if(!h || idx < 0 || !h.players[idx]) return {type:'check'};
   const p = h.players[idx];
+  const gd = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
   const limits = calcBetLimits(h, p);
   const toCall = limits.toCall;
   const pot = limits.pot;
   const oppCount = h.players.filter((pp,i)=>i!==idx && !pp.folded).length;
+  const finalSt = isFinalStreet(h, gd);
+  const pf = posFactor(h, idx);
 
-  // エクイティ計算（モンテカルロ）
+  // エクイティ計算（モンテカルロ・レンジ加重）
   const eq = calcEquity(h, idx);
-
   const rnd = Math.random();
 
-  // レイズ額決定（NL/PL: equityに応じてポットの50〜90%、FL: 固定）
   function raiseAmt(frac){
     if(limits.betting==='fl') return limits.minRaiseTo;
     const target = h.highBet + Math.max(h.minRaise, Math.floor(pot * frac));
@@ -2336,22 +2388,23 @@ function cpuDecide(idx){
   // ===== チェック可能 =====
   if(toCall === 0){
     if(eq > 0.70){
-      // 強い: 高頻度バリューベット
-      if(canRaiseNow() && rnd < 0.85) return {type:'raise', amount: raiseAmt(0.7)};
-      return {type:'check'}; // たまにスロープレイ
+      if(canRaiseNow() && rnd < 0.85) return {type:'raise', amount: raiseAmt(pickBetFrac(eq))};
+      return {type:'check'}; // たまにトラップ
     }
     if(eq > 0.52){
-      if(canRaiseNow() && rnd < 0.55) return {type:'raise', amount: raiseAmt(0.55)};
+      if(canRaiseNow() && rnd < 0.55) return {type:'raise', amount: raiseAmt(pickBetFrac(eq))};
       return {type:'check'};
     }
     if(eq > 0.35){
-      // セミブラフ少々
-      if(canRaiseNow() && rnd < 0.22/Math.max(1,oppCount-1+1)) return {type:'raise', amount: raiseAmt(0.5)};
+      // セミブラフ（ドロー価値が残る間のみ。最終ストリートでは縮小）
+      const f = (finalSt ? 0.10 : 0.22) * pf / oppCount;
+      if(canRaiseNow() && rnd < f) return {type:'raise', amount: raiseAmt(0.7)};
       return {type:'check'};
     }
-    // 弱い: 低頻度ブラフ（マルチウェイでは減らす）
-    const bluffF = 0.12 / oppCount;
-    if(canRaiseNow() && rnd < bluffF) return {type:'raise', amount: raiseAmt(0.6)};
+    // 弱い手のブラフ: 最終ストリートはベットサイズに応じた均衡比率 α=s/(1+2s)
+    const s = 0.7;
+    const bluffF = (finalSt ? (s/(1+2*s)) * 0.9 : 0.12) * pf / oppCount;
+    if(canRaiseNow() && rnd < bluffF) return {type:'raise', amount: raiseAmt(0.7)};
     return {type:'check'};
   }
 
@@ -2360,27 +2413,33 @@ function cpuDecide(idx){
   const allInCall = toCall >= p.stack;
 
   if(allInCall){
-    // オールインコールは純粋にオッズ比較（少しマージン）
     return eq > potOdds + 0.02 ? {type:'call'} : {type:'fold'};
   }
 
   if(eq > 0.72){
-    if(canRaiseNow() && rnd < 0.65) return {type:'raise', amount: raiseAmt(0.85)};
+    if(canRaiseNow() && rnd < 0.65) return {type:'raise', amount: raiseAmt(pickBetFrac(eq))};
     return {type:'call'};
   }
   if(eq > 0.55){
-    if(canRaiseNow() && rnd < 0.28) return {type:'raise', amount: raiseAmt(0.7)};
+    if(canRaiseNow() && rnd < 0.28) return {type:'raise', amount: raiseAmt(pickBetFrac(eq))};
     return {type:'call'};
   }
   if(eq > potOdds + 0.03){
-    return {type:'call'}; // オッズに合う: コール
+    // オッズに合う: コール主体、非最終ストリートはセミブラフレイズ少々
+    if(!finalSt && canRaiseNow() && rnd < 0.10 * pf) return {type:'raise', amount: raiseAmt(0.7)};
+    return {type:'call'};
   }
-  if(eq > potOdds - 0.04){
-    // 境界域: ミックス（MDF風）
-    return rnd < 0.5 ? {type:'call'} : {type:'fold'};
+  if(eq > potOdds - 0.05){
+    return rnd < 0.60 ? {type:'call'} : {type:'fold'}; // 境界域ミックス
   }
-  // オッズに合わない: 基本フォールド、低頻度ブラフレイズ
-  const bluffRaiseF = (limits.betting==='nl' ? 0.07 : 0.05) / oppCount;
+  if(eq > potOdds - 0.12){
+    // MDF確保のブラフキャッチ（降りすぎると搾取されるため一定頻度で継続）
+    const mdf = pot / (pot + toCall);
+    return rnd < 0.18 + 0.12*mdf ? {type:'call'} : {type:'fold'};
+  }
+  // オッズに大きく合わない: 基本フォールド、低頻度ブラフレイズ
+  const s2 = 0.85;
+  const bluffRaiseF = ((finalSt ? (s2/(1+2*s2))*0.45 : 0.07) * pf / oppCount) * (limits.betting==='nl'?1:0.7);
   if(canRaiseNow() && rnd < bluffRaiseF) return {type:'raise', amount: raiseAmt(0.9)};
   return {type:'fold'};
 }
@@ -2493,9 +2552,10 @@ function render(){
     if(isActive) cls += ' active';
     if(p.folded) cls += ' folded';
 
-    // カード（種目別: スタッドは表札のみ見える）
+    // カード（種目別: スタッドは表札のみ見える / ソロで人間フォールド後はCPUの手を公開）
     let cardsH = '';
-    const showCards = (h.phase==='showdown' && !p.folded);
+    const humanFoldedSolo = !isMulti && me && me.folded;
+    const showCards = (h.phase==='showdown' && !p.folded) || humanFoldedSolo;
     const isStud = (MIX_GAMES[G.currentGame]||{}).type === 'stud';
     if(p.hole.length){
       p.hole.forEach((c,ci)=>{
@@ -2967,20 +3027,23 @@ function ploPub_build(){
     drawDone: h.drawDone, studStreet: h.studStreet, studVisible: h.studVisible,
     raiseCount: h.raiseCount || 0, minRaise: h.minRaise,
     results: h.results, handNames: h.handNames,
-    players: h.players.map((p,pi)=>{
+    players: (function(){
+      const meP = h.players.find(x=>x.id===myId);
+      const humanFolded = !isMulti && meP && meP.folded; // ソロで人間がフォールド済み→CPUの手を公開
+      return h.players.map((p,pi)=>{
       const isStud = (MIX_GAMES[G.currentGame]||{}).type === 'stud';
       // スタッド: 表札を公開（自分の手札は your_hand で別途送る）
       const upCards = isStud && p.faceUp ? p.hole.map((c,i)=> p.faceUp[i] ? c : null) : null;
       return {
         id:p.id, name:p.name, stack:p.stack, roundBet:p.roundBet, folded:p.folded, allIn:p.allIn, lastAction:p.lastAction,
-        hole: (h.phase==='showdown' && !p.folded) ? p.hole : null,
+        hole: ((h.phase==='showdown' && !p.folded) || (humanFolded && p.id!==myId)) ? p.hole : null,
         holeCount: p.hole.length,
         upCards, // スタッドの表札（nullの要素は伏札）
         pos: posBadge(h, pi), // ポジションバッジ
         lastDraw: p.lastDraw, // 直近ドローの交換枚数
         startStack: p.startStack, // ハンド開始時スタック（収支用）
       };
-    }),
+    });})(),
     handNo: G.handNo,
   };
 }
@@ -2994,6 +3057,7 @@ function broadcastState(){
     if(p.id === myId) return;
     fbSendTo(p.id, {type:'your_hand', hole:p.hole, faceUp:p.faceUp});
   });
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 
 function onGuestStateUpdate(){
@@ -3291,6 +3355,10 @@ function ploShowReconnectOption(){
   btn.style.display='';
   btn.textContent = '🔄 前のルームに戻る（#' + s.roomCode + '）';
 }
+function pgSaveHostState(){
+  if(!isHost || !fbRoom || !isMulti || typeof G==='undefined' || !G) return;
+  try { fbPut('hostState', {ts: Date.now(), j: JSON.stringify(G), seen: JSON.stringify(fbLastSeen||{})}); } catch(e){}
+}
 async function ploReconnectToRoom(){
   const s = ploLoadSession();
   if(!s){ ploSetErr('セッションが見つかりません'); return; }
@@ -3299,11 +3367,36 @@ async function ploReconnectToRoom(){
   const meta = await fbGet('meta');
   if(!meta){ ploClearSession(); ploSetErr('ルームが見つかりません'); ploSetSt(''); ploShowReconnectOption(); return; }
   soloStack=meta.stack; soloSB=meta.sb; soloBB=meta.bb;
-  fbListen();
   if(isHost){
-    ploSetErr('ホストのゲーム中復帰は制限があります');
-    show('waiting'); g('disp-code').textContent=roomCode;
+    const hs = await fbGet('hostState');
+    if(hs && hs.j){
+      // 完全状態（非公開情報込み）から復元
+      G = JSON.parse(hs.j);
+      fbListen();
+      try { fbLastSeen = JSON.parse(hs.seen||'{}'); } catch(e){ fbLastSeen = {}; }
+      g('disp-code').textContent=roomCode;
+      if(G.hand){
+        show('game');
+        broadcastState();
+        render();
+        const h = HND();
+        if(h && h.results){ aiTimer = setTimeout(()=>startNewHand(), 1500); }
+        else if(h && h.needDraw){ aiTimer = setTimeout(()=>checkDrawComplete(h), 1200); }
+        else if(h){ scheduleNext(); }
+      } else {
+        show('waiting');
+      }
+    } else {
+      // 待機中（ゲーム未開始）: 待機リストから復元
+      const w = await fbGet('waiting');
+      fbListen();
+      if(Array.isArray(w) && w.length) waitingPlayers = w;
+      show('waiting'); g('disp-code').textContent=roomCode;
+      if(typeof renderWaitingPlayers==='function') renderWaitingPlayers();
+      fbBroadcast({type:'waiting_update', waitingPlayers});
+    }
   } else {
+    fbListen();
     await fbSendToHost({type:'join', name:myName, id:myId});
     show('waiting'); g('disp-code').textContent=roomCode;
     g('wait-host-note').textContent='再接続しました。ホストを待っています...';
