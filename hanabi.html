@@ -3,6 +3,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>🎆 花火 HANABI</title>
 <style>
@@ -168,16 +172,6 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
 }
 .hand-area.is-me { border-left: 3px solid var(--hanabi-pink); }
 .hand-area.current-turn { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
-/* 自分のターンでタップ可能なカードに対するインジケーター */
-.hand-area.is-me.current-turn .card {
-  transition: transform 0.15s;
-}
-.hand-area.is-me.current-turn .card:hover {
-  transform: translateY(-3px);
-}
-.hand-area.is-me.current-turn .card:active {
-  transform: translateY(-1px);
-}
 .hand-header {
   display: flex; align-items: center; gap: 8px;
   font-size: 0.85rem; margin-bottom: 10px;
@@ -351,14 +345,29 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
   padding: 6px 14px; border-radius: 20px;
   font-weight: 700; margin: 4px 0;
 }
-
-/* ── Rematch panel ── */
-.rematch-panel { background:var(--surface); border:1px solid var(--surface3); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
-.rematch-status { font-family:var(--mono); font-size:0.85rem; color:var(--muted); }
-.rematch-voter-tag { font-family:var(--mono); font-size:0.78rem; padding:3px 10px; border-radius:12px; background:rgba(45,255,138,0.12); color:#2dff8a; border:1px solid rgba(45,255,138,0.3); }
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
+<div id="pg-confirm" style="position:fixed;inset:0;background:rgba(0,0,0,0.82);display:none;align-items:center;justify-content:center;padding:20px;z-index:99998;">
+  <div style="background:#1c1f2b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:12px;">
+    <p id="pg-confirm-msg" style="font-size:0.92rem;white-space:pre-line;margin:0;color:#f0f0f5;line-height:1.6;"></p>
+    <button id="pg-confirm-ok" style="padding:13px;border:none;border-radius:10px;background:#2dbd6e;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;">はい</button>
+    <button id="pg-confirm-cancel" style="padding:13px;border:1px solid rgba(255,255,255,0.25);border-radius:10px;background:transparent;color:#aab;font-size:0.95rem;cursor:pointer;font-family:inherit;">キャンセル</button>
+  </div>
+</div>
+<script>
+// モバイルブラウザのconfirm()ブロック対策（カスタム確認モーダル）
+function pgConfirm(message, onOk, onCancel){
+  const m=document.getElementById('pg-confirm');
+  document.getElementById('pg-confirm-msg').textContent=message;
+  m.style.display='flex';
+  const ok=document.getElementById('pg-confirm-ok'), ca=document.getElementById('pg-confirm-cancel');
+  const cleanup=()=>{m.style.display='none';ok.onclick=null;ca.onclick=null;};
+  ok.onclick=()=>{cleanup();if(onOk)onOk();};
+  ca.onclick=()=>{cleanup();if(onCancel)onCancel();};
+}
+</script>
 
 <!-- FB MODAL -->
 <div id="fb-modal" class="fb-modal" style="display:none;">
@@ -368,27 +377,6 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <input class="input" id="fb-url" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com">
     <button class="btn btn-pink" onclick="saveFbConfig()">設定して始める</button>
     <button class="btn btn-ghost" onclick="g('fb-modal').style.display='none'">あとで</button>
-  </div>
-</div>
-
-<!-- 確認モーダル（プレイ/捨てる確認用） -->
-<div id="confirm-modal" class="fb-modal" style="display:none;">
-  <div class="fb-modal-inner">
-    <h2 id="confirm-title" style="font-size:1.1rem; text-align:left;">確認</h2>
-    <p id="confirm-msg" style="font-size:0.9rem; white-space:pre-line;"></p>
-    <button class="btn btn-green" id="confirm-ok">はい</button>
-    <button class="btn btn-ghost" id="confirm-cancel">キャンセル</button>
-  </div>
-</div>
-
-<!-- カード選択モーダル（手札タップ時） -->
-<div id="card-action-modal" class="fb-modal" style="display:none;">
-  <div class="fb-modal-inner">
-    <h2 style="font-size:1.1rem; text-align:left;">カードをどうする？</h2>
-    <div id="card-action-preview" style="display:flex; justify-content:center; padding:6px 0;"></div>
-    <button class="btn btn-green" id="card-action-play">🎆 プレイ</button>
-    <button class="btn btn-amber" id="card-action-discard">🗑️ 捨てる</button>
-    <button class="btn btn-ghost" id="card-action-cancel">キャンセル</button>
   </div>
 </div>
 
@@ -402,19 +390,17 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
 
     <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" id="btn-reconnect" style="display:none; background:rgba(45,189,110,0.15); color:#2dbd6e; border:1px solid rgba(45,189,110,0.5);" onclick="pgReconnect()"></button>
       <button class="btn btn-pink" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
       <div class="divider"></div>
       <div class="row">
         <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
         <button class="btn btn-blue" onclick="joinRoom()">参加</button>
       </div>
-      <div class="divider"></div>
-      <button class="btn btn-green" onclick="startSoloMode()">🤖 ソロプレイ（BOTと対戦）</button>
     </div>
 
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
-    <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
 
     <div class="panel" style="margin-top:8px;">
       <h3 style="margin-bottom:10px;">ゲームルール</h3>
@@ -424,13 +410,6 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         重要: 自分の手札は<strong style="color:var(--amber);">見えません</strong>。他人の手札は見えます。<br>
         手番でできるアクション: ① ヒント / ② プレイ / ③ 捨てる<br>
         ミス3回でゲーム終了。全色5まで完成で完全勝利（25点）。
-      </p>
-      <h4 style="margin-top:12px; margin-bottom:6px; font-size:0.88rem;">カード構成</h4>
-      <p style="font-size:0.78rem; color:var(--muted); line-height:1.6;">
-        各色: 1が3枚、2/3/4が各2枚、5が1枚 = <strong>10枚/色</strong><br>
-        <strong style="color:var(--hanabi-pink);">5色モード: 計50枚</strong>（赤・青・黄・緑・白）<br>
-        <strong style="color:var(--amber);">6色モード: 計55枚</strong>（5色+虹色5枚）<br>
-        ※虹色は1〜5が各1枚のみ。すべての色のヒントに該当する難易度UP用。
       </p>
     </div>
 
@@ -459,13 +438,6 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
           <button id="opt-color-6" class="toggle-btn" onclick="setColorMode(6)">6色(難)</button>
         </div>
       </div>
-      <div class="setting-row">
-        <label>🤖 BOTを追加</label>
-        <div style="display:flex; gap:6px;">
-          <button class="toggle-btn" onclick="addBot()">+ BOT追加</button>
-          <button class="toggle-btn" onclick="removeBot()">- BOT削除</button>
-        </div>
-      </div>
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -476,6 +448,9 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <div id="wait-status" class="status-txt"></div>
     <button id="btn-start" class="btn btn-green" onclick="startGame()" disabled>▶ ゲームを開始する</button>
     <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+    <p style="font-size:0.72rem; color:var(--amber); text-align:center; padding:6px; background:rgba(255,176,32,0.08); border-radius:6px; line-height:1.5;">
+      ⚠️ ホストが接続を切ると、ゲームが進行できなくなります。
+    </p>
   </div>
 
   <!-- ===== PLAYING ===== -->
@@ -541,7 +516,7 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <!-- ログ -->
     <div id="game-log" class="game-log"></div>
 
-    <button class="btn btn-ghost" onclick="confirmLeave()">退出</button>
+    <button class="btn btn-ghost" onclick="pgConfirm('ゲームを抜けますか？',()=>leaveRoom())">退出</button>
   </div>
 
   <!-- ===== RESULT ===== -->
@@ -559,12 +534,9 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <h3 style="text-align:center;">最終的な花火</h3>
     <div id="result-fireworks" class="fireworks-row"></div>
 
-    <div id="rematch-panel" class="rematch-panel">
-      <div id="rematch-status" class="rematch-status"></div>
-      <div id="rematch-voters" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
-    </div>
-    <button id="btn-rematch" class="btn btn-pink" onclick="submitRematch()">🔄 もう一度遊ぶ（同じメンバーで再戦）</button>
+    <button class="btn btn-pink" onclick="restartGame()">🔄 もう一度遊ぶ</button>
     <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ戻る</button>
+    <a href="index.html" style="text-decoration:none;"><button class="btn btn-ghost" style="width:100%;">🏠 ハブに戻る</button></a>
   </div>
 
 </div>
@@ -650,237 +622,6 @@ let currentAction = null; // 'hint' | 'play' | 'discard'
 let actionState = {}; // 選択中の状態
 
 // ============================================================
-// BOT
-// ============================================================
-let botActionTimer = null;
-const BOT_NAMES = ['🤖アル', '🤖ベル', '🤖カイ', '🤖ドラ', '🤖エム'];
-function genBotId() { return 'bot_' + Math.random().toString(36).slice(2,8); }
-
-function addBot() {
-  if(!isHost || !fs || fs.phase !== 'waiting') return;
-  if(fs.players.length >= 5) { setSt('満員（最大5人）'); return; }
-  const used = fs.players.map(p => p.name);
-  let botName = null;
-  for(const n of BOT_NAMES) {
-    if(!used.includes(n)) { botName = n; break; }
-  }
-  if(!botName) botName = '🤖BOT';
-  const botId = genBotId();
-  fs.players.push({id:botId, name:botName, hand:[], isBot:true});
-  bcast();
-}
-
-function removeBot() {
-  if(!isHost || !fs || fs.phase !== 'waiting') return;
-  for(let i = fs.players.length-1; i >= 0; i--) {
-    if(fs.players[i].isBot) {
-      fs.players.splice(i, 1);
-      bcast();
-      return;
-    }
-  }
-}
-
-// BOTの行動判断
-// 中級戦略：
-// 1. 手札のうち「ヒント情報で確実に出せる」カードがあれば出す
-// 2. 「ヒント情報で確実に捨てられる」カード（既に場に出ている数字や、ライフ的に不要な高い数字）があれば捨てる
-// 3. それ以外、ヒントトークンがあれば、他人の手札を見て「次に出せるカード」を教える
-// 4. ヒントトークンが0なら、なるべく安全に捨てる
-function botDecideAction(botPlayer) {
-  if(!fs || fs.phase !== 'playing') return null;
-  const hand = botPlayer.hand;
-  if(hand.length === 0) return null;
-  
-  // 各カードについて、ヒント情報からどれだけ確定しているか分析
-  const cardInfo = hand.map((c, idx) => {
-    const hintsNum = c.hintsNum || [];
-    const hintsColor = c.hintsColor || [];
-    const knownNum = hintsNum.find(h => !String(h).startsWith('!'));
-    const knownColor = hintsColor.find(h => !String(h).startsWith('!'));
-    return {
-      idx,
-      knownNum: knownNum || null,
-      knownColor: knownColor || null,
-      negNums: hintsNum.filter(h => String(h).startsWith('!')).map(h => parseInt(h.slice(1))),
-      negColors: hintsColor.filter(h => String(h).startsWith('!')).map(h => h.slice(1)),
-      actualColor: c.color,
-      actualNum: c.number,
-    };
-  });
-  
-  // 1. 「確実に出せる」カードを探す
-  // 色と数字が両方確定し、その色の次に必要な数字なら出す
-  // または、数字1で、その色の場が0なら出す（色不明でも数字1なら誰の色でも出せる場合がある）
-  for(const info of cardInfo) {
-    if(info.knownNum && info.knownColor) {
-      // 完全に分かっている
-      const next = (fs.fireworks[info.knownColor] || 0) + 1;
-      if(info.knownNum === next) return {action:'play', cardIdx:info.idx};
-    } else if(info.knownNum === 1) {
-      // 数字1で、まだ何かの色がfireworks[color]=0のままなら出せる可能性
-      // ただし、その色の場が既に0でない可能性もある
-      // 安全策：全色についてfireworks[color]=0かチェック
-      const colors = fs.colorMode === 6 ? COLORS_6 : COLORS_5;
-      const allColorsZero = colors.every(c => (fs.fireworks[c]||0) === 0);
-      const someColorsZero = colors.some(c => (fs.fireworks[c]||0) === 0);
-      if(allColorsZero) return {action:'play', cardIdx:info.idx};
-      // 否定情報から、可能性のある色を絞り込み
-      const possibleColors = colors.filter(c => !info.negColors.includes(c));
-      const allPossibleZero = possibleColors.every(c => (fs.fireworks[c]||0) === 0);
-      if(allPossibleZero && possibleColors.length > 0) return {action:'play', cardIdx:info.idx};
-    }
-  }
-  
-  // 2. 「確実に捨てられる」カードを探す
-  // 既に場に出ている数字（例：その色の場が3なら、数字1,2,3はもう不要）
-  // ただし、ヒントトークン満タンの場合は捨てられない
-  const canDiscard = fs.hintTokens < fs.maxHintTokens;
-  if(canDiscard) {
-    for(const info of cardInfo) {
-      if(info.knownNum && info.knownColor) {
-        const onBoard = fs.fireworks[info.knownColor] || 0;
-        if(info.knownNum <= onBoard) {
-          // もう不要
-          return {action:'discard', cardIdx:info.idx};
-        }
-      }
-    }
-  }
-  
-  // 3. ヒントを出す
-  if(fs.hintTokens > 0) {
-    // 他プレイヤーの手札を見て、出せるカードを持っている人にヒントを出す
-    for(const op of fs.players) {
-      if(op.id === botPlayer.id) continue;
-      for(let i = 0; i < op.hand.length; i++) {
-        const c = op.hand[i];
-        const hintsNum = c.hintsNum || [];
-        const hintsColor = c.hintsColor || [];
-        const onBoard = fs.fireworks[c.color] || 0;
-        if(c.number === onBoard + 1) {
-          // このカードは出せる
-          // まだヒントされていない情報を選ぶ
-          const hasNumHint = hintsNum.includes(c.number);
-          const hasColorHint = hintsColor.includes(c.color);
-          if(!hasNumHint) {
-            return {action:'hint', targetId:op.id, hintType:'number', hintValue:c.number};
-          } else if(!hasColorHint) {
-            return {action:'hint', targetId:op.id, hintType:'color', hintValue:c.color};
-          }
-        }
-      }
-    }
-    // 出せるカードを持っている人がいなければ、誰かの「1」を教える（汎用的に有用）
-    for(const op of fs.players) {
-      if(op.id === botPlayer.id) continue;
-      for(let i = 0; i < op.hand.length; i++) {
-        const c = op.hand[i];
-        const hintsNum = c.hintsNum || [];
-        if(c.number === 1 && !hintsNum.includes(1)) {
-          return {action:'hint', targetId:op.id, hintType:'number', hintValue:1};
-        }
-      }
-    }
-    // それでもなければ、5のヒント（重要なカード）を教える
-    for(const op of fs.players) {
-      if(op.id === botPlayer.id) continue;
-      for(let i = 0; i < op.hand.length; i++) {
-        const c = op.hand[i];
-        const hintsNum = c.hintsNum || [];
-        if(c.number === 5 && !hintsNum.includes(5)) {
-          return {action:'hint', targetId:op.id, hintType:'number', hintValue:5};
-        }
-      }
-    }
-    // 最後のフォールバック：誰かの最初のカードの色か数字をヒント
-    for(const op of fs.players) {
-      if(op.id === botPlayer.id) continue;
-      if(op.hand.length === 0) continue;
-      const c = op.hand[0];
-      const hintsNum = c.hintsNum || [];
-      const hintsColor = c.hintsColor || [];
-      if(!hintsNum.includes(c.number)) {
-        return {action:'hint', targetId:op.id, hintType:'number', hintValue:c.number};
-      }
-      if(!hintsColor.includes(c.color)) {
-        return {action:'hint', targetId:op.id, hintType:'color', hintValue:c.color};
-      }
-    }
-  }
-  
-  // 4. 仕方なく捨てる（ヒント情報が一番少ないカード）
-  // ヒントトークン満タンの場合は捨てられない → 仕方なくランダムにプレイ（リスク取る）
-  if(!canDiscard) {
-    // 一番無難そうなカード（ヒント情報がなく、数字1の可能性が高いカード）をプレイ
-    // 簡単化のため、最初のカードを出す（運任せ）
-    return {action:'play', cardIdx:0};
-  }
-  
-  // 最初のカードを捨てる（一番古い）
-  // ただし、ヒントで「重要かもしれない」情報があるカードは避ける
-  let safestIdx = 0;
-  let safestScore = -1;
-  for(let i = 0; i < hand.length; i++) {
-    const c = hand[i];
-    const hintsColor = c.hintsColor || [];
-    const hintsNum = c.hintsNum || [];
-    // ヒント情報が多いほど大切。少ないほど安全に捨てられる
-    const hintCount = (hintsColor.filter(h => !String(h).startsWith('!')).length) + 
-                      (hintsNum.filter(h => !String(h).startsWith('!')).length);
-    const safety = -hintCount;
-    if(safety > safestScore) {
-      safestScore = safety;
-      safestIdx = i;
-    }
-  }
-  return {action:'discard', cardIdx:safestIdx};
-}
-
-function scheduleBotTurn() {
-  if(!isHost || !fs || fs.phase !== 'playing') return;
-  if(botActionTimer) { clearTimeout(botActionTimer); botActionTimer = null; }
-  const cur = fs.players[fs.currentTurn];
-  if(!cur || !cur.isBot) return;
-  // 思考時間
-  const delay = 1500 + Math.random() * 2000;
-  botActionTimer = setTimeout(() => {
-    botActionTimer = null;
-    if(!fs || fs.phase !== 'playing') return;
-    const curNow = fs.players[fs.currentTurn];
-    if(!curNow || !curNow.isBot) return;
-    // 手札が0枚の場合（山札枯渇後）：直接ターンを進める
-    if(curNow.hand.length === 0) {
-      fs.log.push('🃏 ' + curNow.name + ' は手札がないためスキップ');
-      advanceTurn();
-      return;
-    }
-    const action = botDecideAction(curNow);
-    if(!action) {
-      // フォールバック: 最初のカードを捨てる
-      // ただし、ヒント満タンなら出す
-      if(fs.hintTokens >= fs.maxHintTokens) {
-        handlePlay(curNow.id, 0);
-      } else {
-        handleDiscard(curNow.id, 0);
-      }
-      return;
-    }
-    if(action.action === 'play') {
-      handlePlay(curNow.id, action.cardIdx);
-    } else if(action.action === 'discard') {
-      handleDiscard(curNow.id, action.cardIdx);
-    } else if(action.action === 'hint') {
-      handleHint(curNow.id, action.targetId, action.hintType, action.hintValue);
-    }
-  }, delay);
-}
-
-function clearBotTimers() {
-  if(botActionTimer) { clearTimeout(botActionTimer); botActionTimer = null; }
-}
-
-// ============================================================
 // UTILS
 // ============================================================
 function g(id) { return document.getElementById(id); }
@@ -913,35 +654,12 @@ async function createRoom() {
     fs = initFs([{id:myId, name:myName}]);
     gs = pubFs(fs);
     fbListen();
+    pgSaveSession();
     setErr(''); setSt('');
     g('disp-code').textContent = code;
     g('host-settings').style.display = '';
-    show('waiting'); saveSession(); refreshWait(); bcast();
+    show('waiting'); refreshWait(); bcast();
   } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
-}
-
-// ソロモード（通信なし、ホスト＋BOT で遊ぶ）
-function startSoloMode() {
-  const name = g('in-name').value.trim() || 'プレイヤー';
-  myName = name; isHost = true;
-  roomCode = ''; fbRoom = ''; // 通信なし
-  myId = genId();
-  fs = initFs([{id:myId, name:myName}]);
-  gs = pubFs(fs);
-  // BOTを2体自動追加（花火は2-5人、合計3人にする）
-  for(let i = 0; i < 2; i++) {
-    const used = fs.players.map(p => p.name);
-    let botName = null;
-    for(const n of BOT_NAMES) {
-      if(!used.includes(n)) { botName = n; break; }
-    }
-    if(!botName) botName = '🤖BOT' + (i+1);
-    fs.players.push({id:'bot_'+i, name:botName, hand:[], isBot:true});
-  }
-  setErr(''); setSt('');
-  g('disp-code').textContent = 'ソロ';
-  g('host-settings').style.display = '';
-  show('waiting'); refreshWait(); bcast();
 }
 
 async function joinRoom() {
@@ -959,9 +677,10 @@ async function joinRoom() {
     if(!meta) { setErr('ルームが見つかりません'); setSt(''); return; }
     if(meta.game !== 'hanabi') { setErr('ゲーム種別が違います'); setSt(''); return; }
     fbListen();
+    pgSaveSession();
     fbSendToHost({type:'join', name:myName, id:myId});
     setSt('接続しました...');
-    show('waiting'); saveSession();
+    show('waiting');
     g('disp-code').textContent = code;
     g('host-settings').style.display = 'none';
     g('btn-start').style.display = 'none';
@@ -976,10 +695,9 @@ async function joinRoom() {
 }
 
 function leaveRoom() {
-  clearBotTimers();
+  pgClearSession();
   fbClose(); fs=null; gs=null; isHost=false;
   myHandCards = null;
-  try { clearSession(); } catch(e) {}
   show('lobby');
 }
 
@@ -1000,19 +718,16 @@ function onMsg(d, senderPid) {
   if(!fs) return;
   switch(d.type) {
     case 'join':
+      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; } // 再接続（途中復帰）は状態再送
       if(fs.phase !== 'waiting') { fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
       if(fs.players.length >= 5) { fbSendTo(d.id, {type:'error', msg:'満員（最大5人）'}); return; }
-      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; }
       fs.players.push({id:d.id, name:d.name, hand:[]});
       bcast(); break;
     case 'action':
       handleAction(senderPid, d);
       break;
     case 'rematch':
-      _hostRematch(senderPid);
-      break;
-    case 'reconnect':
-      _hostReconnect(d, senderPid);
+      handleRematchReq(senderPid);
       break;
   }
 }
@@ -1046,7 +761,6 @@ function pubFs(f) {
     phase: f.phase,
     players: f.players.map(p => ({
       id: p.id, name: p.name,
-      isBot: !!p.isBot,
       // hand の中身は public で送る（各自の画面で「自分のもの」は隠して表示）
       hand: p.hand.map(c => ({
         cardId: c.cardId,
@@ -1075,12 +789,7 @@ function bcast() {
   gs = pubFs(fs);
   fbBroadcast({type:'gs', s:gs});
   onGsUpdate(gs);
-  // BOT行動スケジュール
-  if(isHost && fs && fs.phase === 'playing') {
-    scheduleBotTurn();
-  } else if(isHost) {
-    clearBotTimers();
-  }
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 
 // ============================================================
@@ -1323,65 +1032,7 @@ function advanceTurn() {
 // ============================================================
 // REMATCH
 // ============================================================
-// ============================================================
-// REMATCH (voting)
-// ============================================================
-let _rematchVoters = [];
-
-function _renderRematchPanel(voterIds, players) {
-  const st = g('rematch-status'), vl = g('rematch-voters');
-  if(!st || !vl) return;
-  const total = (players||[]).length;
-  const validIds = voterIds.filter(id => (players||[]).some(p => p.id === id));
-  st.textContent = `再戦希望: ${validIds.length} / ${total} 人`;
-  vl.innerHTML = '';
-  validIds.forEach(id => {
-    const p = (players||[]).find(pp => pp.id === id);
-    if(!p) return;
-    const t = document.createElement('span');
-    t.className = 'rematch-voter-tag';
-    t.textContent = '✅ ' + p.name;
-    vl.appendChild(t);
-  });
-}
-
-function _resetRematchUI() {
-  _rematchVoters = [];
-  const btn = g('btn-rematch');
-  if(btn) { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
-  _renderRematchPanel([], fs?.players || gs?.players || []);
-}
-
-function submitRematch() {
-  const btn = g('btn-rematch');
-  if(btn) { btn.disabled = true; btn.textContent = '⏳ 他のプレイヤーを待っています...'; }
-  if(isHost) {
-    _hostRematch(myId);
-  } else {
-    fbSendToHost({type:'rematch', id:myId, name:myName});
-  }
-}
-
-function _hostRematch(pid) {
-  if(!fs) return;
-  const player = fs.players.find(p => p.id === pid);
-  if(!player) return;
-  // 退出済みプレイヤーIDを除去
-  _rematchVoters = _rematchVoters.filter(id => fs.players.some(p => p.id === id));
-  if(_rematchVoters.includes(pid)) return;
-  _rematchVoters.push(pid);
-  fbBroadcast({type:'rematch_update', voterIds:_rematchVoters, players:fs.players.map(p=>({id:p.id,name:p.name}))});
-  _renderRematchPanel(_rematchVoters, fs.players);
-  if(_rematchVoters.length >= fs.players.length) {
-    fbBroadcast({type:'rematch_go'});
-    _actualRestart();
-  }
-}
-
-function _actualRestart() {
-  _rematchVoters = [];
-  const btn = g('btn-rematch');
-  if(btn) { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
+function restartGame() {
   if(isHost) {
     fs.phase = 'waiting';
     fs.players.forEach(p => { p.hand = []; });
@@ -1392,12 +1043,20 @@ function _actualRestart() {
     bcast();
     show('waiting');
     refreshWait();
+  } else {
+    fbSendToHost({type:'rematch'});
   }
 }
-
-// 互換用エイリアス
-function restartGame() { submitRematch(); }
-function handleRematchReq(senderPid) { _hostRematch(senderPid); }
+function handleRematchReq(senderPid) {
+  if(!fs) return;
+  fs.phase = 'waiting';
+  fs.players.forEach(p => { p.hand = []; });
+  fs.deck = []; fs.fireworks = {}; fs.discard = [];
+  fs.hintTokens = fs.maxHintTokens; fs.missTokens = 0;
+  fs.currentTurn = 0; fs.finalTurnsLeft = -1;
+  fs.log = []; fs.winner = null;
+  bcast();
+}
 
 // ============================================================
 // CLIENT HANDLERS
@@ -1405,11 +1064,8 @@ function handleRematchReq(senderPid) { _hostRematch(senderPid); }
 function handleBroadcast(msg) {
   if(msg.type === 'gs') {
     gs = msg.s;
+    if(gs){ gs.players=gs.players||[]; gs.players.forEach(p=>{p.hand=p.hand||[]; p.hand.forEach(c=>{c.hintsColor=c.hintsColor||[]; c.hintsNum=c.hintsNum||[];});}); gs.discard=gs.discard||[]; gs.log=gs.log||[]; } // FB空配列削除対策
     onGsUpdate(gs);
-  } else if(msg.type === 'rematch_update') {
-    _renderRematchPanel(msg.voterIds||[], msg.players||[]);
-  } else if(msg.type === 'rematch_go') {
-    _resetRematchUI();
   }
 }
 function handlePrivate(msg) {
@@ -1441,8 +1097,7 @@ function refreshWait() {
   gs.players.forEach(p => {
     const row = mk('div', 'player-row' + (p.id===myId?' is-me':''));
     const nameSpan = mk('span', 'player-name');
-    const prefix = p.isBot ? '' : (p.id===myId?'👤 ':'👥 ');
-    nameSpan.textContent = prefix + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
+    nameSpan.textContent = (p.id===myId?'👤 ':'👥 ') + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
     row.appendChild(nameSpan);
     list.appendChild(row);
   });
@@ -1528,32 +1183,20 @@ function renderHands() {
   const mySection = g('my-hand-section');
   mySection.innerHTML = '';
   if(me) {
-    const myTurn = (gs.currentTurn === myIdx);
-    const area = mk('div', 'hand-area is-me' + (myTurn ? ' current-turn' : ''));
+    const area = mk('div', 'hand-area is-me' + (gs.currentTurn === myIdx ? ' current-turn' : ''));
     const header = mk('div', 'hand-header');
     const nameSpan = mk('span', 'hand-name');
     nameSpan.textContent = '👤 自分の手札（自分には見えません）';
     header.appendChild(nameSpan);
-    if(myTurn) {
+    if(gs.currentTurn === myIdx) {
       const turnSpan = mk('span', 'turn-indicator');
       turnSpan.textContent = 'あなたの番';
       header.appendChild(turnSpan);
     }
     area.appendChild(header);
-    // 自分のターンの時、タップ案内
-    if(myTurn) {
-      const hint = mk('div');
-      hint.style.cssText = 'text-align:center; font-size:0.75rem; color:var(--muted); margin-bottom:6px;';
-      hint.textContent = '👆 カードをタップしてプレイ・捨て札を選べます';
-      area.appendChild(hint);
-    }
     const cards = mk('div', 'hand-cards');
     me.hand.forEach((c, idx) => {
       const card = renderMyCardElement(c, idx, {});
-      if(myTurn) {
-        card.style.cursor = 'pointer';
-        card.onclick = () => showMyCardAction(idx);
-      }
       cards.appendChild(card);
     });
     area.appendChild(cards);
@@ -1892,122 +1535,36 @@ function renderLog() {
 // ============================================================
 // ACTION SENDERS
 // ============================================================
-// カスタム確認ダイアログ（モバイルブラウザのconfirm()問題対策）
-function showConfirm(message, onOk) {
-  const modal = g('confirm-modal');
-  g('confirm-msg').textContent = message;
-  modal.style.display = 'flex';
-  const okBtn = g('confirm-ok');
-  const cancelBtn = g('confirm-cancel');
-  const cleanup = () => {
-    modal.style.display = 'none';
-    okBtn.onclick = null;
-    cancelBtn.onclick = null;
-  };
-  okBtn.onclick = () => { cleanup(); if(onOk) onOk(); };
-  cancelBtn.onclick = cleanup;
-}
-
-function confirmLeave() {
-  showConfirm('ゲームを抜けますか？', () => leaveRoom());
-}
-
-// 自分の手札をタップした時のアクション選択モーダル
-function showMyCardAction(cardIdx) {
-  if(!gs || !fs) return;
-  const myIdx = gs.players.findIndex(p => p.id === myId);
-  if(gs.currentTurn !== myIdx) return; // 自分のターンでないなら無視
-  if(isSendingAction) return;
-  
-  const me = gs.players.find(p => p.id === myId);
-  if(!me || !me.hand || !me.hand[cardIdx]) return;
-  
-  const modal = g('card-action-modal');
-  // プレビュー表示（裏向きカードを表示）
-  const preview = g('card-action-preview');
-  preview.innerHTML = '';
-  const cardEl = renderMyCardElement(me.hand[cardIdx], cardIdx, {});
-  cardEl.style.transform = 'scale(1.2)';
-  preview.appendChild(cardEl);
-  
-  modal.style.display = 'flex';
-  
-  const playBtn = g('card-action-play');
-  const discardBtn = g('card-action-discard');
-  const cancelBtn = g('card-action-cancel');
-  
-  // 捨てるはヒントトークン満タンなら無効化
-  if(gs.hintTokens >= gs.maxHintTokens) {
-    discardBtn.disabled = true;
-    discardBtn.textContent = '🗑️ 捨てる（ヒント満タンのため不可）';
-  } else {
-    discardBtn.disabled = false;
-    discardBtn.textContent = '🗑️ 捨てる';
-  }
-  
-  const cleanup = () => {
-    modal.style.display = 'none';
-    playBtn.onclick = null;
-    discardBtn.onclick = null;
-    cancelBtn.onclick = null;
-  };
-  
-  playBtn.onclick = () => {
-    cleanup();
-    sendPlay(cardIdx);
-  };
-  discardBtn.onclick = () => {
-    cleanup();
-    sendDiscard(cardIdx);
-  };
-  cancelBtn.onclick = cleanup;
-}
-
 let isSendingAction = false;
 function sendHint(targetId, hintType, hintValue) {
   if(isSendingAction) return;
   isSendingAction = true;
+  const msg = {action:'hint', targetId, hintType, hintValue};
+  if(isHost) handleAction(myId, msg);
+  else fbSendToHost({type:'action', ...msg});
+  currentAction = null; actionState = {};
   setTimeout(() => { isSendingAction = false; }, 800);
-  try {
-    const msg = {action:'hint', targetId, hintType, hintValue};
-    if(isHost) handleAction(myId, msg);
-    else fbSendToHost({type:'action', ...msg});
-    currentAction = null; actionState = {};
-  } catch(e) {
-    console.error('sendHint error', e);
-    isSendingAction = false;
-  }
 }
 function sendPlay(cardIdx) {
   if(isSendingAction) return;
-  showConfirm('このカードをプレイしますか？\n（間違っているとミス+1）', () => {
+  pgConfirm('このカードをプレイしますか？\n（間違っているとミス+1）', () => {
     isSendingAction = true;
+    const msg = {action:'play', cardIdx};
+    if(isHost) handleAction(myId, msg);
+    else fbSendToHost({type:'action', ...msg});
+    currentAction = null; actionState = {};
     setTimeout(() => { isSendingAction = false; }, 800);
-    try {
-      const msg = {action:'play', cardIdx};
-      if(isHost) handleAction(myId, msg);
-      else fbSendToHost({type:'action', ...msg});
-      currentAction = null; actionState = {};
-    } catch(e) {
-      console.error('sendPlay error', e);
-      isSendingAction = false;
-    }
   });
 }
 function sendDiscard(cardIdx) {
   if(isSendingAction) return;
-  showConfirm('このカードを捨てますか？', () => {
+  pgConfirm('このカードを捨てますか？', () => {
     isSendingAction = true;
+    const msg = {action:'discard', cardIdx};
+    if(isHost) handleAction(myId, msg);
+    else fbSendToHost({type:'action', ...msg});
+    currentAction = null; actionState = {};
     setTimeout(() => { isSendingAction = false; }, 800);
-    try {
-      const msg = {action:'discard', cardIdx};
-      if(isHost) handleAction(myId, msg);
-      else fbSendToHost({type:'action', ...msg});
-      currentAction = null; actionState = {};
-    } catch(e) {
-      console.error('sendDiscard error', e);
-      isSendingAction = false;
-    }
   });
 }
 
@@ -2016,7 +1573,6 @@ function sendDiscard(cardIdx) {
 // ============================================================
 function showResult() {
   show('result');
-  _resetRematchUI();
   if(!gs) return;
   const colors = gs.colorMode === 6 ? COLORS_6 : COLORS_5;
   const score = colors.reduce((s,c) => s + (gs.fireworks[c]||0), 0);
@@ -2071,103 +1627,74 @@ function showResult() {
   });
 }
 
-window.addEventListener('DOMContentLoaded', () => { showReconnectOption(); });
+window.addEventListener('DOMContentLoaded', () => {});
 
-// ============================================================
-// SESSION SAVE / RESTORE
-// ============================================================
-const SESSION_KEY = 'pgSession_hn';
-function saveSession() {
-  try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-      myId, myName, roomCode, fbRoom, isHost,
-      ts: Date.now()
-    }));
-  } catch(e) {}
+// ゲーム中のページ離脱警告
+window.addEventListener('beforeunload', (e) => {
+  if(fs && (fs.phase === 'playing' || fs.phase === 'setup')) {
+    e.preventDefault();
+    e.returnValue = 'ゲーム中です。本当にページを離れますか？';
+    return e.returnValue;
+  }
+});
+
+</script>
+
+<script>
+// === 再接続（途中復帰）機能 ===
+const PG_SESSION_KEY = 'pgSession_hanabi';
+function pgSaveSession(){ try{ sessionStorage.setItem(PG_SESSION_KEY, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); }catch(e){} }
+function pgLoadSession(){ try{ const r=sessionStorage.getItem(PG_SESSION_KEY); if(!r) return null; const s=JSON.parse(r); if(Date.now()-s.ts>3*60*60*1000){ pgClearSession(); return null; } return s; }catch(e){ return null; } }
+function pgClearSession(){ try{ sessionStorage.removeItem(PG_SESSION_KEY); }catch(e){} }
+function pgShowReconnect(){ const s=pgLoadSession(); const b=document.getElementById('btn-reconnect'); if(!b) return; if(!s||!s.roomCode){ b.style.display='none'; return; } b.style.display=''; b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）'; }
+function pgSaveHostState(){
+  if(!isHost || !fbRoom || typeof fs==='undefined' || !fs) return;
+  try { fbPut('hostState', {ts: Date.now(), fsJson: JSON.stringify(fs), actTs: JSON.stringify(fbLastActTs||{})}); } catch(e){}
 }
-function clearSession() {
-  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
-}
-function loadSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if(!raw) return null;
-    const s = JSON.parse(raw);
-    if(Date.now() - s.ts > 3 * 60 * 60 * 1000) { clearSession(); return null; }
-    return s;
-  } catch(e) { return null; }
-}
-function showReconnectOption() {
-  const s = loadSession();
-  if(!s) return;
-  const btn = g('btn-reconnect');
-  if(!btn) return;
-  btn.style.display = '';
-  btn.textContent = `🔄 前のルームに戻る（🎆花火 #${s.roomCode}）`;
-}
-async function reconnectToRoom() {
-  const s = loadSession();
-  if(!s) { setErr('セッションが見つかりません'); return; }
-  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
-  fbRoom = s.fbRoom; isHost = s.isHost;
-  setSt('再接続中...');
-  try {
+async function pgReconnect(){
+  const s = pgLoadSession(); if(!s) return;
+  myId=s.myId; myName=s.myName; roomCode=s.roomCode; fbRoom=s.fbRoom; isHost=s.isHost;
+  if(typeof setSt==='function') setSt('再接続中...');
+  try{
     const meta = await fbGet('meta');
-    if(!meta) {
-      clearSession();
-      setErr('ルームが見つかりません（終了済みの可能性があります）');
-      setSt(''); return;
-    }
-    fbListen();
-    if(isHost) {
-      const data = await fetch(`${fbUrl}/rooms/${fbRoom}.json`).then(r=>r.json()).catch(()=>null);
-      const savedGs = data?.broadcast?.msg?.s;
-      if(savedGs) {
-        gs = savedGs;
-        fs = JSON.parse(JSON.stringify(savedGs));
-        onGsUpdate(gs);
+    if(!meta){ pgClearSession(); pgShowReconnect(); if(typeof setErr==='function') setErr('ルームが見つかりません（終了済みの可能性）'); if(typeof setSt==='function') setSt(''); return; }
+    if(isHost){
+      const hs = await fbGet('hostState');
+      if(hs && hs.fsJson){
+        // 完全状態（非公開情報込み）から復元
+        fs = JSON.parse(hs.fsJson);
+        fbListen();
+        try { fbLastActTs = JSON.parse(hs.actTs||'{}'); } catch(e){ fbLastActTs = {}; }
+        if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+        pgSaveSession();
+        bcast();
       } else {
-        show('waiting');
-        const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
-        if(typeof refreshWait === 'function') refreshWait();
+        const bc = await fbGet('broadcast');
+        const savedGs = bc && bc.msg && bc.msg.s;
+        if(savedGs && savedGs.phase === 'waiting' && savedGs.players){
+          fs = initFs(savedGs.players.map(p=>({id:p.id, name:p.name})));
+          fbListen();
+          if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+          pgSaveSession();
+          bcast();
+        } else {
+          if(typeof setErr==='function') setErr('ルームの状態を復元できませんでした');
+          if(typeof setSt==='function') setSt('');
+          return;
+        }
       }
     } else {
+      fbListen();
       fbSendToHost({type:'join', name:myName, id:myId});
-      fbSendToHost({type:'reconnect', id:myId, name:myName});
-      setSt('接続しました！');
+      pgSaveSession();
+      if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+      const bs=document.getElementById('btn-start'); if(bs) bs.style.display='none';
       show('waiting');
-      const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
-      const bs = g('btn-start'); if(bs) bs.style.display = 'none';
-      let retries = 0;
-      const retry = setInterval(()=>{
-        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
-        fbSendToHost({type:'reconnect', id:myId, name:myName});
-        retries++;
-      }, 2000);
     }
-    setErr(''); setSt('');
-    const br = g('btn-reconnect'); if(br) br.style.display = 'none';
-  } catch(e) {
-    setErr('再接続失敗: ' + (e.message||e));
-    setSt('');
-  }
+    if(typeof setErr==='function') setErr(''); if(typeof setSt==='function') setSt('');
+  }catch(e){ if(typeof setErr==='function') setErr('再接続に失敗しました'); if(typeof setSt==='function') setSt(''); }
 }
-function _hostReconnect(d, senderPid) {
-  if(!fs) return;
-  const rp = fs.players.find(p=>p.id===d.id);
-  if(fs.phase === 'waiting') {
-    if(!rp && fs.players.length < 5) {
-      fs.players.push({id:d.id, name:d.name, hand:[]});
-    }
-    bcast();
-  } else {
-    if(rp) {
-      bcast();
-      // 必要に応じてプライベート情報を再送
-      if(typeof _resendPrivate === 'function') _resendPrivate(d.id);
-    }
-  }
-}
+setTimeout(pgShowReconnect, 300);
 </script>
 </body>
 </html>

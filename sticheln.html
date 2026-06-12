@@ -428,6 +428,7 @@ h3 { font-size: 1.0rem; color: var(--warn); margin: 8px 0; }
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
 
 <!-- デバッグログ表示エリア（画面右上、最小化） -->
 <details id="debug-log-panel" style="position:fixed; top:4px; right:4px; max-width:280px; z-index:200; background:rgba(0,0,0,0.85); border:1px solid var(--accent); border-radius:6px;">
@@ -1125,6 +1126,7 @@ function stBcast(){
     payload._myHand = myHand.length > 0 ? myHand : '__empty__';
     fbSendTo(p.id, {type:'st_gs', s:payload});
   });
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 
 // Public state generator. minusPhase中は他人のminusCardをマスク
@@ -2263,6 +2265,10 @@ function stShowReconnectOption() {
   btn.style.display = '';
   btn.textContent = '🔄 前のルームに戻る（🎯 シュティッヒルン #' + s.roomCode + '）';
 }
+function pgSaveHostState(){
+  if(!isHost || !fbRoom || !stFs) return;
+  try { fbPut('hostState', {ts: Date.now(), j: JSON.stringify(stFs), seen: JSON.stringify(fbLastSeen||{})}); } catch(e){}
+}
 async function stReconnectToRoom() {
   const s = stLoadSession();
   if(!s) { setErr('セッションが見つかりません'); return; }
@@ -2272,6 +2278,19 @@ async function stReconnectToRoom() {
   try {
     const meta = await fbGet('meta');
     if(!meta) { stClearSession(); setErr('ルームが見つかりません（終了済みの可能性）'); setSt(''); stShowReconnectOption(); return; }
+    if(isHost) {
+      const hs = await fbGet('hostState');
+      if(hs && hs.j) {
+        // 完全状態（非公開情報込み）から復元
+        stFs = JSON.parse(hs.j);
+        try { fbLastSeen = JSON.parse(hs.seen||'{}'); } catch(e){ fbLastSeen = {}; }
+        fbListen();
+        if(g('disp-code')) g('disp-code').textContent = roomCode;
+        stBcast();
+        setSt('');
+        return;
+      }
+    }
     fbListen();
     if(isHost) {
       const bc = await fbGet('broadcast');

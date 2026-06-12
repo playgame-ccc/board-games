@@ -3,6 +3,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>🐂 ニムト 6 nimmt!</title>
 <style>
@@ -323,14 +327,29 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
   flex-shrink: 0;
   font-size: 0.85rem;
 }
-
-/* ── Rematch panel ── */
-.rematch-panel { background:var(--surface); border:1px solid var(--surface3); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
-.rematch-status { font-family:var(--mono); font-size:0.85rem; color:var(--muted); }
-.rematch-voter-tag { font-family:var(--mono); font-size:0.78rem; padding:3px 10px; border-radius:12px; background:rgba(45,255,138,0.12); color:#2dff8a; border:1px solid rgba(45,255,138,0.3); }
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
+<div id="pg-confirm" style="position:fixed;inset:0;background:rgba(0,0,0,0.82);display:none;align-items:center;justify-content:center;padding:20px;z-index:99998;">
+  <div style="background:#1c1f2b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:12px;">
+    <p id="pg-confirm-msg" style="font-size:0.92rem;white-space:pre-line;margin:0;color:#f0f0f5;line-height:1.6;"></p>
+    <button id="pg-confirm-ok" style="padding:13px;border:none;border-radius:10px;background:#2dbd6e;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;">はい</button>
+    <button id="pg-confirm-cancel" style="padding:13px;border:1px solid rgba(255,255,255,0.25);border-radius:10px;background:transparent;color:#aab;font-size:0.95rem;cursor:pointer;font-family:inherit;">キャンセル</button>
+  </div>
+</div>
+<script>
+// モバイルブラウザのconfirm()ブロック対策（カスタム確認モーダル）
+function pgConfirm(message, onOk, onCancel){
+  const m=document.getElementById('pg-confirm');
+  document.getElementById('pg-confirm-msg').textContent=message;
+  m.style.display='flex';
+  const ok=document.getElementById('pg-confirm-ok'), ca=document.getElementById('pg-confirm-cancel');
+  const cleanup=()=>{m.style.display='none';ok.onclick=null;ca.onclick=null;};
+  ok.onclick=()=>{cleanup();if(onOk)onOk();};
+  ca.onclick=()=>{cleanup();if(onCancel)onCancel();};
+}
+</script>
 
 <!-- FB MODAL -->
 <div id="fb-modal" class="fb-modal" style="display:none;">
@@ -353,6 +372,7 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
 
     <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" id="btn-reconnect" style="display:none; background:rgba(45,189,110,0.15); color:#2dbd6e; border:1px solid rgba(45,189,110,0.5);" onclick="pgReconnect()"></button>
       <button class="btn btn-cow" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
       <div class="divider"></div>
       <div class="row">
@@ -363,7 +383,6 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
 
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
-    <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
 
     <div class="panel" style="margin-top:8px;">
       <h3 style="margin-bottom:10px;">ゲームルール</h3>
@@ -491,7 +510,7 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <!-- ログ -->
     <div id="game-log" class="game-log"></div>
 
-    <button class="btn btn-ghost" onclick="if(confirm('ゲームを抜けますか？'))leaveRoom()">退出</button>
+    <button class="btn btn-ghost" onclick="pgConfirm('ゲームを抜けますか？',()=>leaveRoom())">退出</button>
   </div>
 
   <!-- ===== ROUND END ===== -->
@@ -512,11 +531,7 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <div class="result-title">ゲーム終了！</div>
     <p style="text-align:center; color:var(--muted);">牛が一番少ない人の勝利</p>
     <div id="result-scores" class="score-list"></div>
-    <div id="rematch-panel" class="rematch-panel">
-      <div id="rematch-status" class="rematch-status"></div>
-      <div id="rematch-voters" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
-    </div>
-    <button id="btn-rematch" class="btn btn-cow" onclick="submitRematch()">🔄 もう一度遊ぶ（同じメンバーで再戦）</button>
+    <button class="btn btn-cow" onclick="restartGame()">🔄 もう一度遊ぶ</button>
     <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ戻る</button>
     <a href="index.html" style="text-decoration:none;"><button class="btn btn-ghost" style="width:100%;">🏠 ハブに戻る</button></a>
   </div>
@@ -642,9 +657,10 @@ async function createRoom() {
     fs = initFs([{id:myId, name:myName}]);
     gs = pubFs(fs);
     fbListen();
+    pgSaveSession();
     setErr(''); setSt('');
     g('disp-code').textContent = code;
-    show('waiting'); saveSession(); refreshWait(); bcast();
+    show('waiting'); refreshWait(); bcast();
   } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
 }
 
@@ -663,9 +679,10 @@ async function joinRoom() {
     if(!meta) { setErr('ルームが見つかりません'); setSt(''); return; }
     if(meta.game !== 'nimmt') { setErr('ゲーム種別が違います'); setSt(''); return; }
     fbListen();
+    pgSaveSession();
     fbSendToHost({type:'join', name:myName, id:myId});
     setSt('接続しました...');
-    show('waiting'); saveSession();
+    show('waiting');
     g('disp-code').textContent = code;
     g('btn-start').style.display = 'none';
     let retries = 0;
@@ -679,9 +696,9 @@ async function joinRoom() {
 }
 
 function leaveRoom() {
+  pgClearSession();
   fbClose(); fs=null; gs=null; isHost=false;
   myHand = null; selectedCardIdx = -1;
-  try { clearSession(); } catch(e) {}
   show('lobby');
 }
 
@@ -714,9 +731,9 @@ function onMsg(d, senderPid) {
   if(!fs) return;
   switch(d.type) {
     case 'join':
+      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; } // 再接続（途中復帰）は状態再送
       if(fs.phase !== 'waiting') { fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
       if(fs.players.length >= 10) { fbSendTo(d.id, {type:'error', msg:'満員（最大10人）'}); return; }
-      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; }
       fs.players.push({id:d.id, name:d.name, hand:[], cows:0});
       bcast(); break;
     case 'play':
@@ -729,10 +746,7 @@ function onMsg(d, senderPid) {
       handleNextRound(senderPid);
       break;
     case 'rematch':
-      _hostRematch(senderPid);
-      break;
-    case 'reconnect':
-      _hostReconnect(d, senderPid);
+      handleRematchReq(senderPid);
       break;
   }
 }
@@ -786,6 +800,7 @@ function bcast() {
   const me = fs.players.find(p => p.id === myId);
   if(me) myHand = me.hand.slice();
   onGsUpdate(gs);
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 
 function sendPrivateHands() {
@@ -1042,65 +1057,7 @@ function proceedToNextRound() {
 // ============================================================
 // REMATCH
 // ============================================================
-// ============================================================
-// REMATCH (voting)
-// ============================================================
-let _rematchVoters = [];
-
-function _renderRematchPanel(voterIds, players) {
-  const st = g('rematch-status'), vl = g('rematch-voters');
-  if(!st || !vl) return;
-  const total = (players||[]).length;
-  const validIds = voterIds.filter(id => (players||[]).some(p => p.id === id));
-  st.textContent = `再戦希望: ${validIds.length} / ${total} 人`;
-  vl.innerHTML = '';
-  validIds.forEach(id => {
-    const p = (players||[]).find(pp => pp.id === id);
-    if(!p) return;
-    const t = document.createElement('span');
-    t.className = 'rematch-voter-tag';
-    t.textContent = '✅ ' + p.name;
-    vl.appendChild(t);
-  });
-}
-
-function _resetRematchUI() {
-  _rematchVoters = [];
-  const btn = g('btn-rematch');
-  if(btn) { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
-  _renderRematchPanel([], fs?.players || gs?.players || []);
-}
-
-function submitRematch() {
-  const btn = g('btn-rematch');
-  if(btn) { btn.disabled = true; btn.textContent = '⏳ 他のプレイヤーを待っています...'; }
-  if(isHost) {
-    _hostRematch(myId);
-  } else {
-    fbSendToHost({type:'rematch', id:myId, name:myName});
-  }
-}
-
-function _hostRematch(pid) {
-  if(!fs) return;
-  const player = fs.players.find(p => p.id === pid);
-  if(!player) return;
-  // 退出済みプレイヤーIDを除去
-  _rematchVoters = _rematchVoters.filter(id => fs.players.some(p => p.id === id));
-  if(_rematchVoters.includes(pid)) return;
-  _rematchVoters.push(pid);
-  fbBroadcast({type:'rematch_update', voterIds:_rematchVoters, players:fs.players.map(p=>({id:p.id,name:p.name}))});
-  _renderRematchPanel(_rematchVoters, fs.players);
-  if(_rematchVoters.length >= fs.players.length) {
-    fbBroadcast({type:'rematch_go'});
-    _actualRestart();
-  }
-}
-
-function _actualRestart() {
-  _rematchVoters = [];
-  const btn = g('btn-rematch');
-  if(btn) { btn.disabled = false; btn.textContent = '🔄 もう一度遊ぶ（同じメンバーで再戦）'; }
+function restartGame() {
   if(isHost) {
     fs.phase = 'waiting';
     fs.players.forEach(p => { p.hand = []; p.cows = 0; });
@@ -1113,12 +1070,22 @@ function _actualRestart() {
     bcast();
     show('waiting');
     refreshWait();
+  } else {
+    fbSendToHost({type:'rematch'});
   }
 }
-
-// 互換用エイリアス
-function restartGame() { submitRematch(); }
-function handleRematchReq(senderPid) { _hostRematch(senderPid); }
+function handleRematchReq(senderPid) {
+  if(!fs) return;
+  fs.phase = 'waiting';
+  fs.players.forEach(p => { p.hand = []; p.cows = 0; });
+  fs.field = [[],[],[],[]];
+  fs.pendingPlays = {}; fs.pendingRowPick = null;
+  fs.revealedPlays = null; fs.roundEndScores = null;
+  fs.finalScores = null;
+  fs.trickNum = 1; fs.roundNum = 1;
+  fs.log = []; fs.winner = null;
+  bcast();
+}
 
 // ============================================================
 // CLIENT HANDLERS
@@ -1126,16 +1093,13 @@ function handleRematchReq(senderPid) { _hostRematch(senderPid); }
 function handleBroadcast(msg) {
   if(msg.type === 'gs') {
     gs = msg.s;
+    if(gs){ gs.players=gs.players||[]; gs.field=gs.field||[]; gs.log=gs.log||[]; } // FB空配列削除対策
     onGsUpdate(gs);
-  } else if(msg.type === 'rematch_update') {
-    _renderRematchPanel(msg.voterIds||[], msg.players||[]);
-  } else if(msg.type === 'rematch_go') {
-    _resetRematchUI();
   }
 }
 function handlePrivate(msg) {
   if(msg.type === 'myhand') {
-    myHand = msg.hand;
+    myHand = msg.hand || [];
     renderPlaying();
   } else if(msg.type === 'error') {
     setErr(msg.msg);
@@ -1397,12 +1361,13 @@ function renderRowPicker() {
 
 function confirmRowPick() {
   if(selectedRowIdx < 0) return;
-  if(!confirm('列' + (selectedRowIdx + 1) + 'を引き取りますか？')) return;
-  const rowIdx = selectedRowIdx;
-  g('btn-confirm-row-pick').disabled = true;
-  if(isHost) handleRowPick(myId, rowIdx);
-  else fbSendToHost({type:'pickRow', rowIdx});
-  selectedRowIdx = -1;
+  pgConfirm('列' + (selectedRowIdx + 1) + 'を引き取りますか？', () => {
+    const rowIdx = selectedRowIdx;
+    g('btn-confirm-row-pick').disabled = true;
+    if(isHost) handleRowPick(myId, rowIdx);
+    else fbSendToHost({type:'pickRow', rowIdx});
+    selectedRowIdx = -1;
+  });
 }
 
 // ============================================================
@@ -1470,7 +1435,6 @@ function renderRoundEnd() {
 
 function showResult() {
   show('result');
-  _resetRematchUI();
   if(!gs || !gs.roundEndScores) return; // gs.finalScores ではなく roundEndScores を使う（fsには finalScores があるが、gsに含めるのを忘れた場合のフォールバック）
 
   // gs に finalScores があれば優先
@@ -1500,7 +1464,7 @@ pubFs = function(f) {
   return result;
 };
 
-window.addEventListener('DOMContentLoaded', () => { showReconnectOption(); });
+window.addEventListener('DOMContentLoaded', () => {});
 
 // ゲーム中のページ離脱警告
 window.addEventListener('beforeunload', (e) => {
@@ -1510,102 +1474,63 @@ window.addEventListener('beforeunload', (e) => {
     return e.returnValue;
   }
 });
+</script>
 
-// ============================================================
-// SESSION SAVE / RESTORE
-// ============================================================
-const SESSION_KEY = 'pgSession_nm';
-function saveSession() {
-  try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-      myId, myName, roomCode, fbRoom, isHost,
-      ts: Date.now()
-    }));
-  } catch(e) {}
+<script>
+// === 再接続（途中復帰）機能 ===
+const PG_SESSION_KEY = 'pgSession_nimmt';
+function pgSaveSession(){ try{ sessionStorage.setItem(PG_SESSION_KEY, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); }catch(e){} }
+function pgLoadSession(){ try{ const r=sessionStorage.getItem(PG_SESSION_KEY); if(!r) return null; const s=JSON.parse(r); if(Date.now()-s.ts>3*60*60*1000){ pgClearSession(); return null; } return s; }catch(e){ return null; } }
+function pgClearSession(){ try{ sessionStorage.removeItem(PG_SESSION_KEY); }catch(e){} }
+function pgShowReconnect(){ const s=pgLoadSession(); const b=document.getElementById('btn-reconnect'); if(!b) return; if(!s||!s.roomCode){ b.style.display='none'; return; } b.style.display=''; b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）'; }
+function pgSaveHostState(){
+  if(!isHost || !fbRoom || typeof fs==='undefined' || !fs) return;
+  try { fbPut('hostState', {ts: Date.now(), fsJson: JSON.stringify(fs), actTs: JSON.stringify(fbLastActTs||{})}); } catch(e){}
 }
-function clearSession() {
-  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
-}
-function loadSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if(!raw) return null;
-    const s = JSON.parse(raw);
-    if(Date.now() - s.ts > 3 * 60 * 60 * 1000) { clearSession(); return null; }
-    return s;
-  } catch(e) { return null; }
-}
-function showReconnectOption() {
-  const s = loadSession();
-  if(!s) return;
-  const btn = g('btn-reconnect');
-  if(!btn) return;
-  btn.style.display = '';
-  btn.textContent = `🔄 前のルームに戻る（🐂ニムト #${s.roomCode}）`;
-}
-async function reconnectToRoom() {
-  const s = loadSession();
-  if(!s) { setErr('セッションが見つかりません'); return; }
-  myId = s.myId; myName = s.myName; roomCode = s.roomCode;
-  fbRoom = s.fbRoom; isHost = s.isHost;
-  setSt('再接続中...');
-  try {
+async function pgReconnect(){
+  const s = pgLoadSession(); if(!s) return;
+  myId=s.myId; myName=s.myName; roomCode=s.roomCode; fbRoom=s.fbRoom; isHost=s.isHost;
+  if(typeof setSt==='function') setSt('再接続中...');
+  try{
     const meta = await fbGet('meta');
-    if(!meta) {
-      clearSession();
-      setErr('ルームが見つかりません（終了済みの可能性があります）');
-      setSt(''); return;
-    }
-    fbListen();
-    if(isHost) {
-      const data = await fetch(`${fbUrl}/rooms/${fbRoom}.json`).then(r=>r.json()).catch(()=>null);
-      const savedGs = data?.broadcast?.msg?.s;
-      if(savedGs) {
-        gs = savedGs;
-        fs = JSON.parse(JSON.stringify(savedGs));
-        onGsUpdate(gs);
+    if(!meta){ pgClearSession(); pgShowReconnect(); if(typeof setErr==='function') setErr('ルームが見つかりません（終了済みの可能性）'); if(typeof setSt==='function') setSt(''); return; }
+    if(isHost){
+      const hs = await fbGet('hostState');
+      if(hs && hs.fsJson){
+        // 完全状態（非公開情報込み）から復元
+        fs = JSON.parse(hs.fsJson);
+        fbListen();
+        try { fbLastActTs = JSON.parse(hs.actTs||'{}'); } catch(e){ fbLastActTs = {}; }
+        if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+        pgSaveSession();
+        bcast();
       } else {
-        show('waiting');
-        const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
-        if(typeof refreshWait === 'function') refreshWait();
+        const bc = await fbGet('broadcast');
+        const savedGs = bc && bc.msg && bc.msg.s;
+        if(savedGs && savedGs.phase === 'waiting' && savedGs.players){
+          fs = initFs(savedGs.players.map(p=>({id:p.id, name:p.name})));
+          fbListen();
+          if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+          pgSaveSession();
+          bcast();
+        } else {
+          if(typeof setErr==='function') setErr('ルームの状態を復元できませんでした');
+          if(typeof setSt==='function') setSt('');
+          return;
+        }
       }
     } else {
+      fbListen();
       fbSendToHost({type:'join', name:myName, id:myId});
-      fbSendToHost({type:'reconnect', id:myId, name:myName});
-      setSt('接続しました！');
+      pgSaveSession();
+      if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+      const bs=document.getElementById('btn-start'); if(bs) bs.style.display='none';
       show('waiting');
-      const dc = g('disp-code'); if(dc) dc.textContent = roomCode;
-      const bs = g('btn-start'); if(bs) bs.style.display = 'none';
-      let retries = 0;
-      const retry = setInterval(()=>{
-        if(!fbRoom || retries >= 5) { clearInterval(retry); return; }
-        fbSendToHost({type:'reconnect', id:myId, name:myName});
-        retries++;
-      }, 2000);
     }
-    setErr(''); setSt('');
-    const br = g('btn-reconnect'); if(br) br.style.display = 'none';
-  } catch(e) {
-    setErr('再接続失敗: ' + (e.message||e));
-    setSt('');
-  }
+    if(typeof setErr==='function') setErr(''); if(typeof setSt==='function') setSt('');
+  }catch(e){ if(typeof setErr==='function') setErr('再接続に失敗しました'); if(typeof setSt==='function') setSt(''); }
 }
-function _hostReconnect(d, senderPid) {
-  if(!fs) return;
-  const rp = fs.players.find(p=>p.id===d.id);
-  if(fs.phase === 'waiting') {
-    if(!rp && fs.players.length < 10) {
-      fs.players.push({id:d.id, name:d.name, hand:[], cows:0});
-    }
-    bcast();
-  } else {
-    if(rp) {
-      bcast();
-      // 必要に応じてプライベート情報を再送
-      if(typeof _resendPrivate === 'function') _resendPrivate(d.id);
-    }
-  }
-}
+setTimeout(pgShowReconnect, 300);
 </script>
 </body>
 </html>

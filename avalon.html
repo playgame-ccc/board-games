@@ -3,6 +3,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>⚔️ アヴァロン</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -802,6 +806,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
 <!-- ===== FIREBASE SETUP MODAL ===== -->
 <div id="fb-modal" class="fb-modal" style="display:none;">
   <div class="fb-modal-box">
@@ -2035,6 +2040,7 @@ function bcast() {
   }
   if(fs.phase==='playing'){renderGame(); if(isSolo) scheduleAI();}
   if(fs.phase==='waiting') refreshWait();
+  if(typeof pgSaveHostStateTb==='function') pgSaveHostStateTb();
 }
 // ============================================================
 // TIMEBOMB DECLARATION
@@ -3686,6 +3692,7 @@ function avBcast(){
   if(avFs.phase==='waiting') avRefreshWaiting();
   if(avFs.phase!=='night'&&avFs.phase!=='waiting') avRenderPhase();
   if(isSolo&&avFs.phase!=='night'&&avFs.phase!=='waiting'&&avFs.phase!=='result') avScheduleAI();
+  if(typeof pgSaveHostStateAv==='function') pgSaveHostStateAv();
 }
 
 // ============================================================
@@ -5224,6 +5231,14 @@ function showReconnectOption() {
   btn.textContent = `🔄 前のルームに戻る（${s.gameMode === 'avalon' ? '⚔️アヴァロン' : '💣タイムボム'} #${s.roomCode}）`;
 }
 
+function pgSaveHostStateTb(){
+  if(!isHost || !fbRoom || typeof fs==='undefined' || !fs) return;
+  try { fbPut('hostState_tb', {ts: Date.now(), j: JSON.stringify(fs), seen: JSON.stringify(fbLastTs||{})}); } catch(e){}
+}
+function pgSaveHostStateAv(){
+  if(!isHost || !fbRoom || typeof avFs==='undefined' || !avFs) return;
+  try { fbPut('hostState_av', {ts: Date.now(), j: JSON.stringify(avFs), seen: JSON.stringify(fbLastTs||{})}); } catch(e){}
+}
 async function reconnectToRoom() {
   const s = loadSession();
   if(!s) { setErr('セッションが見つかりません'); return; }
@@ -5246,6 +5261,28 @@ async function reconnectToRoom() {
       setSt(''); return;
     }
 
+    if(isHost) {
+      // 完全状態（非公開情報込み）からの復元を試みる
+      const hsPath = (gameMode === 'avalon') ? 'hostState_av' : 'hostState_tb';
+      const hs = await fbGet(hsPath);
+      if(hs && hs.j) {
+        if(gameMode === 'avalon') {
+          avFs = JSON.parse(hs.j);
+          fbListen();
+          try { fbLastTs = JSON.parse(hs.seen||'{}'); } catch(e){ fbLastTs = {}; }
+          avBcast();
+        } else {
+          fs = JSON.parse(hs.j);
+          fbListen();
+          try { fbLastTs = JSON.parse(hs.seen||'{}'); } catch(e){ fbLastTs = {}; }
+          bcast();
+          if(typeof onGsUpdate==='function') onGsUpdate();
+        }
+        setErr(''); setSt('');
+        g('btn-reconnect').style.display = 'none';
+        return;
+      }
+    }
     fbListen();
 
     if(isHost) {

@@ -175,6 +175,7 @@ body{min-height:100vh;padding:10px;background:radial-gradient(circle at 30% 40%,
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
 
 <!-- 確認モーダル -->
 <div id="confirm-modal" class="confirm-modal" style="display:none;">
@@ -977,7 +978,7 @@ async function fbSendToHost(data){
 }
 async function fbSaveState(){
   if(!isHost||!ctFs) return;
-  await fbPut('state',ctFs);
+  await fbPut('state',{j: JSON.stringify(ctFs)}); // JSON文字列化（FB空配列削除対策）
 }
 function fbStartPolling(){
   fbStopPolling();
@@ -1205,8 +1206,10 @@ async function ctRecoverSession(){
       return;
     }
     const bcAlive=bc.ts&&(Date.now()-bc.ts)<HOST_TIMEOUT_MS;
-    if(s.isHost&&!bcAlive){
-      const fs=await fbGet('state');
+    let fsPre=null;
+    if(s.isHost){ const fs0=await fbGet('state'); fsPre=(fs0 && fs0.j) ? JSON.parse(fs0.j) : fs0; }
+    if(s.isHost&&(!bcAlive||(fsPre&&fsPre.host===s.myId))){ // 自分が最後のホストなら即復帰可
+      const fs=fsPre;
       if(!fs){
         g('recover-error').textContent='ゲーム状態が取得できません';
         clearSession();
@@ -1230,7 +1233,7 @@ async function ctRecoverSession(){
     fbStartPolling();
     ctLastBcastSeenAt=Date.now();
     g('disp-code').textContent=roomCode;
-    show('waiting');
+    if(!isHost || !ctFs || ctFs.phase==='waiting') show('waiting'); // 進行中ホスト復帰はctBcast内onBroadcastが画面遷移済み
     g('recover-error').textContent='';
     g('recover-card').style.display='none';
   }catch(e){

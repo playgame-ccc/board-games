@@ -3,6 +3,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>🧵 ITO</title>
 <style>
@@ -257,6 +261,26 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
+<div id="pg-confirm" style="position:fixed;inset:0;background:rgba(0,0,0,0.82);display:none;align-items:center;justify-content:center;padding:20px;z-index:99998;">
+  <div style="background:#1c1f2b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:12px;">
+    <p id="pg-confirm-msg" style="font-size:0.92rem;white-space:pre-line;margin:0;color:#f0f0f5;line-height:1.6;"></p>
+    <button id="pg-confirm-ok" style="padding:13px;border:none;border-radius:10px;background:#2dbd6e;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;">はい</button>
+    <button id="pg-confirm-cancel" style="padding:13px;border:1px solid rgba(255,255,255,0.25);border-radius:10px;background:transparent;color:#aab;font-size:0.95rem;cursor:pointer;font-family:inherit;">キャンセル</button>
+  </div>
+</div>
+<script>
+// モバイルブラウザのconfirm()ブロック対策（カスタム確認モーダル）
+function pgConfirm(message, onOk, onCancel){
+  const m=document.getElementById('pg-confirm');
+  document.getElementById('pg-confirm-msg').textContent=message;
+  m.style.display='flex';
+  const ok=document.getElementById('pg-confirm-ok'), ca=document.getElementById('pg-confirm-cancel');
+  const cleanup=()=>{m.style.display='none';ok.onclick=null;ca.onclick=null;};
+  ok.onclick=()=>{cleanup();if(onOk)onOk();};
+  ca.onclick=()=>{cleanup();if(onCancel)onCancel();};
+}
+</script>
 
 <!-- FB MODAL -->
 <div id="fb-modal" class="fb-modal" style="display:none;">
@@ -266,16 +290,6 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <input class="input" id="fb-url" type="text" placeholder="https://xxxx-default-rtdb.firebaseio.com">
     <button class="btn btn-pink" onclick="saveFbConfig()">設定して始める</button>
     <button class="btn btn-ghost" onclick="g('fb-modal').style.display='none'">あとで</button>
-  </div>
-</div>
-
-<!-- 確認モーダル -->
-<div id="confirm-modal" class="fb-modal" style="display:none;">
-  <div class="fb-modal-inner">
-    <h2 id="confirm-title" style="font-size:1.1rem; text-align:left;">確認</h2>
-    <p id="confirm-msg" style="font-size:0.9rem; white-space:pre-line;"></p>
-    <button class="btn btn-green" id="confirm-ok">はい</button>
-    <button class="btn btn-ghost" id="confirm-cancel">キャンセル</button>
   </div>
 </div>
 
@@ -289,14 +303,13 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
 
     <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" id="btn-reconnect" style="display:none; background:rgba(45,189,110,0.15); color:#2dbd6e; border:1px solid rgba(45,189,110,0.5);" onclick="pgReconnect()"></button>
       <button class="btn btn-pink" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
       <div class="divider"></div>
       <div class="row">
         <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
         <button class="btn btn-blue" onclick="joinRoom()">参加</button>
       </div>
-      <div class="divider"></div>
-      <button class="btn btn-green" onclick="startSoloMode()">🤖 ソロプレイ（BOTと対戦）</button>
     </div>
 
     <div id="lobby-status" class="status-txt"></div>
@@ -309,12 +322,11 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
         各プレイヤーに1〜100の数字カードが配られ、テーマに沿って自分の数字を<strong style="color:var(--ito-pink);">言葉で表現</strong>。<br>
         全員で<strong style="color:var(--green);">数字の小さい順</strong>にカードを出していく。<br>
         小さいと思った人から順番に出して、間違えるとライフ-1。<br>
-        <strong style="color:var(--green);">3ラウンド成功で勝利！</strong>（ライフ0で敗北）
+        ライフが0になる前に全員出し切れば成功！
       </p>
       <p style="font-size:0.78rem; color:var(--muted); line-height:1.6; margin-top:10px;">
         💡 数字を直接言うのは禁止。<br>
-        💡 ヒントは言葉のみ（テーマに沿って）。<br>
-        💡 1ラウンドで全員のカードを出し切ると成功。新しい数字とテーマで次へ。
+        💡 ヒントは言葉のみ（テーマに沿って）。
       </p>
     </div>
 
@@ -342,13 +354,6 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <!-- ホストのみの設定 -->
     <div id="host-settings" style="display:none;">
       <h3 style="margin-bottom:8px; font-size:0.9rem;">ゲーム設定（ホストのみ）</h3>
-      <div class="setting-row">
-        <label>🤖 BOTを追加</label>
-        <div style="display:flex; gap:6px;">
-          <button class="toggle-btn" onclick="addBot()">+ BOT追加</button>
-          <button class="toggle-btn" onclick="removeBot()">- BOT削除</button>
-        </div>
-      </div>
       <div class="setting-row">
         <label>❤️ ライフ数</label>
         <div class="toggle-group">
@@ -455,7 +460,7 @@ h3 { font-size: 1rem; color: var(--muted); font-family: var(--mono); text-transf
     <!-- ログ -->
     <div id="game-log" class="game-log"></div>
 
-    <button class="btn btn-ghost" onclick="confirmLeave()">退出</button>
+    <button class="btn btn-ghost" onclick="pgConfirm('ゲームを抜けますか？',()=>leaveRoom())">退出</button>
   </div>
 
   <!-- ===== RESULT ===== -->
@@ -1059,178 +1064,6 @@ let myNumber = null; // 自分の数字
 let mySubmittedExpression = '';
 
 // ============================================================
-// BOT
-// ============================================================
-let botCounter = 0;
-let botActionTimers = {}; // botId -> timeoutId（重複防止）
-const BOT_NAMES = ['🤖アル', '🤖ベル', '🤖カイ', '🤖ドラ', '🤖エム', '🤖フウ', '🤖ジン', '🤖ハル', '🤖ナナ'];
-function genBotId() { return 'bot_' + Math.random().toString(36).slice(2,8); }
-
-function addBot() {
-  if(!isHost || !fs || fs.phase !== 'waiting') return;
-  if(fs.players.length >= 10) { setSt('満員（最大10人）'); return; }
-  // 未使用の名前を選択
-  const used = fs.players.map(p => p.name);
-  let botName = null;
-  for(const n of BOT_NAMES) {
-    if(!used.includes(n)) { botName = n; break; }
-  }
-  if(!botName) botName = '🤖BOT' + (++botCounter);
-  const botId = genBotId();
-  fs.players.push({id:botId, name:botName, number:null, expression:'', played:false, isBot:true});
-  bcast();
-}
-
-function removeBot() {
-  if(!isHost || !fs || fs.phase !== 'waiting') return;
-  // 最後に追加したBOTを削除
-  for(let i = fs.players.length-1; i >= 0; i--) {
-    if(fs.players[i].isBot) {
-      fs.players.splice(i, 1);
-      bcast();
-      return;
-    }
-  }
-}
-
-// BOTが「自分の数字」をどう表現するか（テーマに応じた言葉を選ぶ）
-// 中級レベル: 数字に応じた段階的な表現を返す
-function botGenerateExpression(num, theme, range) {
-  // 数字を1〜100スケールに正規化
-  const norm = Math.round((num / range) * 100);
-  // 各テーマで使う段階的表現
-  // 一般的な比較語ベース（テーマに依存しない）
-  const lowWords = ['ほぼ無', 'すごく少ない', 'ちょっとだけ', '小さい', '弱い'];
-  const midLowWords = ['普通より少なめ', 'やや弱い', '平均以下', '中の下'];
-  const midWords = ['普通', '中くらい', 'まあまあ', 'ちょうどいい'];
-  const midHighWords = ['普通より多い', 'やや強い', '中の上', 'まずまず多い'];
-  const highWords = ['多い', '大きい', '強い', 'かなり', 'たくさん'];
-  const veryHighWords = ['めっちゃ', '超', '最強', 'とんでもなく', 'マックス'];
-  
-  let pool;
-  if(norm <= 15) pool = lowWords;
-  else if(norm <= 35) pool = midLowWords;
-  else if(norm <= 55) pool = midWords;
-  else if(norm <= 75) pool = midHighWords;
-  else if(norm <= 90) pool = highWords;
-  else pool = veryHighWords;
-  
-  // テーマのlow/highの単語を使った表現も
-  const themeBase = theme && theme.text ? theme.text : '';
-  const lowExample = theme && theme.low ? theme.low : '';
-  const highExample = theme && theme.high ? theme.high : '';
-  
-  // テーマ依存の追加候補
-  const extra = [];
-  if(norm <= 20 && lowExample) extra.push(lowExample);
-  if(norm >= 80 && highExample) extra.push(highExample);
-  if(norm >= 35 && norm <= 65 && themeBase) extra.push('普通の' + themeBase);
-  
-  const all = [...pool, ...extra];
-  return all[Math.floor(Math.random() * all.length)];
-}
-
-// BOTが「今カードを出すべきか」判断する
-// 中級: 自分の数字が、まだ出していないプレイヤーの中で順序的に最も「先に出すべき」かを判定
-function botShouldPlay(botPlayer) {
-  if(botPlayer.played || botPlayer.number === null) return false;
-  if(!botPlayer.expression) return false; // 表現していなければ出せない
-  const order = fs.order || 'asc';
-  const myNum = botPlayer.number;
-  const notPlayed = fs.players.filter(p => !p.played && p.id !== botPlayer.id);
-  if(notPlayed.length === 0) return true;
-  // 全員が表現を出しているかチェック（出していない人がいるなら待つ）
-  const allExpressed = notPlayed.every(p => p.expression);
-  if(!allExpressed) return false;
-  
-  // BOTのみの場合や、誰も出さない状況を回避するため：
-  // 「自分以外のBOTで、自分より先に出すべき数字を持つ人」がいないなら出す
-  // 人間プレイヤーがいる場合はその数字は分からないので、確率的に判断
-  const range = fs.numberRange || 100;
-  
-  // 他のBOTの数字を確認できる（ホスト側ロジック）
-  const otherBots = notPlayed.filter(p => p.isBot);
-  const otherHumans = notPlayed.filter(p => !p.isBot);
-  
-  // 他のBOTの中で自分より「先に出すべき」数字がいるかチェック
-  let botBlocks = false;
-  for(const b of otherBots) {
-    if(order === 'asc') {
-      if(b.number < myNum) { botBlocks = true; break; }
-    } else {
-      if(b.number > myNum) { botBlocks = true; break; }
-    }
-  }
-  if(botBlocks) return false; // 他のBOTが先に出すべき
-  
-  // 他のBOTで自分より先のがいない場合、人間プレイヤーが居なければ出す
-  if(otherHumans.length === 0) return true;
-  
-  // 人間プレイヤーが居る場合、確率的に判断
-  // 自分の数字が小さい（昇順）/ 大きい（降順）ほど積極的に出す
-  let shouldPlay;
-  if(order === 'asc') {
-    // 自分の数字が、残り人数で割った範囲の「自分の位置」より小さいか
-    // 例: 4人残ってて自分が3番目に小さいと思うなら(3/5)*range以下なら出す
-    const threshold = (1 / (notPlayed.length + 1)) * range * 1.5; // やや積極的
-    shouldPlay = myNum <= threshold;
-  } else {
-    const threshold = range - (1 / (notPlayed.length + 1)) * range * 1.5;
-    shouldPlay = myNum >= threshold;
-  }
-  return shouldPlay;
-}
-
-// BOTの行動をスケジュール（ゲームフェーズ変化のたびに呼ぶ）
-function scheduleBotActions() {
-  if(!isHost || !fs || fs.phase !== 'playing') return;
-  for(const p of fs.players) {
-    if(!p.isBot) continue;
-    if(p.played) continue;
-    // 表現を未送信なら一定時間後に送信
-    if(!p.expression) {
-      if(botActionTimers[p.id+'_expr']) continue; // 既に予約済み
-      const delay = 1500 + Math.random() * 2500; // 1.5〜4秒
-      botActionTimers[p.id+'_expr'] = setTimeout(() => {
-        delete botActionTimers[p.id+'_expr'];
-        if(!fs || fs.phase !== 'playing') return;
-        const bot = fs.players.find(x => x.id === p.id);
-        if(!bot || bot.played || bot.expression) return;
-        const expr = botGenerateExpression(bot.number, fs.theme, fs.numberRange || 100);
-        handleExpression(bot.id, expr);
-        // handleExpression内でbcastされ、その中で再スケジュールされる
-      }, delay);
-    } else {
-      // 表現済み: 出すかどうか判断
-      if(botActionTimers[p.id+'_play']) continue;
-      const delay = 2000 + Math.random() * 3000; // 2〜5秒
-      botActionTimers[p.id+'_play'] = setTimeout(() => {
-        delete botActionTimers[p.id+'_play'];
-        if(!fs || fs.phase !== 'playing') return;
-        const bot = fs.players.find(x => x.id === p.id);
-        if(!bot || bot.played) return;
-        if(botShouldPlay(bot)) {
-          handlePlay(bot.id);
-          // handlePlay内でbcastされ再スケジュールされる
-        } else {
-          // 出さない判断：再評価のタイマーを設定（少し長めの間隔）
-          // 状態が変わらないと永遠に出さない可能性があるので、ランダム性で動かす
-          // ただし、無限再帰防止のためここでは再スケジュールしない
-          // 次回のbcast（他プレイヤーのアクション後）で再スケジュールされる
-        }
-      }, delay);
-    }
-  }
-}
-
-function clearBotTimers() {
-  for(const k in botActionTimers) {
-    clearTimeout(botActionTimers[k]);
-  }
-  botActionTimers = {};
-}
-
-// ============================================================
 // UTILS
 // ============================================================
 function g(id) { return document.getElementById(id); }
@@ -1263,33 +1096,11 @@ async function createRoom() {
     fs = initFs([{id:myId, name:myName}]);
     gs = pubFs(fs);
     fbListen();
+    pgSaveSession();
     setErr(''); setSt('');
     g('disp-code').textContent = code;
     show('waiting'); refreshWait(); bcast();
   } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
-}
-
-// ソロモード（通信なし、ホスト＋BOT で遊ぶ）
-function startSoloMode() {
-  const name = g('in-name').value.trim() || 'プレイヤー';
-  myName = name; isHost = true;
-  roomCode = ''; fbRoom = ''; // 通信なし
-  myId = genId();
-  fs = initFs([{id:myId, name:myName}]);
-  gs = pubFs(fs);
-  // BOTを2体自動追加
-  for(let i = 0; i < 2; i++) {
-    const used = fs.players.map(p => p.name);
-    let botName = null;
-    for(const n of BOT_NAMES) {
-      if(!used.includes(n)) { botName = n; break; }
-    }
-    if(!botName) botName = '🤖BOT' + (i+1);
-    fs.players.push({id:'bot_'+i, name:botName, number:null, expression:'', played:false, isBot:true});
-  }
-  setErr(''); setSt('');
-  g('disp-code').textContent = 'ソロ';
-  show('waiting'); refreshWait(); bcast();
 }
 
 async function joinRoom() {
@@ -1307,6 +1118,7 @@ async function joinRoom() {
     if(!meta) { setErr('ルームが見つかりません'); setSt(''); return; }
     if(meta.game !== 'ito') { setErr('ゲーム種別が違います'); setSt(''); return; }
     fbListen();
+    pgSaveSession();
     fbSendToHost({type:'join', name:myName, id:myId});
     setSt('接続しました...');
     show('waiting');
@@ -1323,7 +1135,7 @@ async function joinRoom() {
 }
 
 function leaveRoom() {
-  clearBotTimers();
+  pgClearSession();
   fbClose(); fs=null; gs=null; isHost=false;
   myNumber = null; mySubmittedExpression = '';
   show('lobby');
@@ -1337,9 +1149,9 @@ function onMsg(d, senderPid) {
   if(!fs) return;
   switch(d.type) {
     case 'join':
+      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; } // 再接続（途中復帰）は状態再送
       if(fs.phase !== 'waiting') { fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
       if(fs.players.length >= 10) { fbSendTo(d.id, {type:'error', msg:'満員（最大10人）'}); return; }
-      if(fs.players.find(p=>p.id===d.id)){ bcast(); return; }
       fs.players.push({id:d.id, name:d.name, number:null, expression:'', played:false});
       bcast(); break;
     case 'expression':
@@ -1381,7 +1193,6 @@ function pubFs(f) {
       hasNumber: p.number !== null,
       expression: p.expression,
       played: p.played,
-      isBot: !!p.isBot,
     })),
     theme: f.theme,
     lives: f.lives,
@@ -1389,8 +1200,6 @@ function pubFs(f) {
     numberRange: f.numberRange || 100,
     order: f.order || 'asc',
     playedCards: f.playedCards.slice(),
-    roundsCleared: f.roundsCleared || 0,
-    roundsNeeded: f.roundsNeeded || 3,
     log: f.log.slice(-20),
     winner: f.winner,
     revealAll: f.revealAll || null, // 結果画面用
@@ -1406,18 +1215,12 @@ function bcast() {
   const me = fs.players.find(p => p.id === myId);
   if(me) myNumber = me.number;
   onGsUpdate(gs);
-  // BOTの行動をスケジュール
-  if(isHost && fs.phase === 'playing') {
-    scheduleBotActions();
-  } else if(isHost && fs.phase !== 'playing') {
-    clearBotTimers();
-  }
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 
 function sendPrivateNumbers() {
   fs.players.forEach(p => {
     if(p.id === myId) return; // ホスト自身は bcast() で更新
-    if(p.isBot) return; // BOTにはprivate送信不要
     if(p.number !== null) {
       fbSendTo(p.id, {type:'mynumber', number:p.number});
     }
@@ -1434,23 +1237,6 @@ function startGame() {
   const startBtn = g('btn-start');
   if(startBtn) { startBtn.disabled = true; startBtn.textContent = '⏳ 開始中...'; }
 
-  // ラウンド進行用の初期化
-  fs.maxLives = fs.lives;
-  fs.roundsCleared = 0;
-  fs.roundsNeeded = 3;
-  fs.phase = 'playing';
-  fs.winner = null;
-  fs.revealAll = null;
-  fs.log = [];
-  fs.log.push('🎲 ゲーム開始！全部で ' + fs.roundsNeeded + ' ラウンド成功すれば勝利');
-
-  // 第1ラウンド開始
-  startNextRound(true);
-}
-
-// 次のラウンド開始（新しい数字とテーマを配布）
-function startNextRound(isFirst) {
-  if(!fs) return;
   // ランダムにテーマ選択（直近と被らないように）
   let candidate = null;
   for(let i=0;i<30;i++) {
@@ -1472,12 +1258,14 @@ function startNextRound(isFirst) {
     p.played = false;
   });
 
+  fs.maxLives = fs.lives;
   fs.playedCards = [];
-  const roundNo = (fs.roundsCleared || 0) + 1;
-  if(isFirst) {
-    fs.log.push('⚙️ 順序: ' + (fs.order === 'desc' ? '大→小（降順）' : '小→大（昇順）') + ' / ライフ: ' + fs.lives + ' / 範囲: 1〜' + range);
-  }
-  fs.log.push('🎯 ラウンド ' + roundNo + ' / ' + fs.roundsNeeded + ' 開始！テーマ: ' + fs.theme.text);
+  fs.log = [];
+  fs.log.push('🎲 ゲーム開始！テーマ: ' + fs.theme.text);
+  fs.log.push('⚙️ 順序: ' + (fs.order === 'desc' ? '大→小（降順）' : '小→大（昇順）') + ' / ライフ: ' + fs.lives + ' / 範囲: 1〜' + range);
+  fs.phase = 'playing';
+  fs.winner = null;
+  fs.revealAll = null;
 
   bcast();
 }
@@ -1520,13 +1308,7 @@ function handlePlay(actorId) {
     // 失敗：順序が間違っていた
     fs.lives -= 1;
     actor.played = true;
-    // 失敗時は即座に公開（教訓のため、出した本人＆その時の他人の数字を全て見せる）
-    fs.playedCards.push({playerId:actor.id, name:actor.name, number:myNum, isError:true, revealed:true});
-    // まだ出してない人のカードも公開しないとプレイヤーは反省できないが、ゲーム継続なので、
-    // 過去に出したカードのみ公開状態にする
-    for(const pc of fs.playedCards){
-      pc.revealed = true;
-    }
+    fs.playedCards.push({playerId:actor.id, name:actor.name, number:myNum, isError:true});
     const directionWord = order === 'asc' ? '小さい' : '大きい';
     fs.log.push('💔 ' + actor.name + ' が ' + myNum + ' を出したが、もっと' + directionWord + '人がいた！(ライフ-1)');
     // ライフ0で失敗
@@ -1542,38 +1324,18 @@ function handlePlay(actorId) {
     return;
   }
 
-  // 成功（カードは伏せたまま積む）
+  // 成功
   actor.played = true;
-  fs.playedCards.push({playerId:actor.id, name:actor.name, number:myNum, isError:false, revealed:false});
-  fs.log.push('✅ ' + actor.name + ' がカードを出した');
+  fs.playedCards.push({playerId:actor.id, name:actor.name, number:myNum, isError:false});
+  fs.log.push('✅ ' + actor.name + ' が ' + myNum + ' を出した');
 
-  // 全員出したら1ラウンド成功
+  // 全員出したらクリア
   if(fs.players.every(p => p.played)) {
-    // 全カードを公開状態にする（このラウンドの振り返り用）
-    for(const pc of fs.playedCards){
-      pc.revealed = true;
-    }
-    fs.roundsCleared = (fs.roundsCleared || 0) + 1;
-    const needed = fs.roundsNeeded || 3;
-    
-    if(fs.roundsCleared >= needed) {
-      // 全ラウンド達成 → 勝利
-      fs.winner = 'clear';
-      fs.phase = 'result';
-      revealAll();
-      fs.log.push('🎉 ' + needed + ' ラウンド達成！完全クリア！');
-      bcast();
-      return;
-    }
-    // まだ続行：次のラウンドへ
-    fs.log.push('✨ ラウンド ' + fs.roundsCleared + ' クリア！（残り ' + (needed - fs.roundsCleared) + ' ラウンド）');
+    fs.winner = 'clear';
+    fs.phase = 'result';
+    revealAll();
+    fs.log.push('🎉 クリア！全員のカードを順番に出せた');
     bcast();
-    // 少し待ってから次ラウンド開始（演出のため）
-    setTimeout(() => {
-      if(fs && fs.phase === 'playing') {
-        startNextRound(false);
-      }
-    }, 4000);
     return;
   }
   bcast();
@@ -1591,6 +1353,7 @@ function revealAll() {
 function handleBroadcast(msg) {
   if(msg.type === 'gs') {
     gs = msg.s;
+    if(gs){ gs.players=gs.players||[]; gs.playedCards=gs.playedCards||[]; gs.log=gs.log||[]; } // FB空配列削除対策
     onGsUpdate(gs);
   }
 }
@@ -1626,8 +1389,7 @@ function refreshWait() {
   gs.players.forEach(p => {
     const row = mk('div', 'player-row' + (p.id===myId?' is-me':''));
     const nameSpan = mk('span', 'player-name');
-    const prefix = p.isBot ? '' : (p.id===myId?'👤 ':'👥 ');
-    nameSpan.textContent = prefix + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
+    nameSpan.textContent = (p.id===myId?'👤 ':'👥 ') + p.name + (p.id===gs.players[0].id?' (ホスト)':'');
     row.appendChild(nameSpan);
     list.appendChild(row);
   });
@@ -1715,19 +1477,6 @@ function renderPlaying() {
     heart.textContent = '❤️';
     lives.appendChild(heart);
   }
-  // ラウンド進捗を併記
-  if(gs.roundsNeeded && gs.roundsNeeded > 1) {
-    const roundsBox = mk('span');
-    roundsBox.style.cssText = 'margin-left:12px; font-size:0.85rem; color:var(--muted); font-family:var(--mono); letter-spacing:1px;';
-    const cleared = gs.roundsCleared || 0;
-    const needed = gs.roundsNeeded;
-    let stars = '';
-    for(let i=0;i<needed;i++){
-      stars += (i < cleared ? '⭐' : '☆');
-    }
-    roundsBox.innerHTML = stars + ' (' + cleared + '/' + needed + ')';
-    lives.appendChild(roundsBox);
-  }
 
   // 出したカード
   const pf = g('played-cards');
@@ -1739,14 +1488,7 @@ function renderPlaying() {
       const wrap = mk('div');
       wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:14px;';
       const card = mk('div', 'played-card' + (pc.isError ? ' error' : ''));
-      // 自分のカード または 公開済みカード のみ数字を表示
-      const showNumber = pc.revealed || pc.playerId === myId;
-      if(showNumber) {
-        card.textContent = pc.number;
-      } else {
-        card.textContent = '?';
-        card.style.opacity = '0.7';
-      }
+      card.textContent = pc.number;
       wrap.appendChild(card);
       const name = mk('div');
       name.style.cssText = 'font-size:0.65rem; color:var(--muted); text-align:center;';
@@ -1826,26 +1568,6 @@ function renderPlaying() {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-// カスタム確認ダイアログ（モバイルブラウザのconfirm()問題対策）
-function showConfirm(message, onOk, onCancel) {
-  const modal = g('confirm-modal');
-  g('confirm-msg').textContent = message;
-  modal.style.display = 'flex';
-  const okBtn = g('confirm-ok');
-  const cancelBtn = g('confirm-cancel');
-  const cleanup = () => {
-    modal.style.display = 'none';
-    okBtn.onclick = null;
-    cancelBtn.onclick = null;
-  };
-  okBtn.onclick = () => { cleanup(); if(onOk) onOk(); };
-  cancelBtn.onclick = () => { cleanup(); if(onCancel) onCancel(); };
-}
-
-function confirmLeave() {
-  showConfirm('ゲームを抜けますか？', () => leaveRoom());
-}
-
 let isSubmittingExp = false;
 function submitExpression() {
   if(isSubmittingExp) return;
@@ -1853,28 +1575,24 @@ function submitExpression() {
   if(!text) { alert('表現を入力してください'); return; }
   // 数字を含むチェック（半角・全角・漢数字）
   const numberRegex = /[0-9０-９一二三四五六七八九十百千万億兆零壱弐参肆伍陸漆捌玖拾]/;
+  const doSendExp = () => {
+    isSubmittingExp = true;
+    const btn = g('btn-submit-exp');
+    btn.disabled = true;
+    btn.textContent = '⏳ 送信中...';
+    if(isHost) handleExpression(myId, text);
+    else fbSendToHost({type:'expression', text});
+    setTimeout(() => {
+      isSubmittingExp = false;
+      btn.disabled = false;
+      btn.textContent = '💬 表現を更新';
+    }, 800);
+  };
   if(numberRegex.test(text)) {
-    showConfirm('数字(漢数字含む)を含んでいるようです。本当に送信しますか?\n※itoでは数字を直接言うのは禁止のルールがあります', () => {
-      doSubmitExpression(text);
-    });
+    pgConfirm('数字（漢数字含む）を含んでいるようです。本当に送信しますか？\n※itoでは数字を直接言うのは禁止のルールがあります', doSendExp);
     return;
   }
-  doSubmitExpression(text);
-}
-
-function doSubmitExpression(text) {
-  if(isSubmittingExp) return;
-  isSubmittingExp = true;
-  const btn = g('btn-submit-exp');
-  btn.disabled = true;
-  btn.textContent = '⏳ 送信中...';
-  if(isHost) handleExpression(myId, text);
-  else fbSendToHost({type:'expression', text});
-  setTimeout(() => {
-    isSubmittingExp = false;
-    btn.disabled = false;
-    btn.textContent = '💬 表現を更新';
-  }, 800);
+  doSendExp();
 }
 
 let isPlayingCard = false;
@@ -1887,8 +1605,7 @@ function playMyCard() {
   if(me.played) { alert('もうカードを出しています'); return; }
   if(!me.expression) { alert('まず表現を送信してください'); return; }
   const orderTxt = gs.order === 'desc' ? '大きい' : '小さい';
-  showConfirm(`自分のカードを出しますか？\nまだ自分より${orderTxt}数字を持つ人がいたら失敗します（ライフ-1）`, () => {
-    if(isPlayingCard) return;
+  pgConfirm(`自分のカードを出しますか？\nまだ自分より${orderTxt}数字を持つ人がいたら失敗します（ライフ-1）`, () => {
     isPlayingCard = true;
     const btn = g('btn-play-card');
     if(btn) { btn.disabled = true; btn.textContent = '⏳ 送信中...'; }
@@ -2009,6 +1726,63 @@ window.addEventListener('beforeunload', (e) => {
   }
 });
 
+</script>
+
+<script>
+// === 再接続（途中復帰）機能 ===
+const PG_SESSION_KEY = 'pgSession_ito';
+function pgSaveSession(){ try{ sessionStorage.setItem(PG_SESSION_KEY, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); }catch(e){} }
+function pgLoadSession(){ try{ const r=sessionStorage.getItem(PG_SESSION_KEY); if(!r) return null; const s=JSON.parse(r); if(Date.now()-s.ts>3*60*60*1000){ pgClearSession(); return null; } return s; }catch(e){ return null; } }
+function pgClearSession(){ try{ sessionStorage.removeItem(PG_SESSION_KEY); }catch(e){} }
+function pgShowReconnect(){ const s=pgLoadSession(); const b=document.getElementById('btn-reconnect'); if(!b) return; if(!s||!s.roomCode){ b.style.display='none'; return; } b.style.display=''; b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）'; }
+function pgSaveHostState(){
+  if(!isHost || !fbRoom || typeof fs==='undefined' || !fs) return;
+  try { fbPut('hostState', {ts: Date.now(), fsJson: JSON.stringify(fs), actTs: JSON.stringify(fbLastActTs||{})}); } catch(e){}
+}
+async function pgReconnect(){
+  const s = pgLoadSession(); if(!s) return;
+  myId=s.myId; myName=s.myName; roomCode=s.roomCode; fbRoom=s.fbRoom; isHost=s.isHost;
+  if(typeof setSt==='function') setSt('再接続中...');
+  try{
+    const meta = await fbGet('meta');
+    if(!meta){ pgClearSession(); pgShowReconnect(); if(typeof setErr==='function') setErr('ルームが見つかりません（終了済みの可能性）'); if(typeof setSt==='function') setSt(''); return; }
+    if(isHost){
+      const hs = await fbGet('hostState');
+      if(hs && hs.fsJson){
+        // 完全状態（非公開情報込み）から復元
+        fs = JSON.parse(hs.fsJson);
+        fbListen();
+        try { fbLastActTs = JSON.parse(hs.actTs||'{}'); } catch(e){ fbLastActTs = {}; }
+        if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+        pgSaveSession();
+        bcast();
+      } else {
+        const bc = await fbGet('broadcast');
+        const savedGs = bc && bc.msg && bc.msg.s;
+        if(savedGs && savedGs.phase === 'waiting' && savedGs.players){
+          fs = initFs(savedGs.players.map(p=>({id:p.id, name:p.name})));
+          fbListen();
+          if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+          pgSaveSession();
+          bcast();
+        } else {
+          if(typeof setErr==='function') setErr('ルームの状態を復元できませんでした');
+          if(typeof setSt==='function') setSt('');
+          return;
+        }
+      }
+    } else {
+      fbListen();
+      fbSendToHost({type:'join', name:myName, id:myId});
+      pgSaveSession();
+      if(document.getElementById('disp-code')) document.getElementById('disp-code').textContent = roomCode;
+      const bs=document.getElementById('btn-start'); if(bs) bs.style.display='none';
+      show('waiting');
+    }
+    if(typeof setErr==='function') setErr(''); if(typeof setSt==='function') setSt('');
+  }catch(e){ if(typeof setErr==='function') setErr('再接続に失敗しました'); if(typeof setSt==='function') setSt(''); }
+}
+setTimeout(pgShowReconnect, 300);
 </script>
 </body>
 </html>

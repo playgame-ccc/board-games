@@ -1,0 +1,2068 @@
+<!-- PARTY GAMES v4 - FAIRY DEAL -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>🧚 フェアリーディール</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a14; --surface: #131322; --surface2: #1a1a2e; --surface3: #25253d;
+  --accent: #ff9ff5;
+  --c-fair: #f0d066;     /* fairy gold */
+  --c-num: #76c4ff;      /* number blue */
+  --c-one: #ff7676;      /* one red */
+  --text: #e8e8f0; --muted: #5a5a7a;
+  --mono: 'Share Tech Mono', monospace; --sans: 'Barlow', sans-serif;
+}
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; justify-content: center;
+  background-image: radial-gradient(ellipse at 30% 10%, rgba(255,159,245,0.05) 0%, transparent 60%), radial-gradient(ellipse at 70% 90%, rgba(118,196,255,0.04) 0%, transparent 60%); }
+#app { width: 100%; max-width: 520px; padding: 16px 16px 40px; display: flex; flex-direction: column; }
+.screen { display: none; flex-direction: column; gap: 14px; animation: fadeIn 0.3s ease; }
+.screen.active { display: flex; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+h1 { font-family: var(--mono); font-size: 2.2rem; letter-spacing: 0.05em; color: var(--accent); text-shadow: 0 0 30px rgba(255,159,245,0.3); }
+h2 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); text-transform: uppercase; }
+h3 { font-size: 1rem; font-weight: 600; }
+.input { width: 100%; padding: 14px 16px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 8px; color: var(--text); font-size: 1rem; font-family: var(--sans); outline: none; }
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,159,245,0.2); }
+.input.code-input { font-family: var(--mono); letter-spacing: 8px; font-size: 1.4rem; text-align: center; }
+.btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; font-family: var(--sans); cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-purple { background: var(--accent); color: #1a1a26; box-shadow: 0 4px 20px rgba(255,159,245,0.3); }
+.btn-blue { background: var(--surface2); color: var(--c-num); border: 1px solid rgba(118,196,255,0.3); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--surface3); font-weight: 600; }
+.btn-green { background: transparent; color: #2ed87a; border: 1px solid #2ed87a; }
+.btn-red { background: transparent; color: #ff4565; border: 1px solid #ff4565; }
+.row { display: flex; gap: 10px; } .row .input { flex: 1; } .row .btn { width: auto; padding: 14px 22px; flex-shrink: 0; }
+.divider { height: 1px; background: linear-gradient(90deg, transparent, var(--surface3), transparent); }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 16px; }
+.error { color: #ff4565; font-size: 0.88rem; min-height: 18px; font-family: var(--mono); }
+.status-txt { color: var(--muted); font-size: 0.88rem; min-height: 18px; font-family: var(--mono); }
+.code-box { background: var(--surface); border: 1px solid rgba(255,159,245,0.3); border-radius: 12px; padding: 20px; text-align: center; }
+.code-box .label { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.code-box .code { font-family: var(--mono); font-size: 3rem; letter-spacing: 12px; color: var(--accent); text-shadow: 0 0 20px rgba(255,159,245,0.4); }
+.player-list { display: flex; flex-direction: column; gap: 8px; }
+.player-item { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.player-item.is-me { border-color: rgba(118,196,255,0.4); }
+.player-item.is-host { border-color: rgba(255,159,245,0.4); }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem; background: var(--surface3); }
+.firebase-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.firebase-modal.active { display: flex; }
+.firebase-modal .panel { max-width: 480px; width: 100%; }
+.firebase-modal h2 { color: var(--accent); font-size: 1.2rem; margin-bottom: 12px; }
+.firebase-modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; line-height: 1.6; }
+.firebase-modal code { font-family: var(--mono); color: var(--c-num); background: var(--surface2); padding: 2px 6px; border-radius: 4px; }
+.tiny-row { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+.section-title { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+.count-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.count-btn { flex: 1; min-width: 40px; padding: 10px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 8px; color: var(--text); font-family: var(--mono); font-weight: 700; cursor: pointer; }
+.count-btn.active { background: var(--accent); color: #1a1a26; border-color: var(--accent); }
+.game-header { background: linear-gradient(135deg, var(--surface), var(--surface2)); border: 1px solid var(--surface3); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.turn-info { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); display: flex; justify-content: space-between; }
+.deal-area { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 12px; min-height: 100px; display: flex; flex-direction: column; gap: 8px; }
+.deal-header { font-size: 0.88rem; color: var(--text); font-weight: 700; }
+.deal-cards { display: flex; gap: 14px; justify-content: center; padding: 4px; }
+
+/* Card design */
+.card {
+  width: 64px; height: 92px; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-family: var(--sans); font-weight: 900;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  border: 2px solid rgba(0,0,0,0.4);
+  background: linear-gradient(160deg, #2a2a44, #1a1a2e);
+  transition: transform 0.15s;
+}
+.card .num { font-size: 1.8rem; line-height: 1; }
+.card .lbl { font-size: 0.6rem; opacity: 0.85; margin-top: 4px; letter-spacing: 1px; }
+.card.facedown {
+  background: linear-gradient(160deg, #4a3a6e, #2a1a4e);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.card.facedown .num { font-size: 1.5rem; }
+.card.facedown .lbl { display: block; }
+.card.num-card { color: var(--c-num); border-color: #2c6fd6; background: linear-gradient(160deg, #1f3a6a, #0f1f3a); }
+.card.fairy-card { color: var(--c-fair); border-color: #b88a1a; background: linear-gradient(160deg, #4a3a16, #1a1206); }
+.card.one-card { color: var(--c-one); border-color: #c83a3a; background: linear-gradient(160deg, #4a1818, #2a0a0a); }
+.card .decl { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 0.7rem; color: var(--accent); white-space: nowrap; background: var(--surface); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--accent); }
+.card.small { width: 36px; height: 50px; }
+.card.small .num { font-size: 0.95rem; }
+.card.small .lbl { display: none; }
+.card.clickable { cursor: pointer; }
+.card.clickable:hover { transform: translateY(-4px); }
+.card.selected { box-shadow: 0 0 0 3px var(--accent), 0 2px 8px rgba(0,0,0,0.4); transform: translateY(-3px); }
+.card.unplayable { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+.hand-area { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 10px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; min-height: 80px; }
+
+.action-panel { background: var(--surface2); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.declare-input { display: flex; gap: 8px; align-items: center; }
+.declare-input label { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); min-width: 60px; }
+.declare-input select { flex: 1; padding: 8px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 6px; color: var(--text); font-family: var(--sans); font-size: 0.95rem; }
+.face-toggle { display: flex; gap: 6px; }
+.face-btn { flex: 1; padding: 8px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 6px; color: var(--text); font-family: var(--sans); font-size: 0.85rem; cursor: pointer; text-align: center; }
+.face-btn.active { background: var(--accent); color: #1a1a26; border-color: var(--accent); }
+
+.players-overview { display: flex; flex-direction: column; gap: 6px; }
+.po-item { background: var(--surface); border: 1px solid var(--surface3); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
+.po-item.is-me { border-color: var(--c-num); }
+.po-item.is-current { background: rgba(255,159,245,0.08); border-color: var(--accent); }
+.po-head { display: flex; align-items: center; gap: 6px; }
+.po-name { flex: 1; font-weight: 700; }
+.po-score { font-family: var(--mono); font-weight: 900; color: var(--accent); font-size: 1rem; }
+.po-info { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+
+.po-points { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.point-chip { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 6px; font-family: var(--mono); font-weight: 900; font-size: 0.8rem; border: 1px solid rgba(0,0,0,0.3); }
+.point-chip.num { background: #1f3a6a; color: var(--c-num); border-color: #2c6fd6; }
+.point-chip.fairy { background: #4a3a16; color: var(--c-fair); border-color: #b88a1a; }
+.point-chip.one { background: #4a1818; color: var(--c-one); border-color: #c83a3a; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
+.modal-overlay.active { display: flex; }
+.modal-content { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 18px; max-width: 460px; width: 100%; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.log-box { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 12px; max-height: 140px; overflow-y: auto; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); line-height: 1.6; }
+.log-box .log-line { padding: 1px 0; } .log-box .log-line.recent { color: var(--text); }
+.result-card { background: linear-gradient(135deg, var(--surface2), var(--surface)); border: 2px solid var(--accent); border-radius: 14px; padding: 20px; text-align: center; }
+.result-card .title { font-family: var(--mono); font-size: 1.6rem; color: var(--accent); letter-spacing: 4px; margin-bottom: 8px; }
+.result-card.win { border-color: #2ed87a; } .result-card.win .title { color: #2ed87a; }
+.trade-list { display: flex; flex-direction: column; gap: 6px; }
+.trade-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--surface2); border-radius: 6px; font-size: 0.88rem; }
+.trade-row.pending { background: rgba(255,159,245,0.08); border: 1px solid var(--accent); }
+.trade-status { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+.trade-status.want { color: #2ed87a; } .trade-status.skip { color: var(--muted); } .trade-status.pending { color: var(--accent); }
+.dir-indicator { font-family: var(--mono); font-size: 0.78rem; padding: 4px 8px; background: var(--surface2); border-radius: 6px; }
+.reversal-chip { display: inline-block; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: var(--surface3); color: var(--accent); margin-left: 6px; }
+.helper-text { font-size: 0.8rem; color: var(--muted); padding: 6px 8px; background: var(--surface2); border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<div class="firebase-modal" id="fb-modal">
+  <div class="panel">
+    <h2>⚙️ Firebase設定</h2>
+    <p>Firebase Realtime Databaseを通信に使います。<a href="https://console.firebase.google.com" target="_blank" style="color:var(--c-num);">Firebase Console</a>でDatabase URLを取得してください。</p>
+    <input class="input" id="fb-url-input" type="text" placeholder="https://xxx.firebaseio.com" value="https://playgame-3e7ba-default-rtdb.firebaseio.com" autocomplete="off">
+    <div class="error" id="fb-url-error"></div>
+    <button class="btn btn-purple" onclick="fbSaveConfig()">保存して始める</button>
+  </div>
+</div>
+
+<div id="app">
+
+<div class="screen active" id="screen-home">
+  <div style="text-align:center;margin:20px 0 6px;">
+    <div style="font-size:3.5rem;">🧚</div>
+    <h1>FAIRY DEAL</h1>
+    <div class="tiny-row" style="margin-top:8px;">ブラフ×セットコレクション / 2〜6人</div>
+  </div>
+  <div class="row"><input class="input" id="in-name" type="text" placeholder="あなたの名前" maxlength="12" autocomplete="off"></div>
+  <div class="error" id="home-err"></div>
+  <button class="btn btn-purple" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+  <div class="row">
+    <input class="input code-input" id="in-code" type="text" placeholder="ROOM" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+    <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+  </div>
+  <div class="divider"></div>
+  <button class="btn btn-green" onclick="goSolo()">🤖 ひとりで遊ぶ（CPU対戦）</button>
+  <div class="divider"></div>
+  <button class="btn btn-ghost" onclick="openRules()">📖 ルール説明</button>
+  <a href="./index.html" style="text-decoration:none;"><button class="btn btn-ghost">🔄 ロビーへ戻る</button></a>
+</div>
+
+<div class="screen" id="screen-wait">
+  <h2>待機ロビー</h2>
+  <div class="code-box">
+    <div class="label">ルームコード</div>
+    <div class="code" id="room-code">----</div>
+    <button class="btn btn-ghost" style="margin-top:10px;padding:8px;font-size:0.85rem;" onclick="copyCode()">📋 コピー</button>
+  </div>
+  <div>
+    <h3 style="margin-bottom:8px;">参加者 <span id="player-count" style="color:var(--muted);font-weight:400;">1人</span></h3>
+    <div class="player-list" id="wait-players"></div>
+  </div>
+  <div class="status-txt" id="wait-status"></div>
+  <div class="tiny-row" id="poll-indicator"></div>
+  <button class="btn btn-purple" id="btn-start-game" onclick="startGame()" style="display:none;">▶ ゲームを開始する</button>
+  <button class="btn btn-ghost" onclick="leaveRoom()">← 退出する</button>
+</div>
+
+<div class="screen" id="screen-solo">
+  <h2>🤖 ひとりで遊ぶ</h2>
+  <div>
+    <div class="section-title">プレイヤー数（CPU含む）</div>
+    <div class="count-buttons" id="solo-count-buttons"></div>
+    <div class="tiny-row" style="margin-top:6px;" id="solo-cpu-sub">CPU: 3人</div>
+  </div>
+  <div class="error" id="solo-err"></div>
+  <button class="btn btn-purple" onclick="startSoloGame()">▶ ゲーム開始</button>
+  <button class="btn btn-ghost" onclick="show('home')">← 戻る</button>
+</div>
+
+<div class="screen" id="screen-game">
+  <div class="game-header">
+    <div class="turn-info">
+      <span id="turn-text">— のターン</span>
+      <span><span class="dir-indicator" id="dir-indicator">⇨</span> 残山札: <span id="deck-count">0</span></span>
+    </div>
+    <div class="tiny-row" id="game-poll"></div>
+  </div>
+
+  <div>
+    <div class="section-title">📜 出されたカード / 取引</div>
+    <div class="deal-area" id="deal-area"></div>
+  </div>
+
+  <div id="action-zone"></div>
+
+  <div>
+    <div class="section-title">🃏 自分の手札 <span id="hand-count" style="color:var(--muted);font-family:var(--mono);"></span></div>
+    <div class="hand-area" id="my-hand"></div>
+  </div>
+
+  <div>
+    <div class="section-title">👥 全プレイヤー</div>
+    <div class="players-overview" id="players-overview"></div>
+  </div>
+
+  <div>
+    <div class="section-title">📋 ログ</div>
+    <div class="log-box" id="log-box"></div>
+  </div>
+
+  <button class="btn btn-ghost" onclick="confirmLeave()">← ロビーへ戻る</button>
+</div>
+
+<div class="screen" id="screen-result">
+  <div class="result-card" id="result-card"></div>
+  <div>
+    <div class="section-title">最終スコア</div>
+    <div class="players-overview" id="result-overview"></div>
+  </div>
+  <div>
+    <div class="section-title">📋 ログ</div>
+    <div class="log-box" id="result-log"></div>
+  </div>
+  <button class="btn btn-purple" onclick="rematch()">🔄 もう一度遊ぶ</button>
+  <button class="btn btn-ghost" onclick="show('home');leaveRoom();">← 戻る</button>
+</div>
+
+<div class="modal-overlay" id="rules-modal">
+  <div class="modal-content">
+    <h3 style="color:var(--accent);">🧚 フェアリーディール ルール</h3>
+    <div style="font-size:0.88rem;line-height:1.7;color:var(--text);">
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🎯 目的</div>
+        ブラフ×セットコレクション。最も多くの得点を集めた人が勝利。
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🃏 カード</div>
+        全75枚（1〜4：各8枚、5〜9：各7枚、フェアリー：8枚）。人数で使用枚数調整。
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">⚡ 手番の流れ</div>
+        <div style="margin-left:10px;">
+          ① 手札から2枚を選び、それぞれ数字を宣言（嘘OK）<br>
+          ② 出し方を選ぶ：表×表 / 表×裏 / 裏×裏（1回限り）<br>
+          ③ 左隣から「欲しい/いらない」を順次宣言<br>
+          ④「欲しい」: 1枚を取得、残りは出した人へ<br>
+          ⑤ 全員「いらない」: 2枚とも出した人へ<br>
+          ⑥ 山札から2枚補充。全員1巡したら進行方向反転
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">✨ 特殊カード</div>
+        <div style="margin-left:10px;">
+          <strong>フェアリー</strong>：終了時、所持枚数だけ大きい得点カードを捨てる。全員いらないで両方戻ってきたとき、フェアリーを他人に押し付け可能<br>
+          <strong>《1》</strong>：得点化した瞬間、他人の得点カード1枚と交換可能（その数字を3枚以上持っていないとき限定）
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">💯 得点計算</div>
+        <div style="margin-left:10px;">
+          ・《1》: 1枚1点<br>
+          ・フェアリー: 1〜3枚=0点、4枚=10点、5枚=20点、6枚以上=30点<br>
+          ・数字（2〜9）: 奇数枚は数字分マイナス、2枚=数字×1、4枚=数字×2、6枚=数字×3、8枚=数字×4
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🏁 終了条件</div>
+        山札が尽き、全員の手札が1枚になったらゲーム終了。残り1枚は得点化（任意）。
+      </div>
+    </div>
+    <button class="btn btn-purple" onclick="closeRules()">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="play-modal">
+  <div class="modal-content">
+    <h3>カード2枚を選んで出す</h3>
+    <div class="helper-text" id="play-helper">手札から2枚タップして選択→数字宣言→出し方を選択</div>
+    <div id="play-selected" style="display:flex;gap:10px;justify-content:center;padding:6px;"></div>
+    <div class="section-title">🃏 自分の手札（タップで選択）</div>
+    <div class="hand-area" id="play-hand"></div>
+    <div id="play-declare"></div>
+    <div id="play-face"></div>
+    <button class="btn btn-purple" id="play-confirm" disabled onclick="confirmPlay()">確定して出す</button>
+    <button class="btn btn-ghost" onclick="closePlayModal()">キャンセル</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="trade-modal">
+  <div class="modal-content">
+    <h3 id="trade-modal-title">取引</h3>
+    <div id="trade-modal-body"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-green" onclick="tradeChoice('want')">欲しい</button>
+      <button class="btn btn-ghost" onclick="tradeChoice('skip')">いらない</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pick-modal">
+  <div class="modal-content">
+    <h3 id="pick-modal-title">1枚選んでください</h3>
+    <div id="pick-modal-body"></div>
+    <button class="btn btn-ghost" onclick="closePickModal()">キャンセル</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="swap-modal">
+  <div class="modal-content">
+    <h3>《1》の効果：他プレイヤーの得点カードと交換</h3>
+    <div id="swap-info" class="helper-text"></div>
+    <div id="swap-modal-body"></div>
+    <button class="btn btn-ghost" onclick="closeSwapModal()">使わない（スキップ）</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="fairy-give-modal">
+  <div class="modal-content">
+    <h3>フェアリーを誰に押し付けますか？</h3>
+    <div class="helper-text">全員「いらない」を選択しました。フェアリーは任意の他プレイヤーの得点エリアに移せます。</div>
+    <div id="fairy-give-body"></div>
+    <button class="btn btn-ghost" onclick="closeFairyGiveModal()">自分が引き取る</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="initial-swap-modal">
+  <div class="modal-content">
+    <h3>🧚 初期フェアリーの入れ替え</h3>
+    <div class="helper-text">初期得点でフェアリーを獲得しました。手札の1枚と入れ替えできます（任意）。</div>
+    <div id="initial-swap-body"></div>
+    <button class="btn btn-ghost" onclick="keepInitialFairy()">入れ替えない（フェアリーを保持）</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="final-discard-modal">
+  <div class="modal-content">
+    <h3>🏁 最終決断：残り1枚をどうする？</h3>
+    <div class="helper-text">残り手札1枚です。得点化するか捨てるかを選んでください。</div>
+    <div id="final-discard-body"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-green" onclick="finalDiscardChoice(false)">💎 得点化する</button>
+      <button class="btn btn-red" onclick="finalDiscardChoice(true)">🗑️ 捨てる</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ============================================================
+// FIREBASE
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+let fbRoom = '';
+let fbPollTimer = null;
+let fbLastTs = {};
+let fbPollCount = 0;
+
+function fbPath(sub) { return `${fbUrl}/fd_rooms/${fbRoom}/${sub}.json`; }
+// Serialize writes per path: without this, two PUTs to the same path (e.g. 'hand'
+// then 'end' on private/{pid}) can land out of order and the later message gets
+// overwritten by the earlier one that resolved late.
+const fbWriteQueues = {};
+function fbPut(sub, val) {
+  const prev = fbWriteQueues[sub] || Promise.resolve();
+  const next = prev.then(() =>
+    fetch(fbPath(sub), {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(val)})
+  ).catch(()=>{});
+  fbWriteQueues[sub] = next;
+  return next;
+}
+async function fbGet(sub) { try { const r = await fetch(fbPath(sub)); return r.ok ? r.json() : null; } catch(e) { return null; } }
+async function fbDel(sub) {
+  if(!fbRoom) return;
+  const url = sub ? `${fbUrl}/fd_rooms/${fbRoom}/${sub}.json` : `${fbUrl}/fd_rooms/${fbRoom}.json`;
+  try { await fetch(url, {method:'DELETE'}); } catch(e) {}
+}
+function fbListen() { fbClose(); fbLastTs = {}; fbPollCount = 0; fbPoll(); fbPollTimer = setInterval(fbPoll, 500); }
+function fbClose() { if(fbPollTimer){ clearInterval(fbPollTimer); fbPollTimer=null; } fbLastTs={}; }
+async function fbPoll() {
+  if(!fbRoom || !fbUrl) return;
+  fbPollCount++;
+  const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  ['poll-indicator','game-poll'].forEach(id=>{ const el=g(id); if(el) el.textContent=`🔄 polling #${fbPollCount} (${t})`; });
+  try {
+    const res = await fetch(`${fbUrl}/fd_rooms/${fbRoom}.json`);
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data) return;
+    if(data.private?.[myId]) fbHandlePrv(data.private[myId]);
+    if(data.prompt?.[myId]) fbHandlePrompt(data.prompt[myId]);
+    if(data.broadcast) fbHandleBC(data.broadcast);
+    if(isHost && data.action) {
+      Object.keys(data.action).forEach(pid => { const v = data.action[pid]; if(v) fbHandleAct(pid, v); });
+    }
+  } catch(e) {}
+}
+function fbHandleBC(data) { if(!data?.ts || data.ts <= (fbLastTs.broadcast||0)) return; fbLastTs.broadcast = data.ts; if(!isHost) onMsg(data.msg, 'host'); }
+function fbHandlePrv(data) { if(!data?.ts || data.ts <= (fbLastTs.prv||0)) return; fbLastTs.prv = data.ts; if(!isHost) onMsg(data.msg, 'host'); }
+function fbHandlePrompt(data) { if(!data?.ts || data.ts <= (fbLastTs.prompt||0)) return; fbLastTs.prompt = data.ts; if(!isHost) onMsg(data.msg, 'host'); }
+function fbHandleAct(pid, data) { if(!data?.ts || data.ts <= (fbLastTs[pid]||0)) return; if(pid === myId) return; fbLastTs[pid] = data.ts; onMsg(data.msg, pid); }
+function fbBroadcast(msg) { fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg) { fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+// Prompts use their own channel so they can't be overwritten by 'hand' state messages
+function fbSendPrompt(pid, msg) { fbPut(`prompt/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg) { fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+async function checkFbConfig() {
+  if(!fbUrl) { showFbModal(); return false; }
+  try { const r = await fetch(`${fbUrl}/.json?shallow=true`); if(!r.ok && r.status !== 404) { setHomeErr('Firebase接続エラー'); return false; } }
+  catch(e) { setHomeErr('Firebase接続失敗'); return false; }
+  return true;
+}
+function showFbModal() { g('fb-modal').classList.add('active'); }
+function fbSaveConfig() {
+  const url = g('fb-url-input').value.trim().replace(/\/$/, '');
+  if(!url.startsWith('https://') || !url.includes('firebaseio')) { g('fb-url-error').textContent='有効なFirebase URLを入力してください'; return; }
+  fbUrl = url; localStorage.setItem(FB_KEY, fbUrl);
+  g('fb-modal').classList.remove('active'); g('fb-url-error').textContent='';
+}
+
+function g(id) { return document.getElementById(id); }
+function show(name) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); const el = g('screen-'+name); if(el) el.classList.add('active'); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function setHomeErr(msg) { g('home-err').textContent = msg; }
+
+// ============================================================
+// FAIRY DEAL CONSTANTS
+// ============================================================
+// Card values: 1-9 (number cards) and 'F' (fairy).
+// Counts in full deck: 1-4 = 8 each, 5-9 = 7 each, F = 8. Total = 32+35+8 = 75.
+const CARD_COUNTS = { 1:8, 2:8, 3:8, 4:8, 5:7, 6:7, 7:7, 8:7, 9:7, F:8 };
+// Usage by player count
+const USE_CARDS = { 2:68, 3:72, 4:72, 5:70, 6:72 };
+const HAND_SIZE = 5;
+const POINTS_FAIRY = { 0:0, 1:0, 2:0, 3:0, 4:10, 5:20 }; // 6+ = 30
+
+function fairyPoints(count) {
+  if(count <= 3) return 0;
+  if(count === 4) return 10;
+  if(count === 5) return 20;
+  return 30;
+}
+
+function scoreOf(points) {
+  // points is an array of values: 1, 2..9, or 'F'
+  let total = 0;
+  const counts = {};
+  for(const c of points) counts[c] = (counts[c]||0)+1;
+  // 1: each = 1 pt
+  total += (counts[1]||0);
+  // F: tiered
+  total += fairyPoints(counts.F||0);
+  // 2-9: set bonuses
+  for(let v=2; v<=9; v++) {
+    const cnt = counts[v]||0;
+    if(cnt === 0) continue;
+    if(cnt % 2 === 1) total -= v;        // 奇数枚 = 数字分マイナス
+    else if(cnt === 2) total += v;       // 2枚 = 数字×1
+    else if(cnt === 4) total += v * 2;
+    else if(cnt === 6) total += v * 3;
+    else if(cnt === 8) total += v * 4;
+    // theoretically max 8 (we have only 8 copies)
+  }
+  return total;
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '';
+let isHost = false, roomCode = '';
+let isSolo = false, soloCount = 3;
+let gameMode = null;
+let gs = null;
+let myHand = []; // [{id, v}]   v is 1-9 or 'F'
+
+let playSel = [];   // selected card ids for play modal
+let playDecl = [null, null];
+let playFace = ['up', 'up'];  // or 'down'
+
+function setSoloCount(n) {
+  soloCount = n;
+  document.querySelectorAll('#screen-solo .count-btn').forEach(b=>b.classList.toggle('active', parseInt(b.dataset.n)===n));
+  g('solo-cpu-sub').textContent = `CPU: ${n-1}人`;
+}
+function buildSoloButtons() {
+  const c = g('solo-count-buttons');
+  c.innerHTML = '';
+  for(let n=2; n<=6; n++) {
+    const b = document.createElement('button');
+    b.className = 'count-btn' + (n===soloCount?' active':'');
+    b.dataset.n = n;
+    b.textContent = n;
+    b.onclick = () => setSoloCount(n);
+    c.appendChild(b);
+  }
+}
+function goSolo() { show('solo'); buildSoloButtons(); }
+
+// ============================================================
+// ROOM
+// ============================================================
+async function createRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setHomeErr('名前を入力してください'); return; }
+  myName = name; myId = genId();
+  isHost = true; roomCode = randomCode(); fbRoom = roomCode; gameMode = 'online';
+  await fbDel('');
+  await fbPut('meta', { host: myId, code: roomCode, ts: Date.now() });
+  gs = freshGameState();
+  gs.players.push({ id:myId, name:myName, isCpu:false });
+  await fbPut('lobby', { players: gs.players, started:false });
+  show('wait');
+  g('room-code').textContent = roomCode;
+  g('btn-start-game').style.display = 'block';
+  renderWaitPlayers();
+  fbListen();
+}
+async function joinRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setHomeErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim().toUpperCase();
+  if(!/^[A-Z0-9]{4}$/.test(code)) { setHomeErr('4桁のルームコードを入力してください'); return; }
+  myName = name; myId = genId();
+  isHost = false; roomCode = code; fbRoom = roomCode; gameMode = 'online';
+  const meta = await fbGet('meta');
+  if(!meta) { setHomeErr('ルームが見つかりません'); return; }
+  fbSendToHost({ t:'join', id:myId, name:myName });
+  show('wait');
+  g('room-code').textContent = roomCode;
+  g('btn-start-game').style.display = 'none';
+  fbListen();
+}
+function randomCode() { const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=ch[Math.floor(Math.random()*ch.length)]; return s; }
+function copyCode() { navigator.clipboard.writeText(roomCode).catch(()=>{}); }
+function renderWaitPlayers() {
+  const list = g('wait-players'); list.innerHTML = '';
+  const players = gs ? gs.players : [];
+  g('player-count').textContent = players.length + '人';
+  players.forEach((p,i)=>{
+    const div = document.createElement('div');
+    div.className = 'player-item' + (p.id===myId?' is-me':'') + (i===0?' is-host':'');
+    div.innerHTML = `<div class="avatar">${p.name.slice(0,2)}</div><div style="flex:1;">${p.name}${i===0?' 👑':''}${p.isCpu?' 🤖':''}</div>`;
+    list.appendChild(div);
+  });
+  const btn = g('btn-start-game');
+  if(isHost) {
+    const n = players.length;
+    btn.disabled = n < 2 || n > 6;
+    btn.textContent = (n<2) ? `▶ 開始（あと${2-n}人必要）` : (n>6 ? '▶ 開始（最大6人）' : '▶ ゲームを開始する');
+  }
+}
+async function leaveRoom() {
+  fbClose();
+  if(gameMode === 'online' && fbRoom) { if(isHost) { await fbDel(''); } else { await fbDel(`action/${myId}`); } }
+  isHost=false; isSolo=false; gameMode=null;
+  roomCode=''; fbRoom=''; gs=null; myHand=[];
+  closeAllModals();
+  show('home');
+}
+function confirmLeave() { if(confirm('ゲームを終了してロビーに戻りますか？')) leaveRoom(); }
+
+function closeAllModals() {
+  ['play-modal','trade-modal','pick-modal','swap-modal','fairy-give-modal','rules-modal'].forEach(id => {
+    const el = g(id); if(el) el.classList.remove('active');
+  });
+}
+
+// ============================================================
+// MSG ROUTING
+// ============================================================
+function onMsg(msg, from) {
+  if(!msg || !msg.t) return;
+  if(isHost) handleHostMsg(msg, from);
+  else handleClientMsg(msg, from);
+}
+function handleHostMsg(msg, from) {
+  switch(msg.t) {
+    case 'join':
+      if(!gs.started && gs.players.length<6 && !gs.players.find(p=>p.id===msg.id)) {
+        gs.players.push({ id:msg.id, name:msg.name, isCpu:false });
+        broadcastLobby();
+      }
+      break;
+    case 'action':
+      handlePlayerAction(msg.id || from, msg.action);
+      break;
+  }
+}
+function handleClientMsg(msg, from) {
+  switch(msg.t) {
+    case 'lobby':
+      gs = gs || freshGameState();
+      gs.players = msg.players; gs.started = msg.started;
+      renderWaitPlayers();
+      break;
+    case 'state':
+      gs = msg.gs;
+      show('game'); renderGame();
+      maybePromptTrade();
+      break;
+    case 'hand':
+      myHand = msg.hand || [];
+      renderGame();
+      break;
+    case 'prompt-pick':
+      promptPick(msg.cards, msg.context);
+      break;
+    case 'prompt-swap':
+      promptSwap(msg.cardId, msg.cardValue, msg.others);
+      break;
+    case 'prompt-fairy-give':
+      promptFairyGive(msg.cardIds, msg.others);
+      break;
+    case 'prompt-initial-fairy-swap':
+      myHand = msg.hand || myHand;
+      showInitialFairySwapModal(msg.hand);
+      break;
+    case 'prompt-final-discard':
+      showFinalDiscardModal(msg.card);
+      break;
+    case 'end':
+      gs = msg.gs;
+      showResult(msg.scores);
+      break;
+  }
+}
+function broadcastLobby() { fbBroadcast({ t:'lobby', players: gs.players, started: gs.started }); renderWaitPlayers(); }
+
+// ============================================================
+// GAME STATE
+// ============================================================
+function freshGameState() {
+  return {
+    players: [],
+    started: false,
+    phase: 'lobby',   // 'lobby' | 'play' | 'trade' | 'special' | 'end'
+    deck: [],         // [{id, v}]
+    turnIdx: 0,
+    direction: 1,     // 1 or -1 (順番反転)
+    turnsThisRound: 0, // counts toward direction reversal
+    deal: null,       // current deal info {playerIdx, cards: [{id,v,declared,face}], tradeIdx (whose turn to choose), choices: {pid: 'want'|'skip'}, decided: false }
+    log: [],
+    finished: false,
+  };
+}
+async function startGame() {
+  if(gs.players.length<2 || gs.players.length>6) return;
+  gs.started = true;
+  initializeGame();
+  pushStateAll();
+  show('game'); renderGame();
+  if(gameMode==='solo' || isHost) maybeCpuStep();
+}
+function startSoloGame() {
+  isHost = true; isSolo = true; gameMode = 'solo';
+  myId = 'human';
+  myName = g('in-name').value.trim() || 'You';
+  gs = freshGameState();
+  gs.players.push({ id:myId, name:myName, isCpu:false });
+  for(let i=1;i<soloCount;i++) gs.players.push({ id:'cpu'+i, name:'CPU'+i, isCpu:true });
+  initializeGame();
+  show('game'); renderGame();
+  maybeCpuStep();
+}
+
+function initializeGame() {
+  const n = gs.players.length;
+  // build full deck of 75 cards with ids
+  let pool = [];
+  let nextId = 0;
+  for(const v of Object.keys(CARD_COUNTS)) {
+    const val = v === 'F' ? 'F' : parseInt(v);
+    for(let i=0; i<CARD_COUNTS[v]; i++) {
+      pool.push({ id: 'c'+(nextId++), v: val });
+    }
+  }
+  shuffle(pool);
+  // trim to USE_CARDS
+  const useCount = USE_CARDS[n] || 75;
+  pool = pool.slice(0, useCount);
+  // deal 5 to each
+  gs.players.forEach(p => {
+    p.hand = [];
+    p.points = []; // earned card values
+    p.usedDoubleHidden = false;
+    p.score = 0;
+  });
+  for(let i=0; i<HAND_SIZE; i++) {
+    for(const p of gs.players) {
+      if(pool.length>0) p.hand.push(pool.pop());
+    }
+  }
+  // Initial points: n cards flipped face-up, distributed by descending value
+  const flipCount = n;
+  const flipped = [];
+  for(let i=0; i<flipCount; i++) if(pool.length>0) flipped.push(pool.pop());
+  flipped.sort((a,b) => initialValue(b) - initialValue(a));
+  gs.turnIdx = Math.floor(Math.random() * n);
+  // Track which players received fairies (for swap prompt)
+  const fairyReceivers = [];
+  for(let i=0; i<flipped.length; i++) {
+    const pIdx = (gs.turnIdx + i) % n;
+    gs.players[pIdx].points.push(flipped[i].v);
+    if(flipped[i].v === 'F') fairyReceivers.push(pIdx);
+  }
+  gs.deck = pool;
+  gs.direction = 1;
+  gs.turnsThisRound = 0;
+  gs.deal = null;
+  gs.log.push(`🧚 ゲーム開始（${n}人プレイ、初期得点配布完了）`);
+
+  // If any player received fairies, ask them in order if they want to swap with a hand card
+  if(fairyReceivers.length > 0) {
+    gs.phase = 'initial-fairy-swap';
+    gs.fairySwapQueue = fairyReceivers.slice(); // array of player indices, each may have multiple fairies
+    gs.log.push(`✨ 初期得点でフェアリーを獲得 → 手札との入れ替えを選択`);
+    promptInitialFairySwap();
+  } else {
+    gs.phase = 'play';
+    gs.log.push(`👉 ${gs.players[gs.turnIdx].name} の手番`);
+  }
+}
+
+function promptInitialFairySwap() {
+  if(!gs.fairySwapQueue || gs.fairySwapQueue.length === 0) {
+    // All resolved → start play
+    gs.phase = 'play';
+    gs.log.push(`👉 ${gs.players[gs.turnIdx].name} の手番`);
+    pushStateAll();
+    renderGame();
+    setTimeout(() => maybeCpuStep(), 200);
+    return;
+  }
+  const pIdx = gs.fairySwapQueue[0];
+  const player = gs.players[pIdx];
+  // Check if this player still holds at least 1 fairy in points (could be 0 if multiple fairies received and already swapped)
+  const fairyCount = player.points.filter(v => v === 'F').length;
+  if(fairyCount === 0) {
+    // No fairies to swap; skip
+    gs.fairySwapQueue.shift();
+    return promptInitialFairySwap();
+  }
+  // For CPU
+  if(player.isCpu) {
+    setTimeout(() => cpuInitialFairySwap(player), 0);
+    return;
+  }
+  // Push state FIRST so the private-channel prompt below is the last write
+  pushStateAll();
+  renderGame();
+  // For human
+  if(player.id === myId) {
+    showInitialFairySwapModal(player.hand);
+  } else {
+    fbSendPrompt(player.id, { t:'prompt-initial-fairy-swap', hand: player.hand });
+  }
+}
+
+function hostInitialFairySwapResolved(pid, swapHandCardId) {
+  // swapHandCardId can be null (no swap, keep all remaining fairies and move to next player)
+  if(gs.phase !== 'initial-fairy-swap') return;
+  if(gs.fairySwapQueue.length === 0) return;
+  const pIdx = gs.fairySwapQueue[0];
+  const player = gs.players[pIdx];
+  if(player.id !== pid) return;
+  if(swapHandCardId) {
+    const cardIdx = player.hand.findIndex(c => c.id === swapHandCardId);
+    if(cardIdx >= 0) {
+      const fIdx = player.points.indexOf('F');
+      if(fIdx >= 0) {
+        // Swap: fairy moves into hand, hand card becomes a point card
+        const handCard = player.hand[cardIdx];
+        player.points.splice(fIdx, 1);
+        player.points.push(handCard.v);
+        // Replace hand card with a fresh fairy card object
+        player.hand[cardIdx] = { id: 'fairy-swap-' + Date.now() + '-' + Math.random().toString(36).slice(2,6), v: 'F' };
+        gs.log.push(`✨ ${player.name} がフェアリーを手札の ${displayVal(handCard.v)} と入れ替え`);
+      }
+    }
+    // After a swap, this player may have more fairies; ask again
+    const remaining = player.points.filter(v => v === 'F').length;
+    if(remaining > 0) {
+      promptInitialFairySwap();
+    } else {
+      gs.fairySwapQueue.shift();
+      promptInitialFairySwap();
+    }
+  } else {
+    // Declined: keep all remaining fairies, move to next player
+    gs.log.push(`⏭️ ${player.name} はフェアリーをそのまま保持`);
+    gs.fairySwapQueue.shift();
+    promptInitialFairySwap();
+  }
+}
+
+function initialValue(card) {
+  // For initial point allocation only, fairy counts as max (highest of all numbers)
+  if(card.v === 'F') return 99;
+  return card.v;
+}
+
+function shuffle(a) { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function pushStateAll() {
+  if(gameMode !== 'online') {
+    const me = gs.players.find(p=>p.id===myId);
+    if(me) myHand = me.hand.slice();
+    return;
+  }
+  const pub = publicView(gs);
+  fbBroadcast({ t:'state', gs: pub });
+  gs.players.forEach(p => {
+    if(p.isCpu) return;
+    if(p.id === myId) myHand = p.hand.slice();
+    else fbSendTo(p.id, { t:'hand', hand: p.hand });
+  });
+}
+
+function publicView(state) {
+  const copy = JSON.parse(JSON.stringify(state));
+  // Hide hands; expose handCount
+  copy.players.forEach(p => {
+    p.handCount = p.hand ? p.hand.length : 0;
+    delete p.hand;
+  });
+  copy.deckCount = (copy.deck || []).length;
+  delete copy.deck;
+  // For deal: hide actual values of face-down cards
+  if(copy.deal) {
+    copy.deal.cards = copy.deal.cards.map(c => ({
+      id: c.id,
+      face: c.face,
+      declared: c.declared,
+      // Reveal value only if face === 'up' OR card was revealed by trade resolution
+      ...(c.face === 'up' || c.revealed ? { v: c.v } : {})
+    }));
+  }
+  return copy;
+}
+
+// ============================================================
+// CORE: ACTION HANDLERS (host)
+// ============================================================
+function handlePlayerAction(pid, action) {
+  if(!gs) return;
+  if(action.kind === 'play')     return hostPlayCards(pid, action.cards, action.declares, action.faces);
+  if(action.kind === 'trade')    return hostTradeChoice(pid, action.choice);
+  if(action.kind === 'pick')     return hostPickResolved(pid, action.cardId, action.context);
+  if(action.kind === 'swap')     return hostSwapResolved(pid, action.swapTargetId, action.swapValue, action.useEffect);
+  if(action.kind === 'fairy-give') return hostFairyGiveResolved(pid, action.targets);
+  if(action.kind === 'initial-fairy-swap') return hostInitialFairySwapResolved(pid, action.handCardId);
+  if(action.kind === 'final-discard') return hostFinalDiscardResolved(pid, action.discard);
+}
+
+function hostPlayCards(pid, cardIds, declares, faces) {
+  if(gs.phase !== 'play') return;
+  if(gs.players[gs.turnIdx].id !== pid) return;
+  if(!Array.isArray(cardIds) || cardIds.length !== 2) return;
+  const player = gs.players[gs.turnIdx];
+  // verify both cards in hand
+  const handById = {};
+  player.hand.forEach(c => handById[c.id] = c);
+  if(!handById[cardIds[0]] || !handById[cardIds[1]]) return;
+  if(cardIds[0] === cardIds[1]) return;
+  // Validate faces
+  const validFace = (f) => f === 'up' || f === 'down';
+  if(!validFace(faces[0]) || !validFace(faces[1])) return;
+  // double-hidden check
+  if(faces[0] === 'down' && faces[1] === 'down') {
+    if(player.usedDoubleHidden) return;
+    player.usedDoubleHidden = true;
+  }
+  // build deal
+  const c0 = handById[cardIds[0]], c1 = handById[cardIds[1]];
+  // remove from hand
+  player.hand = player.hand.filter(c => c.id !== c0.id && c.id !== c1.id);
+  gs.deal = {
+    playerId: pid,
+    playerIdx: gs.turnIdx,
+    cards: [
+      { id: c0.id, v: c0.v, face: faces[0], declared: declares[0] },
+      { id: c1.id, v: c1.v, face: faces[1], declared: declares[1] }
+    ],
+    tradeIdx: nextActiveIdx(gs.turnIdx),
+    choices: {},
+    decided: false,
+  };
+  gs.phase = 'trade';
+  const faceLabel = (f) => f==='up' ? '表' : '裏';
+  gs.log.push(`📤 ${player.name} がカードを出した（${faceLabel(faces[0])}/${declares[0]} と ${faceLabel(faces[1])}/${declares[1]}）`);
+  pushStateAll();
+  renderGame();
+  triggerNextTradeOrResolve();
+}
+
+function nextActiveIdx(fromIdx) {
+  return (fromIdx + gs.direction + gs.players.length) % gs.players.length;
+}
+
+function triggerNextTradeOrResolve() {
+  if(!gs.deal || gs.deal.decided) return;
+  // If trade index = playerIdx (back to dealer), all skipped → dealer gets both
+  if(gs.deal.tradeIdx === gs.deal.playerIdx) {
+    return resolveAllSkipped();
+  }
+  // Ask current trade player
+  pushStateAll();
+  renderGame();
+  // If host themselves (me) is the trader, open the trade modal locally
+  if(gs.players[gs.deal.tradeIdx]?.id === myId) {
+    maybePromptTrade();
+  }
+  // For CPU, automatically choose
+  setTimeout(() => maybeCpuStep(), 200);
+}
+
+function hostTradeChoice(pid, choice) {
+  if(gs.phase !== 'trade' || !gs.deal) return;
+  if(gs.players[gs.deal.tradeIdx].id !== pid) return;
+  if(!gs.deal.choices) gs.deal.choices = {};
+  gs.deal.choices[pid] = choice;
+  if(choice === 'want') {
+    // This player picks 1 card; the other goes to dealer
+    return askWhichCardToTake(pid);
+  } else {
+    // skip → next
+    gs.deal.tradeIdx = nextActiveIdx(gs.deal.tradeIdx);
+    gs.log.push(`⏭️ ${gs.players.find(p=>p.id===pid).name} は「いらない」`);
+    triggerNextTradeOrResolve();
+  }
+}
+
+function askWhichCardToTake(pid) {
+  // Reveal face-down cards now (they are "revealed when scored")
+  // The taker chooses ONE of the 2, then both are revealed to the dealer & taker
+  // For the picker (taker), they should see the actual values when picking
+  const player = gs.players.find(p => p.id === pid);
+  // Reveal cards info for the picker
+  const cardsForPick = gs.deal.cards.map(c => ({ id: c.id, v: c.v, declared: c.declared, face: c.face }));
+  if(player.isCpu) {
+    return cpuPickCard(player);
+  }
+  if(pid === myId) {
+    promptPick(cardsForPick, { type: 'pick-from-deal' });
+  } else {
+    fbSendPrompt(pid, { t: 'prompt-pick', cards: cardsForPick, context: { type: 'pick-from-deal' } });
+  }
+}
+
+function hostPickResolved(pid, cardId, context) {
+  if(gs.phase !== 'trade' || !gs.deal) return;
+  if(context?.type === 'pick-from-deal') {
+    if(gs.players[gs.deal.tradeIdx].id !== pid) return;
+    const dealer = gs.players[gs.deal.playerIdx];
+    const taker = gs.players.find(p => p.id === pid);
+    const cards = gs.deal.cards;
+    const takerCard = cards.find(c => c.id === cardId);
+    const dealerCard = cards.find(c => c.id !== cardId);
+    if(!takerCard || !dealerCard) return;
+    // reveal both
+    takerCard.revealed = true; dealerCard.revealed = true;
+    // award to each
+    taker.points.push(takerCard.v);
+    dealer.points.push(dealerCard.v);
+    gs.log.push(`🤝 ${taker.name} が「欲しい」を選んで ${displayVal(takerCard.v)}を獲得、${dealer.name} は ${displayVal(dealerCard.v)}を獲得`);
+    // mark decided
+    gs.deal.decided = true;
+    // Trigger special effects for any "1" cards scored, in order: taker first, then dealer
+    const queue = [];
+    if(takerCard.v === 1) queue.push({ pid: taker.id, value: 1 });
+    if(dealerCard.v === 1) queue.push({ pid: dealer.id, value: 1 });
+    return processSpecialQueue(queue, () => endTurnAndAdvance());
+  }
+}
+
+function resolveAllSkipped() {
+  // Dealer keeps both. Special: if fairies are in the cards, dealer can give them away
+  const dealer = gs.players[gs.deal.playerIdx];
+  const cards = gs.deal.cards;
+  cards.forEach(c => c.revealed = true);
+  const fairies = cards.filter(c => c.v === 'F').map(c => c.id);
+  const ones = cards.filter(c => c.v === 1);
+  // Move non-fairy cards to dealer; fairies go to dealer for now, may be reassigned
+  gs.log.push(`🔄 全員「いらない」→ ${dealer.name} が両方獲得`);
+  cards.forEach(c => dealer.points.push(c.v));
+  gs.deal.decided = true;
+  // Then prompt dealer for fairy give (per fairy) and 1 swap effects
+  const proceedAfter = () => {
+    // After fairy give and 1 swap effects, end turn
+    endTurnAndAdvance();
+  };
+  if(fairies.length > 0) {
+    promptFairyGiveCascade(dealer, fairies, () => {
+      // Then process 1's
+      const queue = ones.map(c => ({ pid: dealer.id, value: 1 }));
+      processSpecialQueue(queue, proceedAfter);
+    });
+  } else {
+    const queue = ones.map(c => ({ pid: dealer.id, value: 1 }));
+    processSpecialQueue(queue, proceedAfter);
+  }
+}
+
+function promptFairyGiveCascade(dealer, fairyIds, done) {
+  // For each fairy, ask dealer who to give to (or keep)
+  if(fairyIds.length === 0) return done();
+  const fairyId = fairyIds[0];
+  const others = gs.players.filter(p => p.id !== dealer.id).map(p => ({ id: p.id, name: p.name }));
+  const proceed = () => promptFairyGiveCascade(dealer, fairyIds.slice(1), done);
+  if(dealer.isCpu) {
+    return cpuFairyGive(dealer, fairyId, others, proceed);
+  }
+  if(dealer.id === myId) {
+    promptFairyGive([fairyId], others, proceed);
+    window._fairyGiveDone = proceed;
+  } else {
+    fbSendPrompt(dealer.id, { t:'prompt-fairy-give', cardIds: [fairyId], others });
+    window._pendingFairyGive = { dealer: dealer.id, fairyId, others, proceed };
+  }
+}
+
+function hostFairyGiveResolved(pid, targets) {
+  // targets: { fairyId: targetPid | null }  null = keep self
+  // (may arrive undefined via Firebase when empty object was stripped)
+  targets = targets || {};
+  if(!gs.deal) return;
+  const dealer = gs.players[gs.deal.playerIdx];
+  if(pid !== dealer.id) return;
+  for(const fairyId in targets) {
+    const target = targets[fairyId];
+    if(target && target !== dealer.id) {
+      // Move one fairy from dealer.points to target's points
+      const idx = dealer.points.indexOf('F');
+      if(idx >= 0) {
+        dealer.points.splice(idx, 1);
+        const recv = gs.players.find(p => p.id === target);
+        if(recv) {
+          recv.points.push('F');
+          gs.log.push(`🎁 ${dealer.name} がフェアリーを ${recv.name} に押し付けた`);
+        }
+      }
+    }
+  }
+  // Continue cascade: self (host) via _fairyGiveDone, remote client via _pendingFairyGive
+  if(window._fairyGiveDone) {
+    const fn = window._fairyGiveDone; window._fairyGiveDone = null; fn(); return;
+  }
+  if(window._pendingFairyGive && window._pendingFairyGive.dealer === pid) {
+    const pf = window._pendingFairyGive; window._pendingFairyGive = null;
+    pf.proceed();
+  }
+}
+
+function processSpecialQueue(queue, done) {
+  if(!queue || queue.length === 0) return done();
+  const item = queue[0];
+  const player = gs.players.find(p => p.id === item.pid);
+  // 1 effect: swap with another player's point card unless owner already has 3+ of that value
+  if(item.value === 1) {
+    // Count: did owner have 3+ of any specific value? The condition says "その数字のカードを3枚以上持っていない場合のみ交換可能"
+    // We interpret: only if the owner of the target card doesn't have 3+ of THAT value
+    // Find candidate targets
+    const others = gs.players.filter(p => p.id !== item.pid);
+    const candidates = []; // [{pid, name, cardValue}]
+    for(const op of others) {
+      const counts = {};
+      op.points.forEach(v => counts[v] = (counts[v]||0)+1);
+      // For 2-player special: target's count of that value must be >= mine of that value
+      const myCounts = {};
+      player.points.forEach(v => myCounts[v] = (myCounts[v]||0)+1);
+      for(let v=1; v<=9; v++) {
+        if(!counts[v] || counts[v] === 0) continue;
+        if(counts[v] >= 3) continue;  // owner already has 3+
+        if(gs.players.length === 2) {
+          if(counts[v] < (myCounts[v]||0)) continue;
+        }
+        candidates.push({ pid: op.id, name: op.name, value: v });
+      }
+      // Also consider F? Spec says "数字のカード" so we exclude F.
+    }
+    if(candidates.length === 0) {
+      // No valid swap; just continue
+      processSpecialQueue(queue.slice(1), done);
+      return;
+    }
+    if(player.isCpu) {
+      return cpuSwap(player, candidates, () => processSpecialQueue(queue.slice(1), done));
+    }
+    if(player.id === myId) {
+      promptSwap('one-effect', 1, candidates, () => processSpecialQueue(queue.slice(1), done));
+      window._swapDone = () => processSpecialQueue(queue.slice(1), done);
+    } else {
+      fbSendPrompt(player.id, { t:'prompt-swap', cardId:'one-effect', cardValue: 1, others: candidates });
+      window._pendingSwap = { pid: player.id, candidates, queue, done };
+    }
+    return;
+  }
+  processSpecialQueue(queue.slice(1), done);
+}
+
+function swapContinue(pid) {
+  // Continue the special-effect queue after a swap resolution.
+  // Self (host): _swapDone holds the continuation.
+  // Remote client: _pendingSwap holds { pid, queue, done }.
+  if(window._swapDone) {
+    const fn = window._swapDone; window._swapDone = null; fn(); return;
+  }
+  if(window._pendingSwap && window._pendingSwap.pid === pid) {
+    const ps = window._pendingSwap; window._pendingSwap = null;
+    processSpecialQueue(ps.queue.slice(1), ps.done);
+  }
+}
+
+function hostSwapResolved(pid, swapTargetId, swapValue, useEffect) {
+  // If use_effect=false, skip
+  if(!useEffect) {
+    return swapContinue(pid);
+  }
+  const player = gs.players.find(p => p.id === pid);
+  const target = gs.players.find(p => p.id === swapTargetId);
+  if(!player || !target) {
+    return swapContinue(pid);
+  }
+  // Remove value from target
+  const idx = target.points.indexOf(swapValue);
+  if(idx < 0) {
+    return swapContinue(pid);
+  }
+  // Remove one '1' from player
+  const oneIdx = player.points.indexOf(1);
+  if(oneIdx < 0) {
+    return swapContinue(pid);
+  }
+  player.points.splice(oneIdx, 1);
+  target.points.splice(idx, 1);
+  player.points.push(swapValue);
+  target.points.push(1);
+  gs.log.push(`🔁 ${player.name} が《1》効果で ${target.name} の ${swapValue} と交換`);
+  swapContinue(pid);
+}
+
+function endTurnAndAdvance() {
+  // Refill dealer's hand (draw 2)
+  if(!gs.deal) {
+    advanceTurn(); pushStateAll(); renderGame(); maybeCpuStep(); return;
+  }
+  const dealer = gs.players[gs.deal.playerIdx];
+  for(let i=0; i<2; i++) {
+    if(gs.deck.length > 0) dealer.hand.push(gs.deck.pop());
+  }
+  // Done with deal
+  gs.deal = null;
+  gs.phase = 'play';
+  gs.turnsThisRound++;
+  // Direction reversal: every full round (n turns)
+  if(gs.turnsThisRound >= gs.players.length) {
+    gs.turnsThisRound = 0;
+    gs.direction = -gs.direction;
+    gs.log.push(`🔄 順番反転！方向: ${gs.direction === 1 ? '⇨' : '⇦'}`);
+  }
+  advanceTurn();
+  // Check end of game
+  if(gs.deck.length === 0 && gs.players.every(p => p.hand.length <= 1)) {
+    return endGame();
+  }
+  pushStateAll();
+  renderGame();
+  setTimeout(() => maybeCpuStep(), 250);
+}
+
+function advanceTurn() {
+  gs.turnIdx = (gs.turnIdx + gs.direction + gs.players.length) % gs.players.length;
+}
+
+function endGame() {
+  // Per official rule: each player may choose to score their last card OR discard it
+  // Enter final-discard phase, prompt each player in turn order starting from current
+  gs.phase = 'final-discard';
+  gs.finalDiscardQueue = [];
+  // queue all players who have hands (1 card remaining)
+  for(let i=0; i<gs.players.length; i++) {
+    const pIdx = (gs.turnIdx + i * gs.direction + gs.players.length * 10) % gs.players.length;
+    const p = gs.players[pIdx];
+    if(p.hand.length > 0) gs.finalDiscardQueue.push(pIdx);
+  }
+  gs.log.push(`🏁 山札切れ・手札1枚 → 最終決断フェーズ`);
+  promptFinalDiscard();
+}
+
+function promptFinalDiscard() {
+  if(!gs.finalDiscardQueue || gs.finalDiscardQueue.length === 0) {
+    return finalizeScores();
+  }
+  const pIdx = gs.finalDiscardQueue[0];
+  const player = gs.players[pIdx];
+  if(player.hand.length === 0) {
+    gs.finalDiscardQueue.shift();
+    return promptFinalDiscard();
+  }
+  if(player.isCpu) {
+    setTimeout(() => cpuFinalDiscard(player), 0);
+    return;
+  }
+  // Push state FIRST so the private-channel prompt below is the last write
+  // (otherwise pushStateAll's 'hand' message overwrites the prompt before the client polls)
+  pushStateAll();
+  renderGame();
+  if(player.id === myId) {
+    showFinalDiscardModal(player.hand[0]);
+  } else {
+    fbSendPrompt(player.id, { t:'prompt-final-discard', card: player.hand[0] });
+  }
+}
+
+function hostFinalDiscardResolved(pid, discard) {
+  if(gs.phase !== 'final-discard') return;
+  if(gs.finalDiscardQueue.length === 0) return;
+  const pIdx = gs.finalDiscardQueue[0];
+  const player = gs.players[pIdx];
+  if(player.id !== pid) return;
+  if(player.hand.length === 0) {
+    gs.finalDiscardQueue.shift();
+    return promptFinalDiscard();
+  }
+  const card = player.hand.shift();
+  if(discard) {
+    gs.log.push(`🗑️ ${player.name} は残り1枚 ${displayVal(card.v)} を捨てた`);
+  } else {
+    player.points.push(card.v);
+    gs.log.push(`💎 ${player.name} は残り1枚 ${displayVal(card.v)} を得点化`);
+  }
+  gs.finalDiscardQueue.shift();
+  promptFinalDiscard();
+}
+
+function finalizeScores() {
+  // Apply fairy penalty (per official)
+  gs.players.forEach(p => {
+    const fairyCount = p.points.filter(v => v === 'F').length;
+    if(fairyCount === 0) return;
+    let toRemove = fairyCount;
+    while(toRemove > 0) {
+      const counts = {};
+      p.points.forEach(v => { if(v !== 'F') counts[v] = (counts[v]||0)+1; });
+      const vals = Object.keys(counts).map(Number).filter(v=>!isNaN(v) && counts[v]>0).sort((a,b)=>b-a);
+      if(vals.length === 0) break;
+      for(const v of vals) {
+        if(toRemove <= 0) break;
+        const idx = p.points.indexOf(v);
+        if(idx >= 0) { p.points.splice(idx, 1); toRemove--; }
+      }
+    }
+    if(fairyCount > 0) gs.log.push(`🧚 ${p.name} のフェアリーペナルティ: ${fairyCount}枚分のカードを破棄`);
+  });
+  // Compute scores
+  gs.players.forEach(p => { p.score = scoreOf(p.points); });
+  const sorted = [...gs.players].sort((a,b) => {
+    if(b.score !== a.score) return b.score - a.score;
+    const ac = (v) => a.points.filter(x => x === v).length;
+    const bc = (v) => b.points.filter(x => x === v).length;
+    if(bc(1) !== ac(1)) return bc(1) - ac(1);
+    if(bc('F') !== ac('F')) return bc('F') - ac('F');
+    for(let v=2; v<=9; v++) { if(bc(v) !== ac(v)) return bc(v) - ac(v); }
+    return 0;
+  });
+  gs.phase = 'end';
+  const scores = sorted.map(p => ({ id:p.id, name:p.name, score:p.score, points:p.points.slice() }));
+  const winner = sorted[0];
+  gs.log.push(`🏆 ${winner.name} の勝利！（${winner.score}点）`);
+  if(gameMode === 'solo') return showResult(scores);
+  const pub = publicView(gs);
+  gs.players.forEach(p => {
+    if(p.isCpu) return;
+    if(p.id === myId) showResult(scores);
+    else fbSendTo(p.id, { t:'end', gs: pub, scores });
+  });
+}
+
+function displayVal(v) {
+  if(v === 'F') return 'フェアリー';
+  return '《' + v + '》';
+}
+
+// ============================================================
+// MAYBE CPU STEP
+// ============================================================
+function maybeCpuStep() {
+  if(!gs || gs.phase === 'lobby' || gs.phase === 'end') return;
+  if(gs.phase === 'initial-fairy-swap') {
+    if(!gs.fairySwapQueue || gs.fairySwapQueue.length === 0) return;
+    const player = gs.players[gs.fairySwapQueue[0]];
+    if(player && player.isCpu) setTimeout(() => cpuInitialFairySwap(player), 200);
+    return;
+  }
+  if(gs.phase === 'final-discard') {
+    if(!gs.finalDiscardQueue || gs.finalDiscardQueue.length === 0) return;
+    const player = gs.players[gs.finalDiscardQueue[0]];
+    if(player && player.isCpu) setTimeout(() => cpuFinalDiscard(player), 200);
+    return;
+  }
+  if(gs.phase === 'play') {
+    const cur = gs.players[gs.turnIdx];
+    if(cur && cur.isCpu) setTimeout(() => cpuPlay(cur), 200);
+  } else if(gs.phase === 'trade') {
+    if(!gs.deal) return;
+    const cur = gs.players[gs.deal.tradeIdx];
+    if(cur && cur.isCpu) setTimeout(() => cpuTrade(cur), 200);
+  }
+}
+
+function sendActionToHost(action) {
+  if(isHost) handlePlayerAction(myId, action);
+  else fbSendToHost({ t:'action', id:myId, action });
+}
+
+function rematch() {
+  if(isHost && gameMode === 'online') fbDel('');
+  fbClose();
+  isHost=false; isSolo=false; gameMode=null;
+  roomCode=''; fbRoom=''; gs=null; myHand=[];
+  closeAllModals();
+  show('home');
+}
+
+function openRules() { g('rules-modal').classList.add('active'); }
+function closeRules() { g('rules-modal').classList.remove('active'); }
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderGame() {
+  if(!gs) return;
+  // header
+  const cur = gs.players[gs.turnIdx];
+  g('turn-text').textContent = (gs.phase === 'trade' && gs.deal)
+    ? `${gs.players[gs.deal.playerIdx].name} の出札 / ${gs.players[gs.deal.tradeIdx].name} の取引`
+    : `${cur?.name || '-'} の手番`;
+  g('dir-indicator').textContent = gs.direction === 1 ? '⇨' : '⇦';
+  g('deck-count').textContent = (gs.deck?.length !== undefined ? gs.deck.length : (gs.deckCount||0));
+
+  // Deal area
+  const da = g('deal-area');
+  da.innerHTML = '';
+  if(!gs.deal) {
+    const empty = document.createElement('div');
+    empty.className = 'helper-text';
+    empty.textContent = '手番のプレイヤーがカードを2枚出します';
+    da.appendChild(empty);
+  } else {
+    const dealer = gs.players[gs.deal.playerIdx];
+    const head = document.createElement('div');
+    head.className = 'deal-header';
+    head.textContent = `📤 ${dealer.name} の出札 → 取引中`;
+    da.appendChild(head);
+
+    const cardRow = document.createElement('div');
+    cardRow.className = 'deal-cards';
+    gs.deal.cards.forEach(c => {
+      const el = renderCard(c, c.face === 'up' || c.revealed);
+      // Always show declared
+      const decl = document.createElement('div');
+      decl.className = 'decl';
+      decl.textContent = `宣言: ${c.declared}`;
+      el.appendChild(decl);
+      cardRow.appendChild(el);
+    });
+    da.appendChild(cardRow);
+
+    // trade status
+    const ts = document.createElement('div');
+    ts.className = 'trade-list';
+    // List players from dealer.left in direction order
+    const n = gs.players.length;
+    for(let i=1; i<n; i++) {
+      const idx = (gs.deal.playerIdx + i * gs.direction + n*10) % n;
+      const player = gs.players[idx];
+      const row = document.createElement('div');
+      row.className = 'trade-row';
+      const choice = (gs.deal.choices || {})[player.id];
+      let status = '<span class="trade-status">未回答</span>';
+      if(idx === gs.deal.tradeIdx && !choice) {
+        row.classList.add('pending');
+        status = '<span class="trade-status pending">回答中…</span>';
+      } else if(choice === 'want') status = '<span class="trade-status want">✅ 欲しい</span>';
+      else if(choice === 'skip') status = '<span class="trade-status skip">⏭️ いらない</span>';
+      row.innerHTML = `<span>${player.name}${player.isCpu?' 🤖':''}</span>${status}`;
+      ts.appendChild(row);
+    }
+    da.appendChild(ts);
+  }
+
+  // Action zone
+  const az = g('action-zone');
+  az.innerHTML = '';
+  if(gs.phase === 'play' && cur?.id === myId) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-purple';
+    btn.textContent = '🎴 自分の手番: 2枚出す';
+    btn.onclick = () => openPlayModal();
+    az.appendChild(btn);
+  }
+
+  // Hand
+  const mh = g('my-hand');
+  mh.innerHTML = '';
+  g('hand-count').textContent = `(${myHand.length}枚)`;
+  if(myHand.length === 0) {
+    mh.innerHTML = '<div class="tiny-row" style="padding:14px;">手札なし</div>';
+  } else {
+    // Sort for display: numbers ascending, fairies at end
+    const sorted = myHand.slice().sort((a,b) => {
+      if(a.v === 'F' && b.v !== 'F') return 1;
+      if(b.v === 'F' && a.v !== 'F') return -1;
+      if(a.v === 'F' && b.v === 'F') return 0;
+      return a.v - b.v;
+    });
+    sorted.forEach(card => {
+      mh.appendChild(renderCard(card, true));
+    });
+  }
+
+  // Players overview
+  const po = g('players-overview');
+  po.innerHTML = '';
+  gs.players.forEach((p, i) => {
+    const div = document.createElement('div');
+    let cls = 'po-item';
+    if(p.id === myId) cls += ' is-me';
+    if(i === gs.turnIdx && gs.phase === 'play') cls += ' is-current';
+    div.className = cls;
+    // Build point chips
+    const counts = {};
+    (p.points||[]).forEach(v => counts[v] = (counts[v]||0) + 1);
+    let chipsHtml = '';
+    // Show 1 first
+    if(counts[1]) chipsHtml += `<span class="point-chip one">1×${counts[1]}</span>`;
+    // F
+    if(counts.F) chipsHtml += `<span class="point-chip fairy">🧚×${counts.F}</span>`;
+    // numbers 2-9
+    for(let v=2; v<=9; v++) if(counts[v]) chipsHtml += `<span class="point-chip num">${v}×${counts[v]}</span>`;
+
+    const live = scoreOf(p.points||[]);
+    div.innerHTML = `
+      <div class="po-head">
+        <div class="avatar">${p.name.slice(0,2)}</div>
+        <div class="po-name">${p.name}${p.isCpu?' 🤖':''}${p.usedDoubleHidden?'<span class="reversal-chip">裏×裏済</span>':''}</div>
+        <div class="po-score">${live}点</div>
+      </div>
+      <div class="po-info"><span>手札: ${p.handCount !== undefined ? p.handCount : (p.hand?.length||0)}</span></div>
+      <div class="po-points">${chipsHtml}</div>
+    `;
+    po.appendChild(div);
+  });
+
+  // Log
+  const lb = g('log-box');
+  lb.innerHTML = '';
+  (gs.log||[]).slice(-30).forEach((line, idx, arr) => {
+    const d = document.createElement('div');
+    d.className = 'log-line' + (idx >= arr.length - 3 ? ' recent' : '');
+    d.textContent = line;
+    lb.appendChild(d);
+  });
+  lb.scrollTop = lb.scrollHeight;
+}
+
+function renderCard(card, faceUp) {
+  const el = document.createElement('div');
+  let cls = 'card';
+  if(!faceUp) {
+    cls += ' facedown';
+    el.className = cls;
+    el.innerHTML = '<div class="num">?</div><div class="lbl">裏向き</div>';
+    return el;
+  }
+  if(card.v === 'F') {
+    cls += ' fairy-card';
+    el.className = cls;
+    el.innerHTML = '<div class="num">🧚</div><div class="lbl">FAIRY</div>';
+  } else if(card.v === 1) {
+    cls += ' one-card';
+    el.className = cls;
+    el.innerHTML = `<div class="num">${card.v}</div><div class="lbl">SWAP</div>`;
+  } else {
+    cls += ' num-card';
+    el.className = cls;
+    el.innerHTML = `<div class="num">${card.v}</div><div class="lbl">NUM</div>`;
+  }
+  return el;
+}
+
+// ============================================================
+// PLAY MODAL (human chooses 2 cards + declares + faces)
+// ============================================================
+function openPlayModal() {
+  playSel = []; playDecl = [null, null]; playFace = ['up','up'];
+  g('play-modal').classList.add('active');
+  refreshPlayModal();
+}
+function refreshPlayModal() {
+  // Render selected and remaining hand
+  const sel = g('play-selected');
+  sel.innerHTML = '';
+  // Show 2 slot placeholders
+  for(let i=0; i<2; i++) {
+    const slot = document.createElement('div');
+    slot.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:6px;';
+    if(playSel[i] !== undefined) {
+      const c = myHand.find(h => h.id === playSel[i]);
+      if(c) {
+        const cd = renderCard(c, true);
+        cd.classList.add('selected');
+        cd.onclick = () => { playSel.splice(i,1); playDecl.splice(i,1); playFace.splice(i,1); if(playSel.length<2){playDecl.length=2; playFace.length=2;} refreshPlayModal(); };
+        slot.appendChild(cd);
+      }
+    } else {
+      const ph = document.createElement('div');
+      ph.style.cssText = 'width:64px;height:92px;border:2px dashed var(--surface3);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);';
+      ph.textContent = '?';
+      slot.appendChild(ph);
+    }
+    sel.appendChild(slot);
+  }
+  // Render hand for selection (inside the modal)
+  const hand = g('play-hand');
+  hand.innerHTML = '';
+  const sorted = myHand.slice().sort((a,b) => {
+    if(a.v === 'F' && b.v !== 'F') return 1;
+    if(b.v === 'F' && a.v !== 'F') return -1;
+    if(a.v === 'F' && b.v === 'F') return 0;
+    return a.v - b.v;
+  });
+  sorted.forEach(card => {
+    const el = renderCard(card, true);
+    if(playSel.includes(card.id)) {
+      el.classList.add('selected');
+    } else if(playSel.length < 2) {
+      el.classList.add('clickable');
+      el.onclick = () => { playSel.push(card.id); refreshPlayModal(); };
+    } else {
+      el.classList.add('unplayable');
+    }
+    hand.appendChild(el);
+  });
+  // Render declare inputs and face toggles
+  const dec = g('play-declare');
+  dec.innerHTML = '';
+  if(playSel.length === 2) {
+    for(let i=0; i<2; i++) {
+      const row = document.createElement('div');
+      row.className = 'declare-input';
+      const lbl = document.createElement('label');
+      lbl.textContent = `カード${i+1}宣言:`;
+      const sel = document.createElement('select');
+      ['1','2','3','4','5','6','7','8','9','F'].forEach(v => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v === 'F' ? '🧚 フェアリー' : v;
+        sel.appendChild(o);
+      });
+      if(playDecl[i] !== null && playDecl[i] !== undefined) sel.value = String(playDecl[i]);
+      else {
+        // default to actual value
+        const c = myHand.find(h => h.id === playSel[i]);
+        if(c) { sel.value = String(c.v); playDecl[i] = c.v === 'F' ? 'F' : c.v; }
+      }
+      sel.onchange = () => {
+        const v = sel.value;
+        playDecl[i] = (v === 'F') ? 'F' : parseInt(v);
+      };
+      row.appendChild(lbl); row.appendChild(sel);
+      dec.appendChild(row);
+    }
+  }
+  // Face toggle
+  const face = g('play-face');
+  face.innerHTML = '';
+  if(playSel.length === 2) {
+    const me = gs.players.find(p => p.id === myId);
+    const canDoubleDown = me && !me.usedDoubleHidden;
+    const opts = [
+      { v: ['up','up'], lbl: '表×表' },
+      { v: ['up','down'], lbl: '表×裏' },
+      { v: ['down','up'], lbl: '裏×表' },
+      { v: ['down','down'], lbl: '裏×裏 (1回のみ)' }
+    ];
+    const grp = document.createElement('div');
+    grp.className = 'face-toggle';
+    opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'face-btn' + (playFace[0]===o.v[0]&&playFace[1]===o.v[1]?' active':'');
+      b.textContent = o.lbl;
+      if(o.v[0]==='down' && o.v[1]==='down' && !canDoubleDown) { b.disabled = true; b.style.opacity = '0.35'; }
+      b.onclick = () => { playFace = o.v.slice(); refreshPlayModal(); };
+      grp.appendChild(b);
+    });
+    face.appendChild(grp);
+  }
+  // confirm button
+  g('play-confirm').disabled = !(playSel.length === 2 && playDecl[0] !== null && playDecl[1] !== null);
+}
+function confirmPlay() {
+  if(playSel.length !== 2) return;
+  sendActionToHost({ kind:'play', cards: playSel.slice(), declares: playDecl.slice(), faces: playFace.slice() });
+  closePlayModal();
+}
+function closePlayModal() {
+  g('play-modal').classList.remove('active');
+  playSel = [];
+  renderGame(); // restore main hand display
+}
+
+// ============================================================
+// TRADE PROMPT (human)
+// ============================================================
+function maybePromptTrade() {
+  if(!gs || gs.phase !== 'trade' || !gs.deal) return;
+  if(gs.players[gs.deal.tradeIdx]?.id !== myId) return;
+  // Already showing pick modal? skip
+  showTradeModal();
+}
+function showTradeModal() {
+  const body = g('trade-modal-body');
+  body.innerHTML = '';
+  const dealer = gs.players[gs.deal.playerIdx];
+  const head = document.createElement('div');
+  head.className = 'helper-text';
+  head.textContent = `${dealer.name} の出した2枚から1枚もらいますか？`;
+  body.appendChild(head);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:14px;justify-content:center;padding:10px;';
+  gs.deal.cards.forEach(c => {
+    const el = renderCard(c, c.face === 'up');
+    const decl = document.createElement('div');
+    decl.className = 'decl';
+    decl.textContent = `宣言: ${c.declared}`;
+    el.appendChild(decl);
+    row.appendChild(el);
+  });
+  body.appendChild(row);
+  // Show my hand + points for reference
+  appendMyInfoTo(body);
+  g('trade-modal').classList.add('active');
+}
+
+// Helper: append my hand and points reference to a modal body
+function appendMyInfoTo(body) {
+  const me = gs.players.find(p => p.id === myId);
+  // My points chips
+  if(me && me.points && me.points.length > 0) {
+    const ptTitle = document.createElement('div');
+    ptTitle.className = 'section-title';
+    ptTitle.style.marginTop = '8px';
+    ptTitle.textContent = '💎 自分の得点カード';
+    body.appendChild(ptTitle);
+    const counts = {};
+    me.points.forEach(v => counts[v] = (counts[v]||0) + 1);
+    let chips = '';
+    if(counts[1]) chips += `<span class="point-chip one">1×${counts[1]}</span>`;
+    if(counts.F) chips += `<span class="point-chip fairy">🧚×${counts.F}</span>`;
+    for(let v=2; v<=9; v++) if(counts[v]) chips += `<span class="point-chip num">${v}×${counts[v]}</span>`;
+    const ptRow = document.createElement('div');
+    ptRow.className = 'po-points';
+    ptRow.innerHTML = chips;
+    body.appendChild(ptRow);
+  }
+  // My hand
+  const handTitle = document.createElement('div');
+  handTitle.className = 'section-title';
+  handTitle.style.marginTop = '8px';
+  handTitle.textContent = '🃏 自分の手札（参考）';
+  body.appendChild(handTitle);
+  const handRow = document.createElement('div');
+  handRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:6px;';
+  const sorted = myHand.slice().sort((a,b) => {
+    if(a.v === 'F' && b.v !== 'F') return 1;
+    if(b.v === 'F' && a.v !== 'F') return -1;
+    if(a.v === 'F' && b.v === 'F') return 0;
+    return a.v - b.v;
+  });
+  sorted.forEach(card => {
+    const el = renderCard(card, true);
+    el.classList.add('small');
+    handRow.appendChild(el);
+  });
+  body.appendChild(handRow);
+}
+function tradeChoice(choice) {
+  g('trade-modal').classList.remove('active');
+  if(choice === 'want') {
+    // Then we need to pick a card; backend will prompt-pick
+    sendActionToHost({ kind:'trade', choice:'want' });
+  } else {
+    sendActionToHost({ kind:'trade', choice:'skip' });
+  }
+}
+
+// ============================================================
+// PICK MODAL (after declaring "want", pick which of the two)
+// ============================================================
+function promptPick(cards, context) {
+  const body = g('pick-modal-body');
+  body.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'helper-text';
+  head.textContent = '取得するカードをタップしてください（実際の値も表示されます）';
+  body.appendChild(head);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:14px;justify-content:center;padding:10px;';
+  cards.forEach(c => {
+    const el = renderCard({ v: c.v }, true);
+    el.classList.add('clickable');
+    const decl = document.createElement('div');
+    decl.className = 'decl';
+    decl.textContent = `宣言: ${c.declared}`;
+    el.appendChild(decl);
+    el.onclick = () => {
+      g('pick-modal').classList.remove('active');
+      sendActionToHost({ kind:'pick', cardId: c.id, context });
+    };
+    row.appendChild(el);
+  });
+  body.appendChild(row);
+  // Show my hand + points for reference
+  appendMyInfoTo(body);
+  g('pick-modal').classList.add('active');
+}
+function closePickModal() { g('pick-modal').classList.remove('active'); }
+
+// ============================================================
+// SWAP MODAL (《1》 effect)
+// ============================================================
+function promptSwap(cardId, cardValue, candidates, doneCallback) {
+  const body = g('swap-modal-body');
+  body.innerHTML = '';
+  g('swap-info').textContent = `「《1》効果」: 他プレイヤーの得点カードと交換できます（3枚以上所持の値は対象外）`;
+  if(candidates.length === 0) {
+    body.innerHTML = '<div class="helper-text">交換可能な対象がありません</div>';
+  } else {
+    candidates.forEach(cand => {
+      const row = document.createElement('button');
+      row.className = 'btn btn-blue';
+      row.style.marginBottom = '4px';
+      row.textContent = `${cand.name} の 《${cand.value}》と交換`;
+      row.onclick = () => {
+        g('swap-modal').classList.remove('active');
+        sendActionToHost({ kind:'swap', swapTargetId: cand.pid, swapValue: cand.value, useEffect: true });
+        // continuation is handled by hostSwapResolved (host) or host-side _pendingSwap (remote)
+      };
+      body.appendChild(row);
+    });
+  }
+  g('swap-modal').classList.add('active');
+}
+function closeSwapModal() {
+  g('swap-modal').classList.remove('active');
+  sendActionToHost({ kind:'swap', useEffect: false });
+  // continuation handled by hostSwapResolved
+}
+
+// ============================================================
+// FAIRY GIVE MODAL
+// ============================================================
+function promptFairyGive(cardIds, others, doneCallback) {
+  const body = g('fairy-give-body');
+  body.innerHTML = '';
+  others.forEach(o => {
+    const row = document.createElement('button');
+    row.className = 'btn btn-blue';
+    row.style.marginBottom = '4px';
+    row.textContent = `${o.name} に押し付ける`;
+    row.onclick = () => {
+      g('fairy-give-modal').classList.remove('active');
+      const targets = {};
+      cardIds.forEach(id => targets[id] = o.id);
+      sendActionToHost({ kind:'fairy-give', targets });
+      // continuation handled by hostFairyGiveResolved
+    };
+    body.appendChild(row);
+  });
+  g('fairy-give-modal').classList.add('active');
+}
+function closeFairyGiveModal() {
+  g('fairy-give-modal').classList.remove('active');
+  // Keep self
+  sendActionToHost({ kind:'fairy-give', targets: {} });
+  // continuation handled by hostFairyGiveResolved
+}
+
+// ============================================================
+// INITIAL FAIRY SWAP MODAL
+// ============================================================
+function showInitialFairySwapModal(hand) {
+  const body = g('initial-swap-body');
+  body.innerHTML = '';
+  const head = document.createElement('div');
+  head.style.cssText = 'font-size:0.85rem;color:var(--muted);padding:4px;';
+  head.textContent = '入れ替える手札カードをタップ:';
+  body.appendChild(head);
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:10px;';
+  hand.forEach(card => {
+    const el = renderCard(card, true);
+    el.classList.add('clickable');
+    el.onclick = () => {
+      g('initial-swap-modal').classList.remove('active');
+      sendActionToHost({ kind:'initial-fairy-swap', handCardId: card.id });
+    };
+    row.appendChild(el);
+  });
+  body.appendChild(row);
+  g('initial-swap-modal').classList.add('active');
+}
+function keepInitialFairy() {
+  g('initial-swap-modal').classList.remove('active');
+  sendActionToHost({ kind:'initial-fairy-swap', handCardId: null });
+}
+
+// ============================================================
+// FINAL DISCARD MODAL
+// ============================================================
+function showFinalDiscardModal(card) {
+  const body = g('final-discard-body');
+  body.innerHTML = '';
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;justify-content:center;padding:10px;';
+  row.appendChild(renderCard(card, true));
+  body.appendChild(row);
+  // Score preview
+  const me = gs.players.find(p => p.id === myId);
+  if(me) {
+    const cur = scoreOf(me.points);
+    const withCard = scoreOf([...me.points, card.v]);
+    const preview = document.createElement('div');
+    preview.className = 'helper-text';
+    preview.innerHTML = `現在: <strong>${cur}点</strong> → 得点化すると: <strong>${withCard}点</strong>`;
+    body.appendChild(preview);
+  }
+  g('final-discard-modal').classList.add('active');
+}
+function finalDiscardChoice(discard) {
+  g('final-discard-modal').classList.remove('active');
+  sendActionToHost({ kind:'final-discard', discard });
+}
+
+// ============================================================
+// SHOW RESULT
+// ============================================================
+function showResult(scores) {
+  const winner = scores[0];
+  const iWon = winner.id === myId;
+  const card = g('result-card');
+  card.className = 'result-card ' + (iWon ? 'win' : '');
+  card.innerHTML = `<div class="title">${iWon?'🎉 勝利':'結果'}</div><div style="color:var(--muted);">${winner.name} の勝利！（${winner.score}点）</div>`;
+  const ov = g('result-overview'); ov.innerHTML = '';
+  scores.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'po-item' + (s.id===myId?' is-me':'');
+    // Show points breakdown
+    const counts = {};
+    (s.points||[]).forEach(v => counts[v] = (counts[v]||0) + 1);
+    let chips = '';
+    if(counts[1]) chips += `<span class="point-chip one">1×${counts[1]}</span>`;
+    if(counts.F) chips += `<span class="point-chip fairy">🧚×${counts.F}</span>`;
+    for(let v=2; v<=9; v++) if(counts[v]) chips += `<span class="point-chip num">${v}×${counts[v]}</span>`;
+    div.innerHTML = `<div class="po-head"><div class="avatar">${s.name.slice(0,2)}</div><div class="po-name">${s.name}</div><div class="po-score">${s.score}点</div></div><div class="po-points">${chips}</div>`;
+    ov.appendChild(div);
+  });
+  const rl = g('result-log'); rl.innerHTML = '';
+  (gs.log||[]).slice(-40).forEach(line => { const d = document.createElement('div'); d.className='log-line'; d.textContent=line; rl.appendChild(d); });
+  show('result');
+}
+
+// ============================================================
+// CPU AI
+// ============================================================
+function cpuPlay(cpu) {
+  if(!cpu || gs.phase !== 'play' || gs.players[gs.turnIdx]?.id !== cpu.id) return;
+  if(cpu.hand.length < 2) {
+    // Only 1 card or 0: can't play normally; just discard if 0? Shouldn't happen mid-game with deck refill
+    return;
+  }
+  // Strategy: dump bad cards (esp. lone odd-count numbers and excess fairies), prefer to play matching values to make sets
+  // Simple: pick 2 cards heuristically:
+  // - If we have a fairy and >= 3 fairies, dump one fairy.
+  // - Otherwise pick two of the "least useful" cards: lone numbers (only 1 in hand+points)
+  const me = cpu;
+  const handVals = me.hand.map(c => c.v);
+  const pointVals = me.points.slice();
+  // Pick worst 2 cards by heuristic. For each card, "usefulness" = combined count in hand+points
+  // Lower = worse to keep, so dump it
+  function usefulness(card) {
+    let u = 0;
+    handVals.forEach(v => { if(v === card.v) u++; });
+    pointVals.forEach(v => { if(v === card.v) u++; });
+    // Fairies: more is bad early
+    if(card.v === 'F') u -= 1; // discourage hoarding
+    return u;
+  }
+  const sortedHand = me.hand.slice().sort((a,b) => usefulness(a) - usefulness(b));
+  const cardsToPlay = sortedHand.slice(0, 2);
+  // Declare: 70% chance honest, 30% chance bluff
+  const decls = cardsToPlay.map(c => {
+    if(Math.random() < 0.3) {
+      // bluff: random value
+      const opts = ['1','2','3','4','5','6','7','8','9','F'].filter(v => String(c.v) !== v);
+      const pick = opts[Math.floor(Math.random()*opts.length)];
+      return pick === 'F' ? 'F' : parseInt(pick);
+    }
+    return c.v;
+  });
+  // Face: prefer all up by default; use down occasionally (10% double-down if available)
+  let faces = ['up','up'];
+  const r = Math.random();
+  if(r < 0.05 && !me.usedDoubleHidden) faces = ['down','down'];
+  else if(r < 0.25) faces = Math.random() < 0.5 ? ['up','down'] : ['down','up'];
+  hostPlayCards(cpu.id, cardsToPlay.map(c=>c.id), decls, faces);
+}
+
+function cpuTrade(cpu) {
+  if(!gs.deal || gs.players[gs.deal.tradeIdx]?.id !== cpu.id) return;
+  // Decision: want if declared cards look useful (matches existing point counts toward even)
+  const cards = gs.deal.cards;
+  // Use declared values to evaluate "want" (since face-down cards' actual value unknown to others)
+  // But CPU also weighs: if declared values look good and there's only 1 face-down (some uncertainty)
+  const myPoints = cpu.points;
+  // For each card, compute expected gain
+  // Naive: use declared value
+  function val(decl) {
+    if(decl === 'F') return 5; // moderate baseline
+    if(decl === 1) return 8;   // 1 is valuable for swap
+    const v = decl;
+    const cnt = myPoints.filter(x => x === v).length;
+    if(cnt % 2 === 0) return v + 2; // adding makes odd → -v; wait, adding to even makes odd
+    else return v + 5;              // adding to odd makes even → +v
+  }
+  const v0 = val(cards[0].declared), v1 = val(cards[1].declared);
+  // If either looks valuable enough, want
+  const wantThreshold = 6;
+  const choice = (Math.max(v0,v1) >= wantThreshold && Math.random() < 0.6) ? 'want' : 'skip';
+  hostTradeChoice(cpu.id, choice);
+}
+
+function cpuPickCard(cpu) {
+  if(!gs.deal) return;
+  // Pick the higher-value card (using actual values, since picker sees them)
+  const cards = gs.deal.cards;
+  function pickVal(c) {
+    if(c.v === 'F') return -2; // fairies harm if we accumulate too many
+    if(c.v === 1) return 8;
+    const cnt = cpu.points.filter(x => x === c.v).length;
+    return (cnt % 2 === 0) ? c.v + 2 : c.v + 5;
+  }
+  const sorted = cards.slice().sort((a,b) => pickVal(b) - pickVal(a));
+  hostPickResolved(cpu.id, sorted[0].id, { type: 'pick-from-deal' });
+}
+
+function cpuSwap(cpu, candidates, done) {
+  // Pick the highest-value swap
+  candidates.sort((a,b) => b.value - a.value);
+  const target = candidates[0];
+  if(!target) { done(); return; }
+  // Use effect
+  hostSwapResolved(cpu.id, target.pid, target.value, true);
+  done();
+}
+
+function cpuFairyGive(cpu, fairyId, others, done) {
+  // Give to the player with the highest score (target the leader)
+  others.sort((a,b) => {
+    const pa = gs.players.find(p=>p.id===a.id);
+    const pb = gs.players.find(p=>p.id===b.id);
+    return scoreOf(pb.points) - scoreOf(pa.points);
+  });
+  const target = others[0];
+  if(!target) { done(); return; }
+  const targets = {};
+  targets[fairyId] = target.id;
+  hostFairyGiveResolved(cpu.id, targets);
+  done();
+}
+
+function cpuInitialFairySwap(cpu) {
+  // Decide whether to swap fairy with a hand card.
+  // Strategy: if hand has a useful low-number card (1, or a number we already have 1 of for set completion),
+  // swap with that. Otherwise keep fairy.
+  // Simple version: swap with the highest-value hand card (since fairy is bad in small quantities)
+  const hand = cpu.hand;
+  if(hand.length === 0) {
+    return hostInitialFairySwapResolved(cpu.id, null);
+  }
+  // Prefer a 1 if we have it (1 is good in points pile = +1 + swap effect on draw)
+  // Or prefer a number we already have in points (to make a pair = +score)
+  let best = null, bestScore = -1;
+  for(const card of hand) {
+    let score = 0;
+    if(card.v === 1) score = 5;
+    else if(card.v === 'F') score = -10;
+    else {
+      const cnt = cpu.points.filter(v => v === card.v).length;
+      // Adding this card makes (cnt+1). If (cnt+1) is even, big positive
+      if((cnt+1) % 2 === 0) score = card.v * 2; // making even is good
+      else score = -card.v; // making odd is bad
+    }
+    if(score > bestScore) { bestScore = score; best = card; }
+  }
+  // If best score > 0, do the swap. Otherwise keep the fairy.
+  if(best && bestScore > 0) {
+    hostInitialFairySwapResolved(cpu.id, best.id);
+  } else {
+    hostInitialFairySwapResolved(cpu.id, null);
+  }
+}
+
+function cpuFinalDiscard(cpu) {
+  // Decide whether to discard the last card or score it
+  if(cpu.hand.length === 0) return hostFinalDiscardResolved(cpu.id, false);
+  const card = cpu.hand[0];
+  // Compute current score
+  const cur = scoreOf(cpu.points);
+  const withCard = scoreOf([...cpu.points, card.v]);
+  const discard = withCard < cur;
+  hostFinalDiscardResolved(cpu.id, discard);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('fdName');
+  if(saved) g('in-name').value = saved;
+  g('in-name').addEventListener('input', e => localStorage.setItem('fdName', e.target.value));
+});
+</script>
+</body>
+</html>

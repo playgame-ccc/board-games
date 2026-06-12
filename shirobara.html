@@ -450,6 +450,7 @@ h3 { font-size:1.0rem; color:var(--rose-dark); margin:8px 0; }
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
 
 <!-- ============================================================ LOBBY ============================================================ -->
 <div id="screen-lobby" class="screen active">
@@ -1037,6 +1038,7 @@ function srBcast(){
   srGs = srPub(srFs);
   if(isSolo){ srOnGsUpdate(); return; }
   fbBroadcast({type:'sr_gs', s:srGs});
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 function srPub(f){
   return {
@@ -2596,6 +2598,7 @@ function srRenderProgressInfo(){
 }
 
 function srRenderBoard(){
+  if(!srGs || !srGs.board) return; // sr_gs未受信（盤面情報なし）時は描画しない
   const board = g('game-board');
   const b = srGs.board;
   let html = '<div class="board-top">';
@@ -3253,6 +3256,10 @@ function srShowReconnectOption() {
   btn.style.display = '';
   btn.textContent = '🔄 前のルームに戻る（🌹白薔薇 #' + s.roomCode + '）';
 }
+function pgSaveHostState(){
+  if(!isHost || !fbRoom || !srFs) return;
+  try { fbPut('hostState', {ts: Date.now(), j: JSON.stringify(srFs), seen: JSON.stringify(fbLastSeen||{})}); } catch(e){}
+}
 async function srReconnectToRoom() {
   const s = srLoadSession();
   if(!s) { setErr('セッションが見つかりません'); return; }
@@ -3262,6 +3269,19 @@ async function srReconnectToRoom() {
   try {
     const meta = await fbGet('meta');
     if(!meta) { srClearSession(); setErr('ルームが見つかりません（終了済みの可能性）'); setSt(''); srShowReconnectOption(); return; }
+    if(isHost) {
+      const hs = await fbGet('hostState');
+      if(hs && hs.j) {
+        // 完全状態（非公開情報込み）から復元
+        srFs = JSON.parse(hs.j);
+        try { fbLastSeen = JSON.parse(hs.seen||'{}'); } catch(e){ fbLastSeen = {}; }
+        fbListen();
+        if(g('disp-code')) g('disp-code').textContent = roomCode;
+        srBcast();
+        setSt('');
+        return;
+      }
+    }
     fbListen();
     if(isHost) {
       const bc = await fbGet('broadcast');

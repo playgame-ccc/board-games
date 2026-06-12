@@ -407,6 +407,26 @@ h3 { font-size: 1rem; font-weight: 600; }
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
+<div id="pg-confirm" style="position:fixed;inset:0;background:rgba(0,0,0,0.82);display:none;align-items:center;justify-content:center;padding:20px;z-index:99998;">
+  <div style="background:#1c1f2b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:12px;">
+    <p id="pg-confirm-msg" style="font-size:0.92rem;white-space:pre-line;margin:0;color:#f0f0f5;line-height:1.6;"></p>
+    <button id="pg-confirm-ok" style="padding:13px;border:none;border-radius:10px;background:#2dbd6e;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;">はい</button>
+    <button id="pg-confirm-cancel" style="padding:13px;border:1px solid rgba(255,255,255,0.25);border-radius:10px;background:transparent;color:#aab;font-size:0.95rem;cursor:pointer;font-family:inherit;">キャンセル</button>
+  </div>
+</div>
+<script>
+// モバイルブラウザのconfirm()ブロック対策（カスタム確認モーダル）
+function pgConfirm(message, onOk, onCancel){
+  const m=document.getElementById('pg-confirm');
+  document.getElementById('pg-confirm-msg').textContent=message;
+  m.style.display='flex';
+  const ok=document.getElementById('pg-confirm-ok'), ca=document.getElementById('pg-confirm-cancel');
+  const cleanup=()=>{m.style.display='none';ok.onclick=null;ca.onclick=null;};
+  ok.onclick=()=>{cleanup();if(onOk)onOk();};
+  ca.onclick=()=>{cleanup();if(onCancel)onCancel();};
+}
+</script>
 
 <!-- ============ FIREBASE MODAL ============ -->
 <div class="firebase-modal" id="fb-modal">
@@ -438,6 +458,7 @@ h3 { font-size: 1rem; font-weight: 600; }
   </div>
   <div class="error" id="home-err"></div>
 
+  <button class="btn" id="btn-reconnect" style="display:none; background:rgba(45,189,110,0.15); color:#2dbd6e; border:1px solid rgba(45,189,110,0.5);" onclick="pgReconnect()"></button>
   <button class="btn btn-purple" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
 
   <div class="row">
@@ -905,6 +926,7 @@ async function createRoom() {
   g('btn-start-game').style.display = 'block';
   renderWaitPlayers();
   fbListen();
+  pgSaveSession();
 }
 
 async function joinRoom() {
@@ -926,6 +948,7 @@ async function joinRoom() {
   g('room-code').textContent = roomCode;
   g('btn-start-game').style.display = 'none';
   fbListen();
+  pgSaveSession();
 }
 function randomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -958,6 +981,7 @@ function renderWaitPlayers() {
 }
 
 async function leaveRoom() {
+  pgClearSession();
   fbClose();
   if(gameMode === 'online' && fbRoom) {
     if(isHost) { await fbDel(''); }
@@ -968,7 +992,7 @@ async function leaveRoom() {
   selectedGems = { w:0, b:0, g:0, r:0, k:0 };
   show('home');
 }
-function confirmLeave() { if(confirm('ゲームを終了してロビーに戻りますか？')) leaveRoom(); }
+function confirmLeave() { pgConfirm('ゲームを終了してロビーに戻りますか？', ()=>leaveRoom()); }
 
 // ============================================================
 // MESSAGE HANDLER
@@ -980,12 +1004,15 @@ function onMsg(msg, from) {
 }
 function handleHostMsg(msg, from) {
   switch(msg.t) {
-    case 'join':
-      if(!gs.started && gs.players.length<4 && !gs.players.find(p=>p.id===msg.id)) {
+    case 'join': {
+      const exP = gs && gs.players ? gs.players.find(p=>p.id===msg.id) : null;
+      if(exP) { exP.isCpu = false; if(gs.started) { pushStateAll(); } else { broadcastLobby(); } break; } // 再接続（途中復帰）
+      if(!gs.started && gs.players.length<4) {
         gs.players.push({ id:msg.id, name:msg.name, isCpu:false });
         broadcastLobby();
       }
       break;
+    }
     case 'action':
       handlePlayerAction(msg.id || from, msg.action);
       break;
@@ -1020,6 +1047,7 @@ function handleClientMsg(msg, from) {
 function broadcastLobby() {
   fbBroadcast({ t:'lobby', players: gs.players, started: gs.started });
   renderWaitPlayers();
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 
 // ============================================================
@@ -1106,6 +1134,10 @@ function shuffle(arr) {
 }
 
 // Send public state to all clients
+// 公開用ビュー（注: 予約カードも公開される簡易実装。未実装によるオンライン対戦クラッシュの修正）
+function publicView(state) {
+  return JSON.parse(JSON.stringify(state));
+}
 function pushStateAll() {
   if(gameMode!=='online') return;
   const pub = publicView(gs);
@@ -1113,6 +1145,7 @@ function pushStateAll() {
     if(p.isCpu || p.id===myId) return;
     fbSendTo(p.id, { t:'state', gs: pub });
   });
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 // ============================================================
 // RENDER GAME SCREEN
@@ -1944,6 +1977,70 @@ window.addEventListener('DOMContentLoaded', ()=>{
     localStorage.setItem('spName', e.target.value);
   });
 });
+</script>
+
+<script>
+// === 再接続（途中復帰）機能 ===
+const PG_SESSION_KEY = 'pgSession_splendor';
+function pgSaveSession(){ try{ sessionStorage.setItem(PG_SESSION_KEY, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); }catch(e){} }
+function pgLoadSession(){ try{ const r=sessionStorage.getItem(PG_SESSION_KEY); if(!r) return null; const s=JSON.parse(r); if(Date.now()-s.ts>3*60*60*1000){ pgClearSession(); return null; } return s; }catch(e){ return null; } }
+function pgClearSession(){ try{ sessionStorage.removeItem(PG_SESSION_KEY); }catch(e){} }
+function pgShowReconnect(){ const s=pgLoadSession(); const b=document.getElementById('btn-reconnect'); if(!b) return; if(!s||!s.roomCode){ b.style.display='none'; return; } b.style.display=''; b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）'; }
+function pgSaveHostState(){
+  if(!isHost || !fbRoom || typeof gs==='undefined' || !gs) return;
+  try { fbPut('hostState', {ts: Date.now(), gsJson: JSON.stringify(gs), actTs: JSON.stringify(fbLastTs||{})}); } catch(e){}
+}
+async function pgReconnect(){
+  const s = pgLoadSession(); if(!s) return;
+  myId=s.myId; myName=s.myName; roomCode=s.roomCode; fbRoom=s.fbRoom; isHost=s.isHost; gameMode='online';
+  try{
+    const meta = await fbGet('meta');
+    if(!meta){ pgClearSession(); pgShowReconnect(); setHomeErr('ルームが見つかりません（終了済みの可能性）'); return; }
+    if(isHost){
+      const hs = await fbGet('hostState');
+      if(hs && hs.gsJson){
+        // 完全状態（非公開情報込み）から復元
+        gs = JSON.parse(hs.gsJson);
+        fbListen();
+        try { fbLastTs = JSON.parse(hs.actTs||'{}'); } catch(e){ fbLastTs = {}; }
+        pgSaveSession();
+        if(document.getElementById('room-code')) document.getElementById('room-code').textContent = roomCode;
+        const me = gs.players.find(p=>p.id===myId);
+        if(gs.started){
+          
+          show('game'); renderGame();
+          pushStateAll();
+        } else {
+          show('wait'); renderWaitPlayers(); broadcastLobby();
+        }
+        return;
+      }
+      const bc = await fbGet('broadcast');
+      const m = bc && bc.msg;
+      if(m && m.t==='lobby' && !m.started){
+        gs = freshGameState();
+        gs.players = m.players || [];
+        fbListen();
+        pgSaveSession();
+        show('wait');
+        if(document.getElementById('room-code')) document.getElementById('room-code').textContent = roomCode;
+        renderWaitPlayers();
+        broadcastLobby();
+      } else {
+        setHomeErr('ゲーム進行中のホスト復帰はできません');
+        return;
+      }
+    } else {
+      fbListen();
+      fbSendToHost({ t:'join', id:myId, name:myName });
+      pgSaveSession();
+      show('wait');
+      if(document.getElementById('room-code')) document.getElementById('room-code').textContent = roomCode;
+      const bs=document.getElementById('btn-start-game'); if(bs) bs.style.display='none';
+    }
+  }catch(e){ setHomeErr('再接続に失敗しました'); }
+}
+setTimeout(pgShowReconnect, 300);
 </script>
 </body>
 </html>

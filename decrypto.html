@@ -132,6 +132,7 @@ body{min-height:100vh;padding:14px;background:radial-gradient(circle at 20% 30%,
 </style>
 </head>
 <body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
 <div class="app">
 
 <!-- パスワード画面 -->
@@ -792,7 +793,7 @@ async function fbSendToHost(data){
 // ホスト切断耐性のため、完全な状態を保存
 async function fbSaveState(){
   if(!isHost||!dcFs) return;
-  await fbPut('state',dcFs);
+  await fbPut('state',{j: JSON.stringify(dcFs)}); // JSON文字列化（FB空配列削除対策）
 }
 
 function fbStartPolling(){
@@ -1086,10 +1087,10 @@ async function dcRecoverSession(){
     }
     const now=Date.now();
     const bcAlive=bc.ts && (now-bc.ts)<HOST_TIMEOUT_MS;
-    
-    if(s.isHost && !bcAlive){
-      // 元ホストとして復帰（broadcast停止中 = 自分が唯一のホスト候補）
-      const fs=await fbGet('state');
+    let fsPre=null;
+    if(s.isHost){ const fs0=await fbGet('state'); fsPre=(fs0 && fs0.j) ? JSON.parse(fs0.j) : fs0; }
+    if(s.isHost && (!bcAlive || (fsPre && fsPre.host===s.myId))){ // 自分が最後のホストなら即復帰可
+      const fs=fsPre;
       if(!fs){
         g('recover-error').textContent='ゲーム状態が取得できません';
         clearSession();
