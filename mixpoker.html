@@ -156,7 +156,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   width: 100%;
   max-width: 440px;
   margin: 6px auto;
-  aspect-ratio: 14 / 13;
+  aspect-ratio: 13 / 9;
   background: linear-gradient(180deg, var(--felt) 0%, var(--felt2) 100%);
   border-radius: 50% / 40%;
   box-shadow:
@@ -167,7 +167,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .poker-table::after {
   content: 'MIX';
   position: absolute;
-  top: 58%; left: 50%;
+  top: 60%; left: 50%;
   transform: translate(-50%, -50%);
   font-weight: 800;
   font-style: italic;
@@ -179,17 +179,21 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .table-center {
   position: absolute;
-  top: 46%; left: 50%;
+  top: 52%; left: 50%;
   transform: translate(-50%, -50%);
   width: 92%;
+  z-index: 1;
   text-align: center;
   z-index: 1;
 }
-.table-center .board-area { margin: 8px 0 0; }
+.table-center .board-area { margin: 6px 0 0; }
+.table-center .board-area .card { width: 34px; height: 48px; border-radius: 6px; }
+.table-center .board-area .card .corner { font-size: 0.78rem; }
 
 /* ===== 相手プレイヤー（パネル型） ===== */
 .opp {
   position: absolute;
+  z-index: 2;
   width: 108px;
   transform: translate(-50%, -50%);
   text-align: center;
@@ -1570,6 +1574,10 @@ function advancePhase(){
     // 次のアクター（種目で起点が違う）
     if(gd.type==='stud'){
       h.toActIdx = studFirstActor(h); // 表札の強さで先頭アクターを決定（razzは最弱表札）
+      if(h.toActIdx>=0 && h.players[h.toActIdx]){
+        const isRazzLog = (G.currentGame==='razz');
+        G.log.unshift(`▶ 先頭: ${h.players[h.toActIdx].name}（表札${isRazzLog?'がベストロー':'が最強'}）`);
+      }
     } else {
       h.toActIdx = nextActor(G.buttonIdx);
     }
@@ -1826,11 +1834,122 @@ function bestLowKeep(hole, loType){
   const isA5 = (loType==='a5lo');
   const val = c => isA5 ? (c.r===14?1:c.r) : c.r;
   const sorted = [...hole].sort((a,b)=>val(a)-val(b));
-  const keep=[]; const usedRanks=new Set();
+  // 8以下のユニークランクをキープ（9以上は交換して引き直す）
+  let keep=[]; const usedRanks=new Set();
   for(const c of sorted){
-    if(!usedRanks.has(c.r) && keep.length<5){ keep.push(c); usedRanks.add(c.r); }
+    if(val(c) <= 8 && !usedRanks.has(c.r) && keep.length<5){ keep.push(c); usedRanks.add(c.r); }
   }
+  // 9ハイパット: 8以下が4枚揃っていれば9を1枚足してスタンド
+  if(keep.length===4){
+    const nine = sorted.find(cd=>val(cd)===9 && !usedRanks.has(cd.r));
+    if(nine){ keep.push(nine); usedRanks.add(nine.r); }
+  }
+  // 2-7: ストレート/フラッシュは役がついて最悪 → 5枚完成形なら最高札を捨てて解体
+  if(!isA5 && keep.length===5){
+    const rs = keep.map(cd=>cd.r).sort((a,b)=>a-b);
+    const isStraight = rs.every((r,i)=> i===0 || r===rs[i-1]+1);
+    const isFlush = new Set(keep.map(cd=>cd.s)).size===1;
+    if(isStraight || isFlush){
+      keep.sort((a,b)=>val(a)-val(b));
+      keep.pop(); // 最高札を交換
+    }
+  }
+  // 全部9以上なら最も低い1枚だけ残す
+  if(keep.length===0) keep = [sorted[0]];
   return keep;
+}
+
+// ===== 種目別の手の強さ（レンジ推定フィルタ用・0-1） =====
+function drawStrength(hole, evalLo){
+  if(evalLo==='badugi'){
+    const b = badugiScore(hole);
+    if(!b) return 0;
+    const n = b.count;
+    const vals = b.cards.map(cd=> cd.r===14?1:cd.r);
+    const hi = Math.max(...vals);
+    return Math.min(1, (n-1)/3 * 0.75 + (14-hi)/13 * 0.25);
+  }
+  const isA5 = (evalLo==='a5lo');
+  const val = cd => isA5 ? (cd.r===14?1:cd.r) : cd.r;
+  const uniqVals = [...new Set(hole.map(val))].sort((a,b)=>a-b);
+  const low5 = uniqVals.slice(0,5);
+  if(low5.length < 5) return Math.max(0, low5.length * 0.08); // ペア過多
+  const hi = low5[4];
+  let s;
+  if(hi <= 8) s = Math.min(1, 0.72 + (8-hi)*0.14); // 8ロー完成=0.72、7ロー=0.86、ホイール級=1.0
+  else if(hi === 9) s = 0.62;                       // 9ロー完成
+  else if(hi === 10) s = 0.50;                      // 10ロー完成
+  else {
+    // ブロードウェイ混じり: 実質ドロー手。8以下の低札数で評価
+    const lowN = low5.filter(v=>v<=8).length;
+    s = 0.18 + lowN * 0.07; // 低札4枚=0.46, 3枚=0.39
+  }
+  if(!isA5 && hole.length===5){
+    const rs = hole.map(cd=>cd.r).sort((a,b)=>a-b);
+    const st = new Set(rs).size===5 && rs[4]-rs[0]===4;
+    const fl = new Set(hole.map(cd=>cd.s)).size===1;
+    if(st||fl) s -= 0.45; // 2-7: ストレート/フラッシュ完成は大減点
+  }
+  return Math.max(0, Math.min(1, s));
+}
+// ドロー種目: 投資量+交換枚数から相手レンジ下限を推定（閾値はランダム分布から校正済み）
+function drawRangeFloor(h, opp, evalLo){
+  const bb = h.bbAmount || 20;
+  let inv = (opp.totalBet||0) + (opp.roundBet||0);
+  if(opp.idx === h.bbIdx) inv -= bb * ((typeof G!=='undefined'&&G&&G.tourney)?2:1);
+  else if(opp.idx === h.sbIdx) inv -= Math.floor(bb/2);
+  const bbInv = inv / bb;
+  const T = evalLo==='badugi' ? [0.56,0.62,0.77] : evalLo==='a5lo' ? [0.32,0.40,0.46] : [0.32,0.36,0.39];
+  let tier = 0;
+  if(bbInv >= 7) tier = 3;
+  else if(bbInv >= 2.2) tier = 2;
+  else if(bbInv >= 0.9) tier = 1;
+  // 交換枚数は公開情報: スタンドパット=完成手レンジ（上位5%）、1枚交換=ほぼ完成レンジ
+  const PAT = evalLo==='badugi' ? 0.82 : evalLo==='a5lo' ? 0.62 : 0.50; // パット=完成手レンジ（badugi:4枚 / a5:9ロー以上 / 2-7:10ロー以上）
+  let floor = tier===0 ? 0 : T[tier-1];
+  if(opp.lastDraw === 0) floor = Math.max(floor, PAT);
+  else if(opp.lastDraw === 1) floor = Math.max(floor, T[1]);
+  return floor;
+}
+// スタッド種目: 投資量から伏せ札レンジ下限を推定
+function studRangeFloor(h, opp, isRazz){
+  const bb = h.bbAmount || 20;
+  const bbInv = ((opp.totalBet||0)+(opp.roundBet||0)) / bb;
+  const T = isRazz ? [0.19,0.27,0.38] : [0.28,0.30,0.43];
+  if(bbInv >= 7) return T[2];
+  if(bbInv >= 2.2) return T[1];
+  if(bbInv >= 0.9) return T[0];
+  return 0;
+}
+function studStart3(cards, isRazz){
+  // スタッドの3枚スターティング強度（伏2+表1相当）
+  if(isRazz){
+    const vals = cards.map(cd=> cd.r===14?1:cd.r);
+    const uniq = new Set(vals);
+    let s = 0;
+    vals.forEach(v=>{ s += (9 - Math.min(9, v))/9; });
+    s = s/3 * 0.85;
+    s -= (cards.length - uniq.size) * 0.3; // ペアは大減点
+    return Math.max(0, Math.min(1, s));
+  }
+  // stud/studhi: ペア・トリップス・スーテッド連結・ハイカード
+  const rs = cards.map(cd=>cd.r);
+  const counts={}; rs.forEach(r=>counts[r]=(counts[r]||0)+1);
+  const maxC = Math.max(...Object.values(counts));
+  let s = 0;
+  if(maxC===3) s = 0.95;
+  else if(maxC===2){
+    const pr = +Object.keys(counts).find(k=>counts[k]===2);
+    s = 0.45 + pr/14 * 0.3;
+  } else {
+    const hi = Math.max(...rs);
+    s = hi/14 * 0.3;
+    const suits = new Set(cards.map(cd=>cd.s));
+    if(suits.size===1) s += 0.15;
+    const sr = rs.slice().sort((a,b)=>a-b);
+    if(sr[2]-sr[0] <= 4) s += 0.08; // 連結気味
+  }
+  return Math.max(0, Math.min(1, s));
 }
 
 // 人間のドロー交換UI（ソロ用）
@@ -2467,7 +2586,33 @@ function calcEquity(h, idx, iterations){
     const deck = pool.slice();
     for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
     let di = 0;
-    const draw1 = ()=> deck[di++];
+    const draw1 = ()=> {
+      if(di < deck.length) return deck[di++];
+      // デッキ枯渇（8人スタッド等のエッジ）: 統計的近似としてプールからランダム複製しクラッシュを防ぐ
+      return deck[Math.floor(Math.random()*deck.length)];
+    };
+    // 棄却サンプリングで戻す札は未使用部分のランダム位置へ（末尾に固めると将来札が偏る）
+    const putBack = (cards)=>{
+      cards.forEach(rc=>{
+        const pos = di + Math.floor(Math.random()*(deck.length - di + 1));
+        deck.splice(pos, 0, rc);
+      });
+    };
+    // レンジ条件付きサンプリング: 閾値超えを採用、全試行不通過なら最良候補を採用（分布を上位へ寄せる）
+    const sampleFiltered = (n, floor, scoreFn)=>{
+      const first=[]; for(let k=0;k<n;k++) first.push(draw1());
+      if(floor===0 || scoreFn(first) >= floor) return first;
+      let best=first, bestS=scoreFn(first);
+      const tries = floor >= 0.5 ? 24 : 7; // 高閾値（パット等の完成手レンジ）は試行を増やす
+      for(let t=0;t<tries;t++){
+        const cand=[]; for(let k=0;k<n;k++) cand.push(draw1());
+        const s = scoreFn(cand);
+        if(s >= floor){ putBack(best); return cand; }
+        if(s > bestS){ putBack(best); bestS=s; best=cand; }
+        else putBack(cand);
+      }
+      return best;
+    };
 
     let myHole = me.hole.slice();
     let simBoard = (h.board||[]).slice();
@@ -2477,29 +2622,35 @@ function calcEquity(h, idx, iterations){
       // 相手に手札を配り、ボードを5枚まで補完（投資量に応じたレンジで棄却サンプリング）
       opps.forEach((op)=>{
         const floor = oppRangeFloor(h, op, gd.holeN);
-        let oh = null;
-        const rejected = [];
-        for(let t=0;t<6;t++){
-          const cand=[]; for(let k=0;k<gd.holeN;k++) cand.push(draw1());
-          if(floor===0 || cpuPreflopStrength(cand) >= floor || t===5){ oh=cand; break; }
-          rejected.push(...cand);
-        }
-        rejected.forEach(rc=>deck.push(rc)); // 棄却分はデッキ末尾へ戻す（枯渇防止）
-        oppHoles.push(oh);
+        oppHoles.push(sampleFiltered(gd.holeN, floor, cd=>cpuPreflopStrength(cd)));
       });
       while(simBoard.length<5) simBoard.push(draw1());
     } else if(gd.type==='draw'){
-      // 相手にランダム手札。残りドローがあれば双方1回交換シミュレーション
-      opps.forEach(()=>{ const oh=[]; for(let k=0;k<gd.holeN;k++) oh.push(draw1()); oppHoles.push(oh); });
+      // 相手の手: 投資量+交換枚数（公開情報）に応じたレンジで棄却サンプリング
+      opps.forEach((op)=>{
+        const floor = drawRangeFloor(h, op, gd.evalLo);
+        oppHoles.push(sampleFiltered(gd.holeN, floor, cd=>drawStrength(cd, gd.evalLo)));
+      });
       const drawsLeft = (gd.drawRounds||1) - (h.drawDone||0);
-      if(drawsLeft > 0){
+      for(let d=0; d<drawsLeft; d++){ // 残り全ドローをシミュレート（トリプルドロー精度向上）
         myHole = simDrawOnce(myHole, gd, draw1);
-        for(let oi=0;oi<oppHoles.length;oi++) oppHoles[oi] = simDrawOnce(oppHoles[oi], gd, draw1);
+        for(let oi=0;oi<oppHoles.length;oi++){
+          if(opps[oi].lastDraw === 0) continue; // スタンドパットの相手は完成手のまま
+          oppHoles[oi] = simDrawOnce(oppHoles[oi], gd, draw1);
+        }
       }
     } else { // stud
-      // 相手: 表札既知+伏札ランダム、全員7枚まで補完
+      // 相手: 表札既知。伏せ札は投資量レンジ（3枚スターティング強度）で棄却サンプリング
+      const isRazzSim = (G.currentGame === 'razz');
       opps.forEach((p,oi)=>{
-        const oh = oppKnown[oi].ups.slice();
+        const ups = oppKnown[oi].ups;
+        const downN = Math.max(0, oppKnown[oi].total - ups.length);
+        const floor = studRangeFloor(h, p, isRazzSim);
+        const down = downN===0 ? [] : sampleFiltered(downN, floor, cd=>{
+          const start3 = cd.slice(0,2).concat(ups.slice(0,1));
+          return start3.length<3 ? 1 : studStart3(start3, isRazzSim);
+        });
+        const oh = ups.slice().concat(down);
         while(oh.length < 7) oh.push(draw1());
         oppHoles.push(oh);
       });
@@ -2562,6 +2713,196 @@ function simShare(players, simH, gd){
 }
 
 // GTO風意思決定 v2（MDF・ポジション・ベットサイズミックス・最終ストリートのブラフ均衡）
+// ===== GTOソルバー出力テーブル =====
+// プッシュ/フォールドはfictitious playで計算したナッシュ均衡（169ハンド×スタック4-20BB）
+// オープン/3ベットはGTOソルバー解の代表レンジ。hex43桁=169bit、bit i=GTO_CLASSES[i]
+const GTO_CLASSES = ["22", "32o", "32s", "33", "42o", "42s", "43o", "43s", "44", "52o", "52s", "53o", "53s", "54o", "54s", "55", "62o", "62s", "63o", "63s", "64o", "64s", "65o", "65s", "66", "72o", "72s", "73o", "73s", "74o", "74s", "75o", "75s", "76o", "76s", "77", "82o", "82s", "83o", "83s", "84o", "84s", "85o", "85s", "86o", "86s", "87o", "87s", "88", "92o", "92s", "93o", "93s", "94o", "94s", "95o", "95s", "96o", "96s", "97o", "97s", "98o", "98s", "99", "T2o", "T2s", "T3o", "T3s", "T4o", "T4s", "T5o", "T5s", "T6o", "T6s", "T7o", "T7s", "T8o", "T8s", "T9o", "T9s", "TT", "J2o", "J2s", "J3o", "J3s", "J4o", "J4s", "J5o", "J5s", "J6o", "J6s", "J7o", "J7s", "J8o", "J8s", "J9o", "J9s", "JTo", "JTs", "JJ", "Q2o", "Q2s", "Q3o", "Q3s", "Q4o", "Q4s", "Q5o", "Q5s", "Q6o", "Q6s", "Q7o", "Q7s", "Q8o", "Q8s", "Q9o", "Q9s", "QTo", "QTs", "QJo", "QJs", "QQ", "K2o", "K2s", "K3o", "K3s", "K4o", "K4s", "K5o", "K5s", "K6o", "K6s", "K7o", "K7s", "K8o", "K8s", "K9o", "K9s", "KTo", "KTs", "KJo", "KJs", "KQo", "KQs", "KK", "A2o", "A2s", "A3o", "A3s", "A4o", "A4s", "A5o", "A5s", "A6o", "A6s", "A7o", "A7s", "A8o", "A8s", "A9o", "A9s", "ATo", "ATs", "AJo", "AJs", "AQo", "AQs", "AKo", "AKs", "AA"];
+const GTO_CIDX = {}; GTO_CLASSES.forEach((h,i)=>GTO_CIDX[h]=i);
+const GTO_T = {"RFI": {"utg": "1ffaaa0f40001a0000c00018000c001000801008109", "hj": "1ffaaaafd0001e8000d00018000c001800c01008109", "co": "1fffaaaff4001f8000f0001a000d001800c01808109", "btn": "1fffffffff555feaa0fd401fa00f401a80d01a0c109", "sb": "1fffffffffd55feaa0fd001f800f401a80d01a0c109"}, "TBV": "1e00000800001000008000100000000000000000000", "TBB": "00000aa100000800004000000000000000400800000", "FLAT": "01a0000740000a0000500008000c001800801008109", "PUSH": {"4": "1ffffffffffffffffffffffffeaff51fa0f41a0d109", "6": "1ffffffffffffffffffff55feaafd51ea0f41e8d589", "8": "1fffffffffffffffeaffd55faa0f501ea0f41e8d589", "10": "1ffffffffffffffaaaff545fa80f501ea0f41e8d189", "12": "1fffffffffff5feaaafd541ea80f501e80f41a0d109", "15": "1fffffffffd55faaa0fd401ea00f501e80d41a0d109", "20": "1ffffffff5551fa2a0f5001ea00f501a80d01a0d109"}, "CALL": {"4": "1ffffffffffffffffffffffffeaff51f80f41a0d109", "6": "1fffffffffffffffeaffd41fa00f001800801008109", "8": "1fffffffffffdffea0fd001e800c001000801008109", "10": "1ffffffffff51fe800fc00180008001000801008109", "12": "1fffffffffd01fa000f000100008001000801008109", "15": "1fffffeffc001f8000c000100008001000801008108", "20": "1ffffa8ff0001a00008000100008001000801008108"}, "PUSH2": {"4": "1ffffffffffd5ffa00fc00180008001000801008109", "6": "1fffffffffd01f8000c000100008001000801008109", "8": "1ffffffffd001e00008000100008001000801008109", "10": "1fffffaff0001a00008000100008001000801008109", "12": "1ffffaaff0001800008000100008001000801008109", "15": "1fffea8fc0001000008000100008001000801008108", "20": "1ffe800f00001000008000100008001000801008108"}, "PUSH4": {"4": "1ffffffffff51fe000f000100008001000801008108", "6": "1fffffeffc001e00008000100008001000801008108", "8": "1ffffa8ff0001800008000100008001000801008108", "10": "1fffe80fc0001000008000100008001000801008100", "12": "1fffa00f40001000008000100008001000801008100", "15": "1ffe800c00001000008000100008001000801008100", "20": "1ff8000800001000008000100008001000801008000"}, "PUSH7": {"4": "1ffffffffff41fe000f000100008001000801008108", "6": "1fffffaffc001e00008000100008001000801008108", "8": "1fffea8ff0001800008000100008001000801008100", "10": "1fffa00fc0001000008000100008001000801008100", "12": "1ffe800f00001000008000100008001000801008100", "15": "1ffe000c00001000008000100008001000801008100", "20": "1ff0000800001000008000100008001000801000000"}};
+function handClass169(c1, c2){
+  const R='23456789TJQKA';
+  if(c1.r===c2.r) return R[c1.r-2]+R[c1.r-2];
+  const hi = c1.r>c2.r?c1:c2, lo = c1.r>c2.r?c2:c1;
+  return R[hi.r-2]+R[lo.r-2]+(c1.s===c2.s?'s':'o');
+}
+function gtoIn(hex, cls){
+  const idx = GTO_CIDX[cls];
+  if(idx==null) return false;
+  const nib = parseInt(hex[42 - (idx>>2)], 16);
+  return !!((nib >> (idx & 3)) & 1);
+}
+function gtoNearestS(bb){
+  const S=[4,6,8,10,12];
+  let best=S[0], bd=1e9;
+  S.forEach(s=>{ const d=Math.abs(s-bb); if(d<bd){bd=d;best=s;} });
+  return best;
+}
+// NLH専用: ソルバーテーブルに基づく初回ラウンド判断（該当しない局面はnullで従来ロジックへ）
+function nlhTableDecide(h, idx, p, gd, limits){
+  const toCall = limits.toCall;
+  const bb = h.bbAmount||20;
+  const cls = handClass169(p.hole[0], p.hole[1]);
+  const r = Math.random();
+  const stackBB = (p.stack + p.roundBet) / bb;
+  const oppN = h.players.filter((pp,i)=>i!==idx && !pp.folded).length;
+
+  // ナッシュ・プッシュ/フォールド（12BB以下）
+  if(limits.betting==='nl' && stackBB <= 12){
+    const S = gtoNearestS(stackBB);
+    const facingAllIn = toCall >= (p.stack + p.roundBet) * 0.6;
+    if(facingAllIn) return gtoIn(GTO_T.CALL[S], cls) ? {type:'call'} : {type:'fold'};
+    const pushHex = oppN<=1 ? GTO_T.PUSH[S] : oppN<=3 ? GTO_T.PUSH2[S] : oppN<=5 ? GTO_T.PUSH4[S] : GTO_T.PUSH7[S];
+    if(gtoIn(pushHex, cls) && limits.canRaise) return {type:'raise', amount: limits.maxRaiseTo};
+    if(toCall===0) return {type:'check'};
+    if(toCall <= bb && gtoIn(GTO_T.CALL[S], cls)) return {type:'call'}; // BB好オッズ
+    return {type:'fold'};
+  }
+
+  const openAmt = ()=> limits.betting==='fl' ? limits.minRaiseTo
+    : Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, Math.floor(bb*2.5)));
+  const reraiseAmt = ()=> limits.betting==='fl' ? limits.minRaiseTo
+    : Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, h.highBet*3));
+
+  // ポジション名（ボタンからの距離）
+  let posName;
+  if(idx===h.sbIdx) posName='sb';
+  else if(idx===h.bbIdx) posName='bb';
+  else {
+    let d=0, cur=(typeof G!=='undefined'&&G)?G.buttonIdx:0;
+    const n=h.players.length;
+    while(cur!==idx && d<n){ cur=(cur-1+n)-Math.floor((cur-1+n)/n)*n; d++; }
+    posName = d===0?'btn' : d===1?'co' : d===2?'hj' : 'utg';
+  }
+
+  const unopened = h.highBet <= bb*1.05;
+  if(unopened){
+    if(posName==='bb' && toCall===0){
+      if(gtoIn(GTO_T.TBV, cls) && limits.canRaise && r<0.8) return {type:'raise', amount: openAmt()};
+      return {type:'check'};
+    }
+    const rfiHex = GTO_T.RFI[posName==='bb' ? 'sb' : posName];
+    if(gtoIn(rfiHex, cls) && limits.canRaise){
+      return r<0.92 ? {type:'raise', amount: openAmt()} : {type:'call'};
+    }
+    return toCall===0 ? {type:'check'} : {type:'fold'};
+  }
+  // オープンに直面
+  const facing = h.highBet / bb;
+  if(facing <= 5){
+    if(gtoIn(GTO_T.TBV, cls)){
+      if(limits.canRaise && r<0.7) return {type:'raise', amount: reraiseAmt()};
+      return {type:'call'};
+    }
+    if(gtoIn(GTO_T.TBB, cls) && limits.canRaise && r<0.45) return {type:'raise', amount: reraiseAmt()};
+    if(gtoIn(GTO_T.FLAT, cls) || gtoIn(GTO_T.TBB, cls)) return {type:'call'};
+    return {type:'fold'};
+  }
+  // 3ベット以上に直面: QQ+/AKは4ベット/コール、それ以外はエクイティ判断へ
+  if(gtoIn(GTO_T.TBV, cls)){
+    if((cls==='AA'||cls==='KK'||cls==='QQ'||cls==='AKs') && limits.canRaise && r<0.6)
+      return {type:'raise', amount: reraiseAmt()};
+    return {type:'call'};
+  }
+  return null;
+}
+
+// ===== 初回ベッティングラウンドのレンジ戦略 =====
+function isFirstRound(h, gd){
+  if(gd.type==='community') return h.phase==='preflop';
+  if(gd.type==='draw') return (h.drawDone||0)===0;
+  return (h.studStreet||3)===3;
+}
+function relPos01(h, idx){
+  const n = h.players.length;
+  if(n<=2) return (typeof G!=='undefined' && G && idx===G.buttonIdx) ? 1 : 0.5;
+  if(idx===h.sbIdx) return 0.3;
+  if(idx===h.bbIdx) return 0.35;
+  let d=0, cur=(typeof G!=='undefined'&&G)?G.buttonIdx:0;
+  while(cur!==idx && d<n){ cur=(cur-1+n)%n; d++; }
+  return Math.max(0.2, 1 - d/Math.max(2, n-2)); // 人数で正規化（BTN=1.0、最アーリー≒0.2）
+}
+function strengthOf(p, gd){
+  if(gd.type==='community') return cpuPreflopStrength(p.hole);
+  if(gd.type==='draw') return drawStrength(p.hole, gd.evalLo);
+  return studStart3(p.hole.slice(0,3), (typeof G!=='undefined'&&G&&G.currentGame==='razz'));
+}
+function openThr(gd, pos){
+  // ポジション別オープン閾値（種目別strength分布の校正値から: BTN広い・アーリー狭い）
+  if(gd.type==='community') return gd.holeN>=4 ? (0.50-0.13*pos) : (0.225-0.095*pos);
+  if(gd.type==='draw'){
+    if(gd.evalLo==='badugi') return 0.74-0.15*pos;
+    if(gd.evalLo==='a5lo') return 0.46-0.12*pos;
+    return 0.40-0.07*pos;
+  }
+  return (typeof G!=='undefined'&&G&&G.currentGame==='razz') ? 0.25 : 0.30; // スタッドは表札順でポジション固定でない
+}
+function preflopRangeDecide(h, idx, p, gd, limits){
+  // NLH系（2枚コミュニティ種目）はソルバーテーブルで判断
+  if(gd.type==='community' && gd.holeN===2 && p.hole.length===2){
+    const act = nlhTableDecide(h, idx, p, gd, limits);
+    if(act) return act;
+    return null; // テーブル対象外の局面はエクイティロジックへ
+  }
+  const toCall = limits.toCall;
+  const bb = h.bbAmount||20;
+  const s = strengthOf(p, gd);
+  const pos = relPos01(h, idx);
+  const r = Math.random();
+  const openAmt = ()=> limits.betting==='fl' ? limits.minRaiseTo
+    : Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, Math.floor(bb*2.5)));
+  const reraiseAmt = ()=> limits.betting==='fl' ? limits.minRaiseTo
+    : Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, h.highBet*3));
+
+  // ショートスタック: プッシュ/フォールド（NLのみ・理論どおり2択へ）
+  if(limits.betting==='nl' && (p.stack + p.roundBet) <= 10*bb){
+    const pushThr = openThr(gd, pos) * 0.85;
+    if(s >= pushThr && limits.canRaise) return {type:'raise', amount: limits.maxRaiseTo};
+    if(toCall>0 && toCall <= (p.stack+p.roundBet)*0.3 && s >= pushThr*0.9) return {type:'call'};
+    return toCall===0 ? {type:'check'} : {type:'fold'};
+  }
+
+  const unopened = h.highBet <= bb*1.05;
+  if(unopened){
+    const thr = openThr(gd, pos);
+    if(toCall===0){
+      if(s >= thr && limits.canRaise && r<0.8) return {type:'raise', amount: openAmt()};
+      return {type:'check'};
+    }
+    // リンプ排除: 参加するならレイズ（低頻度でコールをミックス）
+    if(s >= thr && limits.canRaise){
+      return r<0.85 ? {type:'raise', amount: openAmt()} : {type:'call'};
+    }
+    if((idx===h.sbIdx || idx===h.bbIdx) && toCall <= bb && s >= thr*0.7 && r<0.4) return {type:'call'}; // ブラインドの好オッズ防御
+    return {type:'fold'};
+  }
+  // オープンに直面（リレイズ判断）
+  const facing = h.highBet / bb;
+  if(facing <= 5){
+    const thr3 = openThr(gd, Math.min(1,pos)) + (gd.type==='community' && gd.holeN>=4 ? 0.06 : 0.045);
+    if(s >= thr3 && limits.canRaise && r < 0.55) return {type:'raise', amount: reraiseAmt()};
+    if(s >= openThr(gd,pos)) return {type:'call'};
+    if(limits.canRaise && pos>0.7 && r < 0.06) return {type:'raise', amount: reraiseAmt()}; // 低頻度ブラフ3bet
+    if(s >= openThr(gd,pos)*0.8 && toCall<=bb*2.5 && r<0.35) return {type:'call'};
+    return {type:'fold'};
+  }
+  return null; // 大きなリレイズに直面: エクイティ計算（レンジフィルタ済み）で精密対応
+}
+// 残存相手の最強レンジtier（ブラフ頻度の調整用）
+function oppMaxTier(h, idx){
+  const bb = h.bbAmount||20;
+  let mt = 0;
+  h.players.forEach((pp,i)=>{
+    if(i===idx || pp.folded) return;
+    let inv = (pp.totalBet||0)+(pp.roundBet||0);
+    if(pp.idx===h.bbIdx) inv -= bb*((typeof G!=='undefined'&&G&&G.tourney)?2:1);
+    else if(pp.idx===h.sbIdx) inv -= Math.floor(bb/2);
+    const bi = inv/bb;
+    const t = bi>=7?3:bi>=2.2?2:bi>=0.9?1:0;
+    if(t>mt) mt=t;
+  });
+  return mt;
+}
+
 function isFinalStreet(h, gd){
   if(gd.type==='community') return (h.board||[]).length >= 5;
   if(gd.type==='draw') return (h.drawDone||0) >= (gd.drawRounds||1);
@@ -2570,14 +2911,16 @@ function isFinalStreet(h, gd){
 function posFactor(h, idx){
   const n = h.players.length;
   if(n<=2) return 1.0;
+  if((MIX_GAMES[G.currentGame]||{}).type==='stud') return 1.0; // スタッドは表札でアクション順が決まる
   if(typeof G!=='undefined' && G && idx===G.buttonIdx) return 1.25; // ボタンは広く
   if(idx===h.sbIdx || idx===h.bbIdx) return 0.85;                  // ブラインドは狭く
   return 1.0;
 }
-function pickBetFrac(eq){
+function pickBetFrac(eq, finalSt){
   const r = Math.random();
   if(eq > 0.8) return r<0.35 ? 1.0 : (r<0.75 ? 0.75 : 0.5); // 超強い手は大きめ多め
-  return r<0.25 ? 0.5 : (r<0.70 ? 0.7 : 1.0);                // 共通分布（サイズから手を読まれにくく）
+  if(finalSt) return r<0.30 ? 0.66 : (r<0.70 ? 0.85 : 1.0); // 最終ストリートはポラライズして大きめ
+  return r<0.30 ? 0.4 : (r<0.75 ? 0.6 : 0.85);              // 序中盤は小さめ（レンジベット風）
 }
 function cpuDecide(idx){
   const h = HND();
@@ -2590,6 +2933,17 @@ function cpuDecide(idx){
   const oppCount = h.players.filter((pp,i)=>i!==idx && !pp.folded).length;
   const finalSt = isFinalStreet(h, gd);
   const pf = posFactor(h, idx);
+
+  // 初回ベッティングラウンド: ポジション別レンジ戦略（オープン/3ベット/プッシュフォールド）
+  if(isFirstRound(h, gd)){
+    const act = preflopRangeDecide(h, idx, p, gd, limits);
+    if(act) return act;
+  }
+
+  // FL（固定リミット）はベット単価が低く理論上よりアグレッシブが正しい
+  const flAdj = limits.betting==='fl' ? 0.07 : 0;
+  // 強いレンジを見せている相手にはブラフを減らす
+  const bluffVs = 1 - 0.18 * oppMaxTier(h, idx);
 
   // エクイティ計算（モンテカルロ・レンジ加重）
   const eq = calcEquity(h, idx);
@@ -2606,23 +2960,23 @@ function cpuDecide(idx){
 
   // ===== チェック可能 =====
   if(toCall === 0){
-    if(eq > 0.70){
-      if(canRaiseNow() && rnd < 0.85) return {type:'raise', amount: raiseAmt(pickBetFrac(eq))};
+    if(eq > 0.70 - flAdj){
+      if(canRaiseNow() && rnd < 0.85) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt))};
       return {type:'check'}; // たまにトラップ
     }
-    if(eq > 0.52){
-      if(canRaiseNow() && rnd < 0.55) return {type:'raise', amount: raiseAmt(pickBetFrac(eq))};
+    if(eq > 0.52 - flAdj){
+      if(canRaiseNow() && rnd < 0.55) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt))};
       return {type:'check'};
     }
     if(eq > 0.35){
       // セミブラフ（ドロー価値が残る間のみ。最終ストリートでは縮小）
-      const f = (finalSt ? 0.10 : 0.22) * pf / oppCount;
+      const f = (finalSt ? 0.10 : 0.22) * pf * bluffVs / oppCount;
       if(canRaiseNow() && rnd < f) return {type:'raise', amount: raiseAmt(0.7)};
       return {type:'check'};
     }
     // 弱い手のブラフ: 最終ストリートはベットサイズに応じた均衡比率 α=s/(1+2s)
     const s = 0.7;
-    const bluffF = (finalSt ? (s/(1+2*s)) * 0.9 : 0.12) * pf / oppCount;
+    const bluffF = (finalSt ? (s/(1+2*s)) * 0.9 : 0.12) * pf * bluffVs / oppCount;
     if(canRaiseNow() && rnd < bluffF) return {type:'raise', amount: raiseAmt(0.7)};
     return {type:'check'};
   }
@@ -2635,12 +2989,12 @@ function cpuDecide(idx){
     return eq > potOdds + 0.02 ? {type:'call'} : {type:'fold'};
   }
 
-  if(eq > 0.72){
-    if(canRaiseNow() && rnd < 0.65) return {type:'raise', amount: raiseAmt(pickBetFrac(eq))};
+  if(eq > 0.72 - flAdj){
+    if(canRaiseNow() && rnd < 0.65) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt))};
     return {type:'call'};
   }
-  if(eq > 0.55){
-    if(canRaiseNow() && rnd < 0.28) return {type:'raise', amount: raiseAmt(pickBetFrac(eq))};
+  if(eq > 0.55 - flAdj){
+    if(canRaiseNow() && rnd < 0.28) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt))};
     return {type:'call'};
   }
   if(eq > potOdds + 0.03){
@@ -2658,7 +3012,7 @@ function cpuDecide(idx){
   }
   // オッズに大きく合わない: 基本フォールド、低頻度ブラフレイズ
   const s2 = 0.85;
-  const bluffRaiseF = ((finalSt ? (s2/(1+2*s2))*0.45 : 0.07) * pf / oppCount) * (limits.betting==='nl'?1:0.7);
+  const bluffRaiseF = ((finalSt ? (s2/(1+2*s2))*0.45 : 0.07) * pf * bluffVs / oppCount) * (limits.betting==='nl'?1:0.7);
   if(canRaiseNow() && rnd < bluffRaiseF) return {type:'raise', amount: raiseAmt(0.9)};
   return {type:'fold'};
 }
@@ -2690,14 +3044,14 @@ function oppPositions(count){
   if(count<=0) return [];
   // 重なり防止: 上部は最大1〜2人、残りは左右の縁に縦分散
   const presets = {
-    1: [{x:50,y:13}],
-    2: [{x:17,y:30},{x:83,y:30}],
-    3: [{x:14,y:38},{x:50,y:11},{x:86,y:38}],
-    4: [{x:13,y:46},{x:20,y:15},{x:80,y:15},{x:87,y:46}],
-    5: [{x:12,y:50},{x:15,y:21},{x:50,y:10},{x:85,y:21},{x:88,y:50}],
-    6: [{x:12,y:56},{x:13,y:32},{x:27,y:12},{x:73,y:12},{x:87,y:32},{x:88,y:56}],
-    7: [{x:12,y:60},{x:11,y:38},{x:16,y:17},{x:50,y:8},{x:84,y:17},{x:89,y:38},{x:88,y:60}],
-    8: [{x:11,y:64},{x:11,y:43},{x:13,y:22},{x:38,y:8},{x:62,y:8},{x:87,y:22},{x:89,y:43},{x:89,y:64}],
+    1: [{x:50,y:18}],
+    2: [{x:17,y:42},{x:83,y:42}],
+    3: [{x:14,y:52},{x:50,y:16},{x:86,y:52}],
+    4: [{x:13,y:62},{x:20,y:22},{x:80,y:22},{x:87,y:62}],
+    5: [{x:12,y:68},{x:15,y:28},{x:50,y:15},{x:85,y:28},{x:88,y:68}],
+    6: [{x:12,y:74},{x:13,y:42},{x:27,y:16},{x:73,y:16},{x:87,y:42},{x:88,y:74}],
+    7: [{x:12,y:78},{x:11,y:50},{x:16,y:22},{x:50,y:15},{x:84,y:22},{x:89,y:50},{x:88,y:78}],
+    8: [{x:11,y:82},{x:11,y:54},{x:13,y:27},{x:38,y:15},{x:62,y:15},{x:87,y:27},{x:89,y:54},{x:89,y:82}],
   };
   return presets[count] || presets[8].slice(0,count);
 }
@@ -2742,8 +3096,8 @@ function render(){
     }
     g('board-area').innerHTML = boardH;
   } else {
-    // 場札なし種目: 種目名を中央に表示
-    g('board-area').innerHTML = `<div style="font-family:'Share Tech Mono',monospace; color:rgba(232,200,74,0.5); font-size:0.7rem; letter-spacing:0.3em; text-transform:uppercase; text-align:center;">${gdCur.short}</div>`;
+    // 場札なし種目: 中央はポット表示のみ（種目名はヘッダにあるため省略）
+    g('board-area').innerHTML = '';
   }
 
   // ===== 相手プレイヤーを楕円周囲に配置 =====
@@ -2764,7 +3118,7 @@ function render(){
   oppOrder.forEach((pi, slot)=>{
     const p = h.players[pi];
     const isActive = (h.toActIdx===pi && h.phase!=='showdown');
-    const isDealer = (pi===G.buttonIdx);
+    const isDealer = (pi===G.buttonIdx) && (MIX_GAMES[G.currentGame]||{}).type!=='stud';
     const pos = positions[slot];
     let cls = 'opp';
     if(oppOrder.length >= 5) cls += ' compact';
@@ -3349,7 +3703,7 @@ function renderGuest(){
   oppOrder.forEach((pi,slot)=>{
     const p=pub.players[pi];
     const isActive=(pub.toActId===p.id && pub.phase!=='showdown');
-    const isDealer=(pub.buttonId===p.id);
+    const isDealer=(pub.buttonId===p.id) && (MIX_GAMES[pub.currentGame]||{}).type!=='stud';
     const pos=positions[slot];
     let cls='opp'; if(oppOrder.length>=5)cls+=' compact'; if(isActive)cls+=' active'; if(p.folded)cls+=' folded';
     let cardsH='';
