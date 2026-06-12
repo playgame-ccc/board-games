@@ -1,0 +1,1062 @@
+<!-- PARTY GAMES v4 - PEPPER -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>🌶 ペッパー</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a14; --surface: #131322; --surface2: #1a1a2e; --surface3: #25253d;
+  --c-r: #ff4565; --c-b: #3a7eff; --c-g: #2ed87a; --c-y: #ffce3a; --c-p: #b465ff; --c-o: #ff8c3a;
+  --accent: #ff8c3a; --text: #e8e8f0; --muted: #5a5a7a;
+  --mono: 'Share Tech Mono', monospace; --sans: 'Barlow', sans-serif;
+}
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; justify-content: center;
+  background-image: radial-gradient(ellipse at 30% 10%, rgba(255,140,58,0.04) 0%, transparent 60%), radial-gradient(ellipse at 70% 90%, rgba(255,69,101,0.04) 0%, transparent 60%); }
+#app { width: 100%; max-width: 520px; padding: 16px 16px 40px; display: flex; flex-direction: column; }
+.screen { display: none; flex-direction: column; gap: 14px; animation: fadeIn 0.3s ease; }
+.screen.active { display: flex; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+h1 { font-family: var(--mono); font-size: 2.4rem; letter-spacing: 0.05em; color: var(--accent); text-shadow: 0 0 30px rgba(255,140,58,0.3); }
+h2 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); text-transform: uppercase; }
+h3 { font-size: 1rem; font-weight: 600; }
+.input { width: 100%; padding: 14px 16px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 8px; color: var(--text); font-size: 1rem; font-family: var(--sans); outline: none; }
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,140,58,0.2); }
+.input.code-input { font-family: var(--mono); letter-spacing: 8px; font-size: 1.4rem; text-align: center; }
+.btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; font-family: var(--sans); cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-purple { background: var(--accent); color: #1a1a26; box-shadow: 0 4px 20px rgba(255,140,58,0.3); }
+.btn-blue { background: var(--surface2); color: var(--c-b); border: 1px solid rgba(58,126,255,0.3); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--surface3); font-weight: 600; }
+.btn-green { background: transparent; color: var(--c-g); border: 1px solid var(--c-g); }
+.row { display: flex; gap: 10px; } .row .input { flex: 1; } .row .btn { width: auto; padding: 14px 22px; flex-shrink: 0; }
+.divider { height: 1px; background: linear-gradient(90deg, transparent, var(--surface3), transparent); }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 16px; }
+.error { color: var(--c-r); font-size: 0.88rem; min-height: 18px; font-family: var(--mono); }
+.status-txt { color: var(--muted); font-size: 0.88rem; min-height: 18px; font-family: var(--mono); }
+.code-box { background: var(--surface); border: 1px solid rgba(255,140,58,0.3); border-radius: 12px; padding: 20px; text-align: center; }
+.code-box .label { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.code-box .code { font-family: var(--mono); font-size: 3rem; letter-spacing: 12px; color: var(--accent); text-shadow: 0 0 20px rgba(255,140,58,0.4); }
+.player-list { display: flex; flex-direction: column; gap: 8px; }
+.player-item { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.player-item.is-me { border-color: rgba(58,126,255,0.4); }
+.player-item.is-host { border-color: rgba(255,140,58,0.4); }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.95rem; background: var(--surface3); }
+.firebase-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.firebase-modal.active { display: flex; }
+.firebase-modal .panel { max-width: 480px; width: 100%; }
+.firebase-modal h2 { color: var(--accent); font-size: 1.2rem; margin-bottom: 12px; }
+.firebase-modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; line-height: 1.6; }
+.firebase-modal code { font-family: var(--mono); color: var(--c-b); background: var(--surface2); padding: 2px 6px; border-radius: 4px; }
+.tiny-row { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+.section-title { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+.count-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.count-btn { flex: 1; min-width: 40px; padding: 10px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 8px; color: var(--text); font-family: var(--mono); font-weight: 700; cursor: pointer; }
+.count-btn.active { background: var(--accent); color: #1a1a26; border-color: var(--accent); }
+.game-header { background: linear-gradient(135deg, var(--surface), var(--surface2)); border: 1px solid var(--surface3); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.turn-info { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); display: flex; justify-content: space-between; }
+.trick-area { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 12px; min-height: 110px; }
+.trick-cards { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; min-height: 80px; align-items: center; }
+.card-mini { width: 50px; height: 70px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--sans); font-weight: 900; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid rgba(0,0,0,0.4); }
+.card-mini .num { font-size: 1.3rem; line-height: 1; }
+.card-mini .lbl { font-size: 0.55rem; opacity: 0.7; margin-top: 2px; }
+.card-mini.c-r { background: linear-gradient(160deg, #ff6080, #d22040); color: white; }
+.card-mini.c-b { background: linear-gradient(160deg, #5b9eff, #2c6fd6); color: white; }
+.card-mini.c-g { background: linear-gradient(160deg, #45e88e, #1aa85a); color: #0a3a1a; }
+.card-mini.c-y { background: linear-gradient(160deg, #ffdb6a, #e0a800); color: #4a3a00; }
+.card-mini.c-p { background: linear-gradient(160deg, #c785ff, #8a3acc); color: white; }
+.card-mini.c-o { background: linear-gradient(160deg, #ffa85a, #d96820); color: white; }
+.card-mini.winner { box-shadow: 0 0 0 3px var(--accent), 0 2px 6px rgba(0,0,0,0.3); }
+.card-mini .pname { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 0.6rem; color: var(--muted); white-space: nowrap; }
+.hand-area { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 8px; background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; min-height: 80px; }
+.hand-area .card-mini { cursor: pointer; transition: transform 0.15s; }
+.hand-area .card-mini:hover { transform: translateY(-4px); }
+.hand-area .card-mini.unplayable { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+.front-area { display: flex; flex-direction: column; gap: 4px; }
+.front-cards { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; background: var(--surface); border: 1px dashed var(--surface3); border-radius: 10px; min-height: 40px; }
+.front-cards .card-mini { width: 32px; height: 44px; border-width: 1.5px; }
+.front-cards .card-mini .num { font-size: 0.85rem; }
+.front-cards .card-mini .lbl { display: none; }
+.front-empty { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); padding: 6px; }
+.players-overview { display: flex; flex-direction: column; gap: 6px; }
+.po-item { background: var(--surface); border: 1px solid var(--surface3); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
+.po-item.is-me { border-color: var(--c-b); }
+.po-item.is-current { background: rgba(255,140,58,0.08); border-color: var(--accent); }
+.po-item .po-head { display: flex; align-items: center; gap: 6px; }
+.po-item .po-name { flex: 1; font-weight: 700; }
+.po-item .po-score { font-family: var(--mono); font-weight: 900; color: var(--accent); font-size: 1rem; }
+.po-item .po-info { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+.po-peppers { display: flex; gap: 3px; }
+.po-peppers .pp-chip { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; font-size: 0.6rem; font-weight: 900; border: 1px solid rgba(0,0,0,0.3); }
+.po-peppers .pp-chip.c-r { background: var(--c-r); color: white; }
+.po-peppers .pp-chip.c-b { background: var(--c-b); color: white; }
+.po-peppers .pp-chip.c-g { background: var(--c-g); color: #0a3a1a; }
+.po-peppers .pp-chip.c-y { background: var(--c-y); color: #4a3a00; }
+.po-peppers .pp-chip.c-p { background: var(--c-p); color: white; }
+.po-peppers .pp-chip.c-o { background: var(--c-o); color: white; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px; }
+.modal-overlay.active { display: flex; }
+.modal-content { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 18px; max-width: 460px; width: 100%; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.log-box { background: var(--surface); border: 1px solid var(--surface3); border-radius: 10px; padding: 10px 12px; max-height: 140px; overflow-y: auto; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); line-height: 1.6; }
+.log-box .log-line { padding: 1px 0; } .log-box .log-line.recent { color: var(--text); }
+.result-card { background: linear-gradient(135deg, var(--surface2), var(--surface)); border: 2px solid var(--accent); border-radius: 14px; padding: 20px; text-align: center; }
+.result-card .title { font-family: var(--mono); font-size: 1.6rem; color: var(--accent); letter-spacing: 4px; margin-bottom: 8px; }
+.result-card.win { border-color: var(--c-g); } .result-card.win .title { color: var(--c-g); }
+</style>
+</head>
+<body>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
+<div id="pg-confirm" style="position:fixed;inset:0;background:rgba(0,0,0,0.82);display:none;align-items:center;justify-content:center;padding:20px;z-index:99998;">
+  <div style="background:#1c1f2b;border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:12px;">
+    <p id="pg-confirm-msg" style="font-size:0.92rem;white-space:pre-line;margin:0;color:#f0f0f5;line-height:1.6;"></p>
+    <button id="pg-confirm-ok" style="padding:13px;border:none;border-radius:10px;background:#2dbd6e;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit;">はい</button>
+    <button id="pg-confirm-cancel" style="padding:13px;border:1px solid rgba(255,255,255,0.25);border-radius:10px;background:transparent;color:#aab;font-size:0.95rem;cursor:pointer;font-family:inherit;">キャンセル</button>
+  </div>
+</div>
+<script>
+// モバイルブラウザのconfirm()ブロック対策（カスタム確認モーダル）
+function pgConfirm(message, onOk, onCancel){
+  const m=document.getElementById('pg-confirm');
+  document.getElementById('pg-confirm-msg').textContent=message;
+  m.style.display='flex';
+  const ok=document.getElementById('pg-confirm-ok'), ca=document.getElementById('pg-confirm-cancel');
+  const cleanup=()=>{m.style.display='none';ok.onclick=null;ca.onclick=null;};
+  ok.onclick=()=>{cleanup();if(onOk)onOk();};
+  ca.onclick=()=>{cleanup();if(onCancel)onCancel();};
+}
+</script>
+
+<div class="firebase-modal" id="fb-modal">
+  <div class="panel">
+    <h2>⚙️ Firebase設定</h2>
+    <p>Firebase Realtime Databaseを通信に使います。<a href="https://console.firebase.google.com" target="_blank" style="color:var(--c-b);">Firebase Console</a>でDatabase URLを取得してください。</p>
+    <input class="input" id="fb-url-input" type="text" placeholder="https://xxx.firebaseio.com" value="https://playgame-3e7ba-default-rtdb.firebaseio.com" autocomplete="off">
+    <div class="error" id="fb-url-error"></div>
+    <button class="btn btn-purple" onclick="fbSaveConfig()">保存して始める</button>
+  </div>
+</div>
+
+<div id="app">
+
+<div class="screen active" id="screen-home">
+  <div style="text-align:center;margin:20px 0 6px;">
+    <div style="font-size:3.5rem;">🌶</div>
+    <h1>PEPPER</h1>
+    <div class="tiny-row" style="margin-top:8px;">ペッパーを押し付け合うトリックテイク / 3〜9人</div>
+  </div>
+  <div class="row"><input class="input" id="in-name" type="text" placeholder="あなたの名前" maxlength="12" autocomplete="off"></div>
+  <div class="error" id="home-err"></div>
+  <button class="btn" id="btn-reconnect" style="display:none; background:rgba(45,189,110,0.15); color:#2dbd6e; border:1px solid rgba(45,189,110,0.5);" onclick="pgReconnect()"></button>
+  <button class="btn btn-purple" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+  <div class="row">
+    <input class="input code-input" id="in-code" type="text" placeholder="ROOM" maxlength="4" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+    <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+  </div>
+  <div class="divider"></div>
+  <button class="btn btn-green" onclick="goSolo()">🤖 ひとりで遊ぶ（CPU対戦）</button>
+  <div class="divider"></div>
+  <button class="btn btn-ghost" onclick="openRules()">📖 ルール説明</button>
+  <a href="./index.html" style="text-decoration:none;"><button class="btn btn-ghost">🔄 ロビーへ戻る</button></a>
+</div>
+
+<div class="screen" id="screen-wait">
+  <h2>待機ロビー</h2>
+  <div class="code-box">
+    <div class="label">ルームコード</div>
+    <div class="code" id="room-code">----</div>
+    <button class="btn btn-ghost" style="margin-top:10px;padding:8px;font-size:0.85rem;" onclick="copyCode()">📋 コピー</button>
+  </div>
+  <div>
+    <h3 style="margin-bottom:8px;">参加者 <span id="player-count" style="color:var(--muted);font-weight:400;">1人</span></h3>
+    <div class="player-list" id="wait-players"></div>
+  </div>
+  <div class="status-txt" id="wait-status"></div>
+  <div class="tiny-row" id="poll-indicator"></div>
+  <button class="btn btn-purple" id="btn-start-game" onclick="startGame()" style="display:none;">▶ ゲームを開始する</button>
+  <button class="btn btn-ghost" onclick="leaveRoom()">← 退出する</button>
+</div>
+
+<div class="screen" id="screen-solo">
+  <h2>🤖 ひとりで遊ぶ</h2>
+  <div>
+    <div class="section-title">プレイヤー数（CPU含む）</div>
+    <div class="count-buttons" id="solo-count-buttons"></div>
+    <div class="tiny-row" style="margin-top:6px;" id="solo-cpu-sub">CPU: 3人</div>
+  </div>
+  <div class="error" id="solo-err"></div>
+  <button class="btn btn-purple" onclick="startSoloGame()">▶ ゲーム開始</button>
+  <button class="btn btn-ghost" onclick="show('home')">← 戻る</button>
+</div>
+
+<div class="screen" id="screen-game">
+  <div class="game-header">
+    <div class="turn-info">
+      <span id="turn-text">— のターン</span>
+      <span id="round-info">R1/5</span>
+    </div>
+    <div class="tiny-row" id="game-poll"></div>
+  </div>
+  <div>
+    <div class="section-title">🎴 現在のトリック <span id="trick-num" style="color:var(--accent);"></span></div>
+    <div class="trick-area"><div class="trick-cards" id="trick-cards"></div></div>
+  </div>
+  <div class="front-area">
+    <div class="section-title">🌶 自分のペッパー（公開・手札の一部）</div>
+    <div class="front-cards" id="my-peppers"></div>
+  </div>
+  <div>
+    <div class="section-title">🃏 自分の手札 <span id="hand-count" style="color:var(--muted);font-family:var(--mono);"></span></div>
+    <div class="hand-area" id="my-hand"></div>
+  </div>
+  <div>
+    <div class="section-title">👥 全プレイヤー</div>
+    <div class="players-overview" id="players-overview"></div>
+  </div>
+  <div>
+    <div class="section-title">📋 ログ</div>
+    <div class="log-box" id="log-box"></div>
+  </div>
+  <button class="btn btn-ghost" onclick="confirmLeave()">← ロビーへ戻る</button>
+</div>
+
+<div class="screen" id="screen-result">
+  <div class="result-card" id="result-card"></div>
+  <div>
+    <div class="section-title">最終スコア</div>
+    <div class="players-overview" id="result-overview"></div>
+  </div>
+  <div>
+    <div class="section-title">📋 ログ</div>
+    <div class="log-box" id="result-log"></div>
+  </div>
+  <button class="btn btn-purple" onclick="rematch()">🔄 もう一度遊ぶ</button>
+  <button class="btn btn-ghost" onclick="show('home');leaveRoom();">← 戻る</button>
+</div>
+
+<div class="modal-overlay" id="rules-modal">
+  <div class="modal-content">
+    <h3 style="color:var(--accent);">🌶 ペッパー ルール</h3>
+    <div style="font-size:0.88rem;line-height:1.7;color:var(--text);">
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🎯 目的</div>
+        失点を最小にする。5ラウンド終了時、最も失点が少ないプレイヤーの勝利。
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🃏 カード</div>
+        6色×18枚（1=ペッパー、2〜18）。人数で手札枚数調整。
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">⚡ プレイ手順</div>
+        <div style="margin-left:10px;">
+          ① ペッパー（1）は手札から表向きで自分の前に置く（公開）<br>
+          ② 全員順番にカードを1枚出す（リードカラーがあれば従う＝マストフォロー）<br>
+          ③ リードカラーの最高数値がトリック勝者<br>
+          ④ 勝者がそのカードを取得<br>
+          ⑤ 手札がなくなったらラウンド終了
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">💀 失点</div>
+        <div style="margin-left:10px;">
+          ・ペッパー（1）所持: 1枚 <strong>−2点</strong><br>
+          ・ペッパーと同色の取得カード: 1枚 <strong>−1点</strong>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-purple" onclick="closeRules()">閉じる</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ============================================================
+// FIREBASE
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+let fbRoom = '';
+let fbPollTimer = null;
+let fbLastTs = {};
+let fbPollCount = 0;
+
+function fbPath(sub) { return `${fbUrl}/pp_rooms/${fbRoom}/${sub}.json`; }
+async function fbPut(sub, val) { try { await fetch(fbPath(sub), {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(val)}); } catch(e) {} }
+async function fbGet(sub) { try { const r = await fetch(fbPath(sub)); return r.ok ? r.json() : null; } catch(e) { return null; } }
+async function fbDel(sub) {
+  if(!fbRoom) return;
+  const url = sub ? `${fbUrl}/pp_rooms/${fbRoom}/${sub}.json` : `${fbUrl}/pp_rooms/${fbRoom}.json`;
+  try { await fetch(url, {method:'DELETE'}); } catch(e) {}
+}
+function fbListen() { fbClose(); fbLastTs = {}; fbPollCount = 0; fbPoll(); fbPollTimer = setInterval(fbPoll, 500); }
+function fbClose() { if(fbPollTimer){ clearInterval(fbPollTimer); fbPollTimer=null; } fbLastTs={}; }
+async function fbPoll() {
+  if(!fbRoom || !fbUrl) return;
+  fbPollCount++;
+  const t = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  ['poll-indicator','game-poll'].forEach(id=>{ const el=g(id); if(el) el.textContent=`🔄 polling #${fbPollCount} (${t})`; });
+  try {
+    const res = await fetch(`${fbUrl}/pp_rooms/${fbRoom}.json`);
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data) return;
+    if(data.private?.[myId]) fbHandlePrv(data.private[myId]);
+    if(data.broadcast) fbHandleBC(data.broadcast);
+    if(isHost && data.action) {
+      Object.keys(data.action).forEach(pid => { const v = data.action[pid]; if(v) fbHandleAct(pid, v); });
+    }
+  } catch(e) {}
+}
+function fbHandleBC(data) { if(!data?.ts || data.ts <= (fbLastTs.broadcast||0)) return; fbLastTs.broadcast = data.ts; if(!isHost) onMsg(data.msg, 'host'); }
+function fbHandlePrv(data) { if(!data?.ts || data.ts <= (fbLastTs.prv||0)) return; fbLastTs.prv = data.ts; if(!isHost) onMsg(data.msg, 'host'); }
+function fbHandleAct(pid, data) { if(!data?.ts || data.ts <= (fbLastTs[pid]||0)) return; if(pid === myId) return; fbLastTs[pid] = data.ts; onMsg(data.msg, pid); }
+function fbBroadcast(msg) { fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg) { fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg) { fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+async function checkFbConfig() {
+  if(!fbUrl) { showFbModal(); return false; }
+  try { const r = await fetch(`${fbUrl}/.json?shallow=true`); if(!r.ok && r.status !== 404) { setHomeErr('Firebase接続エラー'); return false; } }
+  catch(e) { setHomeErr('Firebase接続失敗'); return false; }
+  return true;
+}
+function showFbModal() { g('fb-modal').classList.add('active'); }
+function fbSaveConfig() {
+  const url = g('fb-url-input').value.trim().replace(/\/$/, '');
+  if(!url.startsWith('https://') || !url.includes('firebaseio')) { g('fb-url-error').textContent='有効なFirebase URLを入力してください'; return; }
+  fbUrl = url; localStorage.setItem(FB_KEY, fbUrl);
+  g('fb-modal').classList.remove('active'); g('fb-url-error').textContent='';
+}
+
+function g(id) { return document.getElementById(id); }
+function show(name) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); const el = g('screen-'+name); if(el) el.classList.add('active'); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function setHomeErr(msg) { g('home-err').textContent = msg; }
+
+// ============================================================
+// PEPPER GAME CONSTANTS
+// ============================================================
+const COLORS = ['r','b','g','y','p','o'];  // 6 colors
+const COLOR_NAMES = { r:'赤', b:'青', g:'緑', y:'黄', p:'紫', o:'橙' };
+const TOTAL_ROUNDS = 5;
+
+// Hand size per player count (official-ish)
+function handSize(n) {
+  // total cards = 108 (6*18)
+  // Distribute roughly evenly
+  return Math.floor(108 / n);
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '';
+let isHost = false, roomCode = '';
+let isSolo = false, soloCount = 4;
+let gameMode = null;
+let gs = null;
+let myHand = []; // local: my hand cards [{c, n}]
+let myPeppersFront = []; // local copy of my pepper front pile
+
+function setSoloCount(n) {
+  soloCount = n;
+  document.querySelectorAll('#screen-solo .count-btn').forEach(b=>b.classList.toggle('active', parseInt(b.dataset.n)===n));
+  g('solo-cpu-sub').textContent = `CPU: ${n-1}人`;
+}
+function buildSoloButtons() {
+  const c = g('solo-count-buttons');
+  c.innerHTML = '';
+  for(let n=3; n<=9; n++) {
+    const b = document.createElement('button');
+    b.className = 'count-btn' + (n===soloCount?' active':'');
+    b.dataset.n = n;
+    b.textContent = n;
+    b.onclick = () => setSoloCount(n);
+    c.appendChild(b);
+  }
+}
+function goSolo() { show('solo'); buildSoloButtons(); }
+
+// ============================================================
+// ROOM
+// ============================================================
+async function createRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setHomeErr('名前を入力してください'); return; }
+  myName = name; myId = genId();
+  isHost = true; roomCode = randomCode(); fbRoom = roomCode; gameMode = 'online';
+  await fbDel('');
+  await fbPut('meta', { host: myId, code: roomCode, ts: Date.now() });
+  gs = freshGameState();
+  gs.players.push({ id:myId, name:myName, isCpu:false });
+  await fbPut('lobby', { players: gs.players, started:false });
+  show('wait');
+  g('room-code').textContent = roomCode;
+  g('btn-start-game').style.display = 'block';
+  renderWaitPlayers();
+  fbListen();
+  pgSaveSession();
+}
+async function joinRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setHomeErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim().toUpperCase();
+  if(!/^[A-Z0-9]{4}$/.test(code)) { setHomeErr('4桁のルームコードを入力してください'); return; }
+  myName = name; myId = genId();
+  isHost = false; roomCode = code; fbRoom = roomCode; gameMode = 'online';
+  const meta = await fbGet('meta');
+  if(!meta) { setHomeErr('ルームが見つかりません'); return; }
+  fbSendToHost({ t:'join', id:myId, name:myName });
+  show('wait');
+  g('room-code').textContent = roomCode;
+  g('btn-start-game').style.display = 'none';
+  fbListen();
+  pgSaveSession();
+}
+function randomCode() { const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=ch[Math.floor(Math.random()*ch.length)]; return s; }
+function copyCode() { navigator.clipboard.writeText(roomCode).catch(()=>{}); }
+
+function renderWaitPlayers() {
+  const list = g('wait-players'); list.innerHTML = '';
+  const players = gs ? gs.players : [];
+  g('player-count').textContent = players.length + '人';
+  players.forEach((p,i)=>{
+    const div = document.createElement('div');
+    div.className = 'player-item' + (p.id===myId?' is-me':'') + (i===0?' is-host':'');
+    div.innerHTML = `<div class="avatar">${p.name.slice(0,2)}</div><div style="flex:1;">${p.name}${i===0?' 👑':''}${p.isCpu?' 🤖':''}</div>`;
+    list.appendChild(div);
+  });
+  const btn = g('btn-start-game');
+  if(isHost) {
+    const n = players.length;
+    btn.disabled = n < 3 || n > 9;
+    btn.textContent = (n<3) ? `▶ 開始（あと${3-n}人必要）` : (n>9 ? '▶ 開始（最大9人）' : '▶ ゲームを開始する');
+  }
+}
+
+async function leaveRoom() {
+  pgClearSession();
+  fbClose();
+  if(gameMode === 'online' && fbRoom) { if(isHost) { await fbDel(''); } else { await fbDel(`action/${myId}`); } }
+  isHost=false; isSolo=false; gameMode=null;
+  roomCode=''; fbRoom=''; gs=null; myHand=[]; myPeppersFront=[];
+  show('home');
+}
+function confirmLeave() { pgConfirm('ゲームを終了してロビーに戻りますか？', ()=>leaveRoom()); }
+
+// ============================================================
+// MSG ROUTING
+// ============================================================
+function onMsg(msg, from) {
+  if(!msg || !msg.t) return;
+  if(isHost) handleHostMsg(msg, from);
+  else handleClientMsg(msg, from);
+}
+function handleHostMsg(msg, from) {
+  switch(msg.t) {
+    case 'join': {
+      const exP = gs && gs.players ? gs.players.find(p=>p.id===msg.id) : null;
+      if(exP) { exP.isCpu = false; if(gs.started) { pushStateAll(); } else { broadcastLobby(); } break; } // 再接続（途中復帰）
+      if(!gs.started && gs.players.length<9) {
+        gs.players.push({ id:msg.id, name:msg.name, isCpu:false });
+        broadcastLobby();
+      }
+      break;
+    }
+    case 'action':
+      handlePlayerAction(msg.id || from, msg.action);
+      break;
+  }
+}
+function handleClientMsg(msg, from) {
+  switch(msg.t) {
+    case 'lobby':
+      gs = gs || freshGameState();
+      gs.players = msg.players; gs.started = msg.started;
+      renderWaitPlayers();
+      break;
+    case 'state':
+      gs = msg.gs;
+      show('game'); renderGame();
+      break;
+    case 'hand':
+      myHand = msg.hand || [];
+      myPeppersFront = msg.peppers || [];
+      renderGame();
+      break;
+    case 'end':
+      gs = msg.gs;
+      showResult(msg.scores);
+      break;
+  }
+}
+function broadcastLobby() { fbBroadcast({ t:'lobby', players: gs.players, started: gs.started }); renderWaitPlayers();
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+function freshGameState() {
+  return {
+    players: [],
+    started: false,
+    phase: 'lobby',
+    round: 0,
+    leadIdx: 0,
+    turnIdx: 0,
+    trickCards: [], // [{playerId, c, n}]
+    leadColor: null,
+    log: [],
+    finished: false,
+  };
+}
+async function startGame() {
+  if(gs.players.length<3 || gs.players.length>9) return;
+  gs.started = true;
+  initializeGame();
+  pushStateAll();
+  show('game'); renderGame();
+  if(gameMode==='solo') maybeCpuTurn();
+}
+function startSoloGame() {
+  isHost = true; isSolo = true; gameMode = 'solo';
+  myId = 'human';
+  myName = g('in-name').value.trim() || 'You';
+  gs = freshGameState();
+  gs.players.push({ id:myId, name:myName, isCpu:false });
+  for(let i=1;i<soloCount;i++) gs.players.push({ id:'cpu'+i, name:'CPU'+i, isCpu:true });
+  initializeGame();
+  show('game'); renderGame();
+  maybeCpuTurn();
+}
+
+function initializeGame() {
+  // initialize per-player state
+  gs.players.forEach(p => {
+    p.score = 0;
+    p.hand = []; p.peppers = []; p.taken = []; // taken cards this round
+  });
+  gs.round = 0;
+  startRound();
+}
+
+function startRound() {
+  gs.round++;
+  gs.phase = 'play';
+  // build deck
+  const deck = [];
+  for(const c of COLORS) for(let n=1; n<=18; n++) deck.push({c, n});
+  shuffle(deck);
+  // hand size
+  const n = gs.players.length;
+  const hs = handSize(n);
+  // deal
+  gs.players.forEach(p => {
+    p.hand = []; p.peppers = []; p.taken = [];
+  });
+  for(let i=0; i<hs; i++) {
+    for(const p of gs.players) p.hand.push(deck.pop());
+  }
+  // move peppers (n=1) from hand to front
+  gs.players.forEach(p => {
+    const remain = [];
+    for(const card of p.hand) {
+      if(card.n === 1) p.peppers.push(card);
+      else remain.push(card);
+    }
+    p.hand = remain;
+  });
+  // Sort hand for nice display
+  gs.players.forEach(p => p.hand.sort((a,b) => a.c.localeCompare(b.c) || a.n - b.n));
+  // lead: dealer (in round 1, random / from round 2, previous round's "most-points" player)
+  // Simple: round 1 = first player, then loser of previous = leader of next (or just rotate)
+  if(gs.round === 1) gs.leadIdx = Math.floor(Math.random() * n);
+  else gs.leadIdx = (gs.leadIdx + 1) % n;
+  gs.turnIdx = gs.leadIdx;
+  gs.trickCards = [];
+  gs.leadColor = null;
+  gs.log.push(`🌶 ラウンド${gs.round}/${TOTAL_ROUNDS} 開始（手札${hs}枚）`);
+  gs.log.push(`👉 リード: ${gs.players[gs.leadIdx].name}`);
+}
+
+function shuffle(a) { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+// Push state to all clients
+function pushStateAll() {
+  if(gameMode!=='online') {
+    // For solo, just sync local view from host state
+    const me = gs.players.find(p=>p.id===myId);
+    if(me) { myHand = me.hand.slice(); myPeppersFront = me.peppers.slice(); }
+    return;
+  }
+  const pub = publicView(gs);
+  fbBroadcast({ t:'state', gs: pub });
+  // Send each player their own hand privately
+  gs.players.forEach(p => {
+    if(p.isCpu) return;
+    if(p.id === myId) {
+      myHand = p.hand.slice(); myPeppersFront = p.peppers.slice();
+    } else {
+      fbSendTo(p.id, { t:'hand', hand: p.hand, peppers: p.peppers });
+    }
+  });
+  if(typeof pgSaveHostState==='function') pgSaveHostState();
+}
+
+function publicView(state) {
+  const copy = JSON.parse(JSON.stringify(state));
+  // Hide hands. peppers are public (placed in front).
+  // Show only counts for hand. Replace hand with handCount.
+  copy.players.forEach(p => {
+    p.handCount = p.hand ? p.hand.length : 0;
+    delete p.hand;
+    // taken: keep only counts (not the actual cards)
+    p.takenCount = p.taken ? p.taken.length : 0;
+    // Reveal taken cards' colors only as count? In Pepper, taken cards are kept in pile.
+    // Per spec: "トリックを取ったプレイヤーが次のリード" - taken stays in pile
+    // For scoring transparency, we keep "taken" hidden until end of round (or hand done).
+    // Actually pile is on table face-down usually. We'll keep counts only.
+    delete p.taken;
+  });
+  return copy;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderGame() {
+  if(!gs) return;
+  const cur = gs.players[gs.turnIdx];
+  g('turn-text').textContent = `${cur?.name||'-'} のターン`;
+  g('round-info').textContent = `R${gs.round}/${TOTAL_ROUNDS}`;
+  g('trick-num').textContent = gs.leadColor ? `(リード: ${COLOR_NAMES[gs.leadColor]})` : '';
+
+  // Trick area
+  const tc = g('trick-cards');
+  tc.innerHTML = '';
+  if(gs.trickCards.length === 0) {
+    tc.innerHTML = '<span class="tiny-row">まだカードが出ていません</span>';
+  } else {
+    // determine winner so far
+    const winnerIdx = computeTrickWinnerIdx(gs.trickCards, gs.leadColor);
+    gs.trickCards.forEach((tcd, idx) => {
+      const card = document.createElement('div');
+      card.className = 'card-mini c-' + tcd.c + (idx === winnerIdx ? ' winner' : '');
+      card.innerHTML = `<div class="num">${tcd.n}</div><div class="lbl">${COLOR_NAMES[tcd.c]}</div><div class="pname">${tcd.name||''}</div>`;
+      tc.appendChild(card);
+    });
+  }
+
+  // My peppers
+  const mp = g('my-peppers');
+  mp.innerHTML = '';
+  if(myPeppersFront.length === 0) {
+    mp.innerHTML = '<div class="front-empty">ペッパーカードを所持していません</div>';
+  } else {
+    myPeppersFront.forEach(card => {
+      const el = document.createElement('div');
+      el.className = 'card-mini c-' + card.c + (canPlay(card)? '':' unplayable');
+      el.innerHTML = `<div class="num">1</div>`;
+      if(canPlay(card) && cur?.id === myId) {
+        el.style.cursor = 'pointer';
+        el.onclick = () => sendActionToHost({ kind:'play', card });
+      }
+      mp.appendChild(el);
+    });
+  }
+
+  // My hand
+  const mh = g('my-hand');
+  mh.innerHTML = '';
+  g('hand-count').textContent = `(${myHand.length}枚)`;
+  if(myHand.length === 0) {
+    mh.innerHTML = '<div class="tiny-row" style="padding:14px;">手札なし</div>';
+  } else {
+    myHand.forEach(card => {
+      const el = document.createElement('div');
+      const playable = canPlay(card);
+      el.className = 'card-mini c-' + card.c + (playable? '' : ' unplayable');
+      el.innerHTML = `<div class="num">${card.n}</div><div class="lbl">${COLOR_NAMES[card.c]}</div>`;
+      if(playable && cur?.id === myId) {
+        el.onclick = () => sendActionToHost({ kind:'play', card });
+      }
+      mh.appendChild(el);
+    });
+  }
+
+  // Players overview
+  const po = g('players-overview'); po.innerHTML = '';
+  gs.players.forEach((p, i) => {
+    const div = document.createElement('div');
+    let cls = 'po-item';
+    if(p.id===myId) cls += ' is-me';
+    if(i===gs.turnIdx) cls += ' is-current';
+    div.className = cls;
+    const pepCount = (p.peppers||[]).length;
+    const peppersHtml = (p.peppers||[]).map(c => `<span class="pp-chip c-${c.c}">1</span>`).join('');
+    div.innerHTML = `
+      <div class="po-head">
+        <div class="avatar">${p.name.slice(0,2)}</div>
+        <div class="po-name">${p.name}${p.isCpu?' 🤖':''}${i===gs.leadIdx?' 🎯':''}</div>
+        <div class="po-score">${p.score||0}</div>
+      </div>
+      <div class="po-info">
+        <span>手札: ${p.handCount !== undefined ? p.handCount : (p.hand?.length||0)}</span>
+        <span>取得: ${p.takenCount !== undefined ? p.takenCount : (p.taken?.length||0)}</span>
+        ${pepCount>0 ? `<span class="po-peppers">🌶 ${peppersHtml}</span>` : ''}
+      </div>
+    `;
+    po.appendChild(div);
+  });
+
+  // Log
+  const lb = g('log-box'); lb.innerHTML = '';
+  gs.log.slice(-30).forEach((line, idx, arr) => {
+    const d = document.createElement('div');
+    d.className = 'log-line' + (idx >= arr.length - 3 ? ' recent' : '');
+    d.textContent = line;
+    lb.appendChild(d);
+  });
+  lb.scrollTop = lb.scrollHeight;
+}
+
+function canPlay(card) {
+  if(!gs || gs.phase === 'end') return false;
+  if(gs.players[gs.turnIdx].id !== myId) return false;
+  if(gs.trickCards.length === 0) return true; // lead: anything
+  // must-follow: if I have lead color, must play it
+  const hasLead = [...myHand, ...myPeppersFront].some(c => c.c === gs.leadColor);
+  if(hasLead) return card.c === gs.leadColor;
+  return true;
+}
+
+function computeTrickWinnerIdx(cards, leadColor) {
+  if(!cards.length) return -1;
+  let winIdx = 0;
+  let winN = cards[0].c === leadColor ? cards[0].n : -1;
+  for(let i=1; i<cards.length; i++) {
+    const c = cards[i];
+    if(c.c === leadColor && c.n > winN) { winN = c.n; winIdx = i; }
+  }
+  return winIdx;
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function sendActionToHost(action) {
+  if(isHost) handlePlayerAction(myId, action);
+  else fbSendToHost({ t:'action', id:myId, action });
+}
+
+function handlePlayerAction(pid, action) {
+  if(!gs || gs.phase !== 'play' && gs.phase !== 'lobby') return;
+  if(action.kind === 'play') return hostPlayCard(pid, action.card);
+}
+
+function hostPlayCard(pid, card) {
+  if(gs.players[gs.turnIdx].id !== pid) return;
+  const player = gs.players.find(p => p.id === pid);
+  // Determine source (hand or peppers)
+  let foundIdx = player.hand.findIndex(c => c.c === card.c && c.n === card.n);
+  let fromPeppers = false;
+  if(foundIdx < 0) {
+    foundIdx = player.peppers.findIndex(c => c.c === card.c && c.n === card.n);
+    if(foundIdx < 0) return;
+    fromPeppers = true;
+  }
+  // must-follow check
+  if(gs.trickCards.length > 0) {
+    const lead = gs.leadColor;
+    const hasLead = [...player.hand, ...player.peppers].some(c => c.c === lead);
+    if(hasLead && card.c !== lead) return;
+  }
+  // play
+  if(fromPeppers) player.peppers.splice(foundIdx, 1);
+  else player.hand.splice(foundIdx, 1);
+  gs.trickCards.push({ playerId: pid, name: player.name, c: card.c, n: card.n });
+  if(gs.trickCards.length === 1) gs.leadColor = card.c;
+  gs.log.push(`🎴 ${player.name} が ${COLOR_NAMES[card.c]} ${card.n} を出した`);
+
+  if(gs.trickCards.length === gs.players.length) {
+    // resolve trick
+    const winIdx = computeTrickWinnerIdx(gs.trickCards, gs.leadColor);
+    const winnerCard = gs.trickCards[winIdx];
+    const winner = gs.players.find(p => p.id === winnerCard.playerId);
+    winner.taken = winner.taken || [];
+    for(const tc of gs.trickCards) {
+      // All trick cards (including pepper) go into taken pile
+      winner.taken.push({ c: tc.c, n: tc.n });
+    }
+    gs.log.push(`🏆 ${winner.name} がトリック獲得（${COLOR_NAMES[gs.leadColor]} ${winnerCard.n}）`);
+    // next lead = winner
+    gs.leadIdx = gs.players.indexOf(winner);
+    gs.turnIdx = gs.leadIdx;
+    gs.trickCards = [];
+    gs.leadColor = null;
+    // delay rendering trick to let users see result? Just push state for now.
+    pushStateAll();
+    renderGame();
+    // Check round end
+    if(gs.players.every(p => p.hand.length === 0)) {
+      return endRound();
+    }
+    if(gameMode === 'solo' || isHost) setTimeout(()=>maybeCpuTurn(), 100);
+    return;
+  }
+  // next turn
+  gs.turnIdx = (gs.turnIdx + 1) % gs.players.length;
+  pushStateAll();
+  renderGame();
+  if(gameMode === 'solo' || isHost) setTimeout(()=>maybeCpuTurn(), 100);
+}
+
+function endRound() {
+  // Score the round (公式ルール):
+  // ・自分の前にあるペッパー（peppers pile + taken pile内のn===1）= -2点ずつ
+  // ・ペッパーと同色の取得カード = -1点ずつ
+  gs.players.forEach(p => {
+    const allFront = [...(p.peppers||[]), ...(p.taken||[])];
+    const pepperCards = allFront.filter(c => c.n === 1);
+    const pepperColors = new Set(pepperCards.map(c => c.c));
+    let roundLoss = pepperCards.length * 2;
+    // Count non-pepper cards in same colors as my peppers
+    for(const c of allFront) {
+      if(c.n !== 1 && pepperColors.has(c.c)) roundLoss += 1;
+    }
+    p.score = (p.score||0) - roundLoss;
+    if(roundLoss > 0) gs.log.push(`💀 ${p.name} がラウンド失点 -${roundLoss}（ペッパー${pepperCards.length}枚 + 同色${roundLoss - pepperCards.length*2}枚）`);
+  });
+  // check end of game
+  if(gs.round >= TOTAL_ROUNDS) {
+    gs.phase = 'end';
+    return finishGame();
+  }
+  startRound();
+  pushStateAll();
+  renderGame();
+  if(gameMode === 'solo' || isHost) setTimeout(()=>maybeCpuTurn(), 100);
+}
+
+function finishGame() {
+  // sort scores
+  const sorted = [...gs.players].sort((a,b)=> b.score - a.score);
+  const winner = sorted[0];
+  const label = `${winner.name} の勝利！（${winner.score}点）`;
+  gs.log.push(`🏆 ${label}`);
+  const scores = sorted.map(p => ({ id:p.id, name:p.name, score:p.score }));
+  if(gameMode === 'solo') {
+    showResult(scores);
+    return;
+  }
+  const pub = publicView(gs);
+  gs.players.forEach(p => {
+    if(p.isCpu) return;
+    if(p.id === myId) showResult(scores);
+    else fbSendTo(p.id, { t:'end', gs: pub, scores });
+  });
+}
+
+function showResult(scores) {
+  const card = g('result-card');
+  const winner = scores[0];
+  const iWon = winner.id === myId;
+  card.className = 'result-card ' + (iWon ? 'win' : '');
+  card.innerHTML = `<div class="title">${iWon?'🎉 勝利':'結果'}</div><div style="color:var(--muted);">${winner.name} の勝利！（${winner.score}点）</div>`;
+  const ov = g('result-overview'); ov.innerHTML = '';
+  scores.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'po-item' + (s.id===myId?' is-me':'');
+    d.innerHTML = `<div class="po-head"><div class="avatar">${s.name.slice(0,2)}</div><div class="po-name">${s.name}</div><div class="po-score">${s.score}</div></div>`;
+    ov.appendChild(d);
+  });
+  const rl = g('result-log'); rl.innerHTML = '';
+  (gs.log||[]).slice(-40).forEach(line => { const d = document.createElement('div'); d.className='log-line'; d.textContent=line; rl.appendChild(d); });
+  show('result');
+}
+
+function maybeCpuTurn() {
+  if(!gs || gs.phase !== 'play' && gs.round === 0) return;
+  if(!gs.players[gs.turnIdx]) return;
+  const cur = gs.players[gs.turnIdx];
+  if(cur.isCpu) setTimeout(() => cpuTurn(cur), 100);
+}
+
+function rematch() {
+  if(isHost && gameMode === 'online') fbDel('');
+  fbClose();
+  isHost=false; isSolo=false; gameMode=null;
+  roomCode=''; fbRoom=''; gs=null; myHand=[]; myPeppersFront=[];
+  show('home');
+}
+
+// ============================================================
+// CPU AI
+// ============================================================
+function cpuTurn(cpu) {
+  if(!cpu || !gs.players[gs.turnIdx] || gs.players[gs.turnIdx].id !== cpu.id) return;
+  const hand = cpu.hand || [];
+  const peppers = cpu.peppers || [];
+  const all = [...hand, ...peppers];
+  if(all.length === 0) return;
+  const lead = gs.leadColor;
+  let candidates;
+  if(gs.trickCards.length === 0) {
+    // lead phase
+    candidates = all;
+  } else {
+    const followable = all.filter(c => c.c === lead);
+    candidates = followable.length > 0 ? followable : all;
+  }
+  // Decision: avoid taking pepper-color tricks (esp. ones I own peppers in)
+  const myPepperColors = new Set(peppers.map(c=>c.c));
+  let choice;
+  if(gs.trickCards.length === 0) {
+    // Lead: prefer low-risk colors (NOT my pepper colors). Among those, lead high to clear color.
+    const nonMyPep = candidates.filter(c => !myPepperColors.has(c.c));
+    const pool = nonMyPep.length > 0 ? nonMyPep : candidates;
+    // If we have pepper cards, lead them to dump them (CPU wants to dump pepper)
+    const pepperCards = pool.filter(c => c.n === 1);
+    if(pepperCards.length > 0) {
+      choice = pepperCards[0];  // lead pepper to give up
+    } else {
+      // Lead high to win and possibly dump? Or low to avoid winning?
+      // In Pepper, avoiding tricks in your-pepper-colors is key. Other colors don't matter.
+      // Lead random low card from non-pepper-color (we don't care who wins)
+      pool.sort((a,b) => a.n - b.n);
+      choice = pool[0];
+    }
+  } else {
+    // following
+    const winNow = computeTrickWinnerIdx(gs.trickCards, gs.leadColor);
+    const winCard = gs.trickCards[winNow];
+    const winNum = winCard.c === gs.leadColor ? winCard.n : 0;
+    // Will trick contain pepper-color cards (in trickCards)?
+    const trickHasMyPepperColor = gs.trickCards.some(t => myPepperColors.has(t.c));
+    const leadIsMyPepperColor = myPepperColors.has(gs.leadColor);
+    if(candidates[0].c === gs.leadColor) {
+      // We can follow
+      if(leadIsMyPepperColor) {
+        // Lead color matches a pepper I own → I MUST avoid winning if possible
+        // Play lowest that won't win
+        const sorted = candidates.slice().sort((a,b) => a.n - b.n);
+        const losers = sorted.filter(c => c.n < winNum);
+        choice = losers.length > 0 ? losers[losers.length-1] : sorted[0]; // can't avoid, use lowest
+      } else if(trickHasMyPepperColor) {
+        // Trick has cards in my pepper color but lead is different - if I win I get those cards. Avoid winning.
+        const sorted = candidates.slice().sort((a,b) => a.n - b.n);
+        const losers = sorted.filter(c => c.n < winNum);
+        choice = losers.length > 0 ? losers[losers.length-1] : sorted[0];
+      } else {
+        // Safe to win or not. Play highest non-pepper if winning makes sense (dump a high card)
+        const sorted = candidates.slice().sort((a,b) => b.n - a.n);
+        choice = sorted[0];
+      }
+    } else {
+      // Can't follow → dump worst card
+      // Prefer dumping pepper cards (worst) or high cards in my pepper colors
+      const myPepperColorCards = candidates.filter(c => myPepperColors.has(c.c));
+      if(myPepperColorCards.length > 0) {
+        // dump highest of my pepper color
+        myPepperColorCards.sort((a,b) => b.n - a.n);
+        choice = myPepperColorCards[0];
+      } else {
+        // dump pepper if any
+        const peppers = candidates.filter(c => c.n === 1);
+        if(peppers.length > 0) choice = peppers[0];
+        else {
+          // dump highest card
+          const sorted = candidates.slice().sort((a,b) => b.n - a.n);
+          choice = sorted[0];
+        }
+      }
+    }
+  }
+  if(choice) hostPlayCard(cpu.id, choice);
+}
+
+function openRules() { g('rules-modal').classList.add('active'); }
+function closeRules() { g('rules-modal').classList.remove('active'); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('ppName');
+  if(saved) g('in-name').value = saved;
+  g('in-name').addEventListener('input', e => localStorage.setItem('ppName', e.target.value));
+});
+</script>
+
+<script>
+// === 再接続（途中復帰）機能 ===
+const PG_SESSION_KEY = 'pgSession_pepper';
+function pgSaveSession(){ try{ sessionStorage.setItem(PG_SESSION_KEY, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); }catch(e){} }
+function pgLoadSession(){ try{ const r=sessionStorage.getItem(PG_SESSION_KEY); if(!r) return null; const s=JSON.parse(r); if(Date.now()-s.ts>3*60*60*1000){ pgClearSession(); return null; } return s; }catch(e){ return null; } }
+function pgClearSession(){ try{ sessionStorage.removeItem(PG_SESSION_KEY); }catch(e){} }
+function pgShowReconnect(){ const s=pgLoadSession(); const b=document.getElementById('btn-reconnect'); if(!b) return; if(!s||!s.roomCode){ b.style.display='none'; return; } b.style.display=''; b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）'; }
+function pgSaveHostState(){
+  if(!isHost || !fbRoom || typeof gs==='undefined' || !gs) return;
+  try { fbPut('hostState', {ts: Date.now(), gsJson: JSON.stringify(gs), actTs: JSON.stringify(fbLastTs||{})}); } catch(e){}
+}
+async function pgReconnect(){
+  const s = pgLoadSession(); if(!s) return;
+  myId=s.myId; myName=s.myName; roomCode=s.roomCode; fbRoom=s.fbRoom; isHost=s.isHost; gameMode='online';
+  try{
+    const meta = await fbGet('meta');
+    if(!meta){ pgClearSession(); pgShowReconnect(); setHomeErr('ルームが見つかりません（終了済みの可能性）'); return; }
+    if(isHost){
+      const hs = await fbGet('hostState');
+      if(hs && hs.gsJson){
+        // 完全状態（非公開情報込み）から復元
+        gs = JSON.parse(hs.gsJson);
+        fbListen();
+        try { fbLastTs = JSON.parse(hs.actTs||'{}'); } catch(e){ fbLastTs = {}; }
+        pgSaveSession();
+        if(document.getElementById('room-code')) document.getElementById('room-code').textContent = roomCode;
+        const me = gs.players.find(p=>p.id===myId);
+        if(gs.started){
+          if(me){ myHand=(me.hand||[]).slice(); myPeppersFront=(me.peppers||[]).slice(); }
+          show('game'); renderGame();
+          pushStateAll();
+        } else {
+          show('wait'); renderWaitPlayers(); broadcastLobby();
+        }
+        return;
+      }
+      const bc = await fbGet('broadcast');
+      const m = bc && bc.msg;
+      if(m && m.t==='lobby' && !m.started){
+        gs = freshGameState();
+        gs.players = m.players || [];
+        fbListen();
+        pgSaveSession();
+        show('wait');
+        if(document.getElementById('room-code')) document.getElementById('room-code').textContent = roomCode;
+        renderWaitPlayers();
+        broadcastLobby();
+      } else {
+        setHomeErr('ゲーム進行中のホスト復帰はできません');
+        return;
+      }
+    } else {
+      fbListen();
+      fbSendToHost({ t:'join', id:myId, name:myName });
+      pgSaveSession();
+      show('wait');
+      if(document.getElementById('room-code')) document.getElementById('room-code').textContent = roomCode;
+      const bs=document.getElementById('btn-start-game'); if(bs) bs.style.display='none';
+    }
+  }catch(e){ setHomeErr('再接続に失敗しました'); }
+}
+setTimeout(pgShowReconnect, 300);
+</script>
+</body>
+</html>
