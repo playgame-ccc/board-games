@@ -577,6 +577,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
         <button class="count-btn selected" data-s="1000" onclick="setStack(1000)" style="width:auto;padding:0 14px;">1000</button>
         <button class="count-btn" data-s="2000" onclick="setStack(2000)" style="width:auto;padding:0 14px;">2000</button>
         <button class="count-btn" data-s="5000" onclick="setStack(5000)" style="width:auto;padding:0 14px;">5000</button>
+        <button class="count-btn" data-s="10000" onclick="setStack(10000)" style="width:auto;padding:0 14px;">10000</button>
       </div>
       <div class="center muted small" id="blind-label" style="margin-top:8px;">SB 10 / BB 20（50bb）</div>
     </div>
@@ -588,12 +589,14 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
         <button class="count-btn" data-m="tourney" onclick="setGameFormat('tourney')" style="width:auto;padding:0 14px;">トーナメント</button>
       </div>
       <div id="tourney-opts" style="display:none; margin-top:10px;">
-        <div class="center muted small">ブラインドアップ間隔</div>
-        <div class="count-selector" id="level-select" style="margin-top:6px;">
-          <button class="count-btn" data-lv="1" onclick="setLevelMin(1)" style="width:auto;padding:0 14px;">1分</button>
-          <button class="count-btn selected" data-lv="3" onclick="setLevelMin(3)" style="width:auto;padding:0 14px;">3分</button>
-          <button class="count-btn" data-lv="5" onclick="setLevelMin(5)" style="width:auto;padding:0 14px;">5分</button>
+        <div class="center muted small">ストラクチャー（所要時間の目安）</div>
+        <div class="count-selector" id="struct-select" style="margin-top:6px; flex-wrap:wrap; gap:6px;">
+          <button class="count-btn" data-st="t15" onclick="setStruct('t15')" style="width:auto;padding:0 12px;">15分</button>
+          <button class="count-btn selected" data-st="t30" onclick="setStruct('t30')" style="width:auto;padding:0 12px;">30分</button>
+          <button class="count-btn" data-st="t60" onclick="setStruct('t60')" style="width:auto;padding:0 12px;">60分</button>
+          <button class="count-btn" data-st="t90" onclick="setStruct('t90')" style="width:auto;padding:0 12px;">90分</button>
         </div>
+        <div class="center muted small" id="struct-detail" style="margin-top:6px;"></div>
       </div>
       <div class="center muted small" id="format-label" style="margin-top:8px;">通常のキャッシュゲーム（リバイあり）</div>
       <div class="center" style="margin-top:10px;">
@@ -1163,39 +1166,104 @@ function setPlayerCount(n){
 function setStack(s){
   soloStack = s;
   document.querySelectorAll('#stack-select .count-btn').forEach(b=>b.classList.toggle('selected', parseInt(b.dataset.s)===s));
-  // ブラインドは固定（SB10/BB20）。スタックを変えると深さ(bb数)が変わる
-  soloSB = 10; soloBB = 20;
-  const bbCount = Math.round(s / soloBB);
-  g('blind-label').textContent = `SB ${soloSB} / BB ${soloBB}（${bbCount}bb）`;
+  if(gameFormat === 'tourney'){
+    const st = TOURNEY_STRUCTURES[tourneyStructKey];
+    const [sb,bb] = st.levels[0];
+    soloSB = sb; soloBB = bb;
+    g('blind-label').textContent = `開始 SB ${sb} / BB ${bb}（${Math.round(s/bb)}bb）`;
+  } else {
+    soloSB = 10; soloBB = 20;
+    g('blind-label').textContent = `SB ${soloSB} / BB ${soloBB}（${Math.round(s / soloBB)}bb）`;
+  }
 }
 
 // ===== ゲーム形式（リング / トーナメント） =====
 let gameFormat = 'ring';
-let tourneyLevelMin = 3;
+let tourneyLevelMin = 3;       // レガシー保持
+let tourneyStructKey = 't30';  // 既定プリセット
 function setGameFormat(m){
   gameFormat = m;
   document.querySelectorAll('#format-select .count-btn').forEach(b=>b.classList.toggle('selected', b.dataset.m===m));
   g('tourney-opts').style.display = m==='tourney' ? 'block' : 'none';
-  g('format-label').textContent = m==='tourney'
-    ? `脱落制・ブラインドが${tourneyLevelMin}分ごとに上昇（リバイなし）`
-    : '通常のキャッシュゲーム（リバイあり）';
+  if(m==='tourney'){
+    setStruct(tourneyStructKey);
+    setStack(soloStack); // ブラインド表示を更新
+  } else {
+    g('format-label').textContent = '通常のキャッシュゲーム（リバイあり）';
+    setStack(soloStack);
+  }
 }
-function setLevelMin(n){
-  tourneyLevelMin = n;
-  document.querySelectorAll('#level-select .count-btn').forEach(b=>b.classList.toggle('selected', parseInt(b.dataset.lv)===n));
-  g('format-label').textContent = `脱落制・ブラインドが${n}分ごとに上昇（リバイなし）`;
+function setStruct(key){
+  tourneyStructKey = key;
+  const st = TOURNEY_STRUCTURES[key];
+  document.querySelectorAll('#struct-select .count-btn').forEach(b=>b.classList.toggle('selected', b.dataset.st===key));
+  const nLv = st.levels.length;
+  const hasAnte = st.levels.some(l=>l[2]>0);
+  const anteLv = st.levels.findIndex(l=>l[2]>0);
+  const anteTxt = !hasAnte ? 'アンティなし'
+    : (anteLv===0 ? 'BBアンティ最初から' : `BBアンティLv${anteLv+1}から`);
+  g('struct-detail').textContent = `各レベル${st.minPerLevel}分・全${nLv}レベル・${anteTxt}`;
+  g('format-label').textContent = `脱落制（リバイなし）・${st.label}`;
+  if(g('blind-label')) setStack(soloStack);
 }
 
-// トーナメントのブラインドストラクチャ（SB/BB）
-const TOURNEY_BLINDS = [[10,20],[15,30],[25,50],[40,80],[60,120],[100,200],[150,300],[250,500],[400,800],[600,1200],[1000,2000]];
-function tourneyBlindsAt(lv){
-  if(lv < TOURNEY_BLINDS.length) return TOURNEY_BLINDS[lv];
-  const last = TOURNEY_BLINDS[TOURNEY_BLINDS.length-1];
-  const mult = Math.pow(2, lv - TOURNEY_BLINDS.length + 1);
-  return [last[0]*mult, last[1]*mult];
+// トーナメントのストラクチャープリセット（PDF準拠）
+// 各レベル [SB, BB, アンティ(0=なし), このレベルの分数]
+const TOURNEY_STRUCTURES = {
+  t15: { label:'15分（ハイパーターボ）', minPerLevel:2, levels:[
+    [50,100,100],[100,200,200],[150,300,300],[300,600,600],
+    [600,1200,1200],[1200,2500,2500],[2000,4000,4000],[4000,8000,8000] ]},
+  t30: { label:'30分（ターボ）', minPerLevel:3, levels:[
+    [50,100,100],[80,150,150],[120,250,250],[200,400,400],[400,800,800],
+    [600,1200,1200],[1000,2000,2000],[1500,3000,3000],[2500,5000,5000],[4000,8000,8000] ]},
+  t60: { label:'60分（標準ターボ）', minPerLevel:5, levels:[
+    [50,100,0],[80,150,0],[100,200,0],[150,300,300],[250,500,500],[400,800,800],
+    [500,1000,1000],[800,1500,1500],[1200,2500,2500],[2000,4000,4000],[2500,5000,5000],[4000,8000,8000] ]},
+  t90: { label:'90分（標準）', minPerLevel:6, levels:[
+    [50,100,0],[80,150,0],[100,200,0],[120,250,250],[150,300,300],[250,500,500],
+    [300,600,600],[400,800,800],[600,1200,1200],[800,1500,1500],[1200,2500,2500],
+    [1500,3000,3000],[2000,4000,4000],[3000,6000,6000],[4000,8000,8000] ]},
+};
+// 後方互換: 旧levelMin指定（1/3/5分）の簡易ストラクチャを動的生成
+const LEGACY_BLINDS = [[10,20],[15,30],[25,50],[40,80],[60,120],[100,200],[150,300],[250,500],[400,800],[600,1200],[1000,2000]];
+function tourneyStruct(t){
+  return (t.structKey && TOURNEY_STRUCTURES[t.structKey]) ? TOURNEY_STRUCTURES[t.structKey] : null;
+}
+function tourneyLevelInfo(t, lv){
+  // [SB, BB, ante] を返す（レベル上限超過は最終レベルの倍々）
+  const st = tourneyStruct(t);
+  if(st){
+    const L = st.levels;
+    if(lv < L.length) return L[lv];
+    const last = L[L.length-1];
+    const mult = Math.pow(2, lv - L.length + 1);
+    return [last[0]*mult, last[1]*mult, last[2]*mult];
+  }
+  // レガシー
+  let blind;
+  if(lv < LEGACY_BLINDS.length) blind = LEGACY_BLINDS[lv];
+  else { const last=LEGACY_BLINDS[LEGACY_BLINDS.length-1]; const m=Math.pow(2,lv-LEGACY_BLINDS.length+1); blind=[last[0]*m,last[1]*m]; }
+  return [blind[0], blind[1], blind[1]]; // レガシーはBBアンティ
+}
+function tourneyBlindsAt(t_or_lv, maybeLv){
+  // 互換: 引数1個(数値)なら旧呼び出し（レガシーBB表）。2個ならtourneyLevelInfo相当
+  if(typeof t_or_lv === 'number'){
+    const lv = t_or_lv;
+    if(lv < LEGACY_BLINDS.length) return LEGACY_BLINDS[lv];
+    const last=LEGACY_BLINDS[LEGACY_BLINDS.length-1]; const m=Math.pow(2,lv-LEGACY_BLINDS.length+1); return [last[0]*m,last[1]*m];
+  }
+  const info = tourneyLevelInfo(t_or_lv, maybeLv);
+  return [info[0], info[1]];
+}
+function tourneyAnteAt(t, lv){ return tourneyLevelInfo(t, lv)[2] || 0; }
+function tourneyMinForLevel(t, lv){
+  const st = tourneyStruct(t);
+  return (st ? st.minPerLevel : (t.levelMin || 3));
 }
 function tourneyCurrentLevel(t){
-  return Math.floor((Date.now() - t.startTs) / (t.levelMin * 60000));
+  // 各レベルの分数が一定なので累積で算出（PDFは全レベル同一分数）
+  const per = tourneyMinForLevel(t, 0);
+  return Math.floor((Date.now() - t.startTs) / (per * 60000));
 }
 
 const CPU_NAMES = ['アル','ベラ','カイ','デフ','エコ','フィン','ジン','ハナ'];
@@ -1229,7 +1297,7 @@ function startSolo(){
     currentGame: soloSelectedGame || 'holdem',
   };
   if(gameFormat === 'tourney'){
-    G.tourney = {startTs: Date.now(), levelMin: tourneyLevelMin, level: 0, ranks: {}};
+    G.tourney = {startTs: Date.now(), levelMin: tourneyLevelMin, structKey: tourneyStructKey, level: 0, ranks: {}};
     soloSB = 10; soloBB = 20;
     G.log.unshift(`🏆 トーナメント開始！ ${tourneyLevelMin}分ごとにブラインドアップ`);
   }
@@ -1262,11 +1330,13 @@ function startNewHand(){
     const lv = tourneyCurrentLevel(G.tourney);
     if(lv > G.tourney.level){
       G.tourney.level = lv;
-      const [nsb, nbb] = tourneyBlindsAt(lv);
-      G.log.unshift(`📈 ブラインドアップ → Lv${lv+1}: ${nsb}/${nbb}`);
+      const [nsb, nbb] = tourneyBlindsAt(G.tourney, lv);
+      const nante = tourneyAnteAt(G.tourney, lv);
+      G.log.unshift(`📈 ブラインドアップ → Lv${lv+1}: ${nsb}/${nbb}${nante>0?` (アンティ${nante})`:''}`);
     }
-    const [sb, bb] = tourneyBlindsAt(G.tourney.level);
+    const [sb, bb] = tourneyBlindsAt(G.tourney, G.tourney.level);
     soloSB = sb; soloBB = bb;
+    G.tourney.curAnte = tourneyAnteAt(G.tourney, G.tourney.level);
   }
 
   // スタックが残っている人だけ続行
@@ -1388,12 +1458,13 @@ function startNewHand(){
     }
     postChips(sbIdx, soloSB);
     postChips(bbIdx, soloBB);
-    // トーナメント: BBアンティ（BB担当が全員分=BB額を即ポットへ。BB優先で残りから支払う）
+    // トーナメント: BBアンティ（プリセットのアンティ額。0のレベルはアンティなし）
     let anteToPot = 0;
-    if(G.tourney){
+    const anteAmt = (G.tourney && G.tourney.curAnte!=null) ? G.tourney.curAnte : (G.tourney ? soloBB : 0);
+    if(G.tourney && anteAmt > 0){
       const bp = players[bbIdx];
       const beforeRB = bp.roundBet;
-      postChips(bbIdx, soloBB); // アンティ（最大BB額、スタック不足ならある分だけ）
+      postChips(bbIdx, anteAmt); // アンティ（スタック不足ならある分だけ）
       anteToPot = bp.roundBet - beforeRB;
       bp.roundBet = beforeRB;   // アンティはコール額に含めない（totalBetには残しサイドポット計算に反映）
       if(anteToPot > 0) G.log.unshift(`🪙 BBアンティ: ${bp.name} が ${anteToPot} をポスト`);
@@ -1926,7 +1997,10 @@ function drawStrength(hole, evalLo){
 function drawRangeFloor(h, opp, evalLo){
   const bb = h.bbAmount || 20;
   let inv = (opp.totalBet||0) + (opp.roundBet||0);
-  if(opp.idx === h.bbIdx) inv -= bb * ((typeof G!=='undefined'&&G&&G.tourney)?2:1);
+  if(opp.idx === h.bbIdx){
+    const anteBB = (typeof G!=='undefined'&&G&&G.tourney&&G.tourney.curAnte>0) ? (G.tourney.curAnte/bb) : 0;
+    inv -= bb * (1 + anteBB);
+  }
   else if(opp.idx === h.sbIdx) inv -= Math.floor(bb/2);
   const bbInv = inv / bb;
   const T = evalLo==='badugi' ? [0.56,0.62,0.77] : evalLo==='a5lo' ? [0.32,0.40,0.46] : [0.32,0.36,0.39];
@@ -2543,15 +2617,17 @@ function updateTourneyBar(){
   const t = tourneyInfo();
   if(!t){ bar.style.display='none'; return; }
   bar.style.display='block';
-  const lvNow = Math.floor((Date.now() - t.startTs) / (t.levelMin * 60000));
+  const per = tourneyMinForLevel(t, 0);
+  const lvNow = Math.floor((Date.now() - t.startTs) / (per * 60000));
   const applied = t.level; // 適用中レベル（次のハンドから上がる）
-  const [sb, bb] = tourneyBlindsAt(applied);
-  const nextAt = t.startTs + (lvNow + 1) * t.levelMin * 60000;
+  const [sb, bb] = tourneyBlindsAt(t, applied);
+  const ante = tourneyAnteAt(t, applied);
+  const nextAt = t.startTs + (lvNow + 1) * per * 60000;
   const remain = Math.max(0, nextAt - Date.now());
   const mm = Math.floor(remain/60000), ss = Math.floor((remain%60000)/1000);
-  let txt = `🏆 Lv${applied+1} ・ ブラインド ${sb}/${bb} +BBアンティ`;
+  let txt = `🏆 Lv${applied+1} ・ ブラインド ${sb}/${bb}${ante>0?` ・ アンティ${ante}`:''}`;
   if(lvNow > applied){
-    const [nsb, nbb] = tourneyBlindsAt(lvNow);
+    const [nsb, nbb] = tourneyBlindsAt(t, lvNow);
     txt += ` ・ 次のハンドから ${nsb}/${nbb}`;
   } else {
     txt += ` ・ アップまで ${mm}:${String(ss).padStart(2,'0')}`;
@@ -3839,7 +3915,7 @@ function ploHostStart(){
   waitingPlayers.forEach(p=>names[p.id]=p.name);
   G = { ids, names, stacks: ids.map(()=>soloStack), buttonIdx: Math.floor(Math.random()*ids.length), handNo: 0, log: [], isMulti: true, currentGame: hostSelectedGame || 'holdem' };
   if(gameFormat === 'tourney'){
-    G.tourney = {startTs: Date.now(), levelMin: tourneyLevelMin, level: 0, ranks: {}};
+    G.tourney = {startTs: Date.now(), levelMin: tourneyLevelMin, structKey: tourneyStructKey, level: 0, ranks: {}};
     soloSB = 10; soloBB = 20;
     G.log.unshift(`🏆 トーナメント開始！ ${tourneyLevelMin}分ごとにブラインドアップ`);
   }
@@ -3880,7 +3956,7 @@ function ploPub_build(){
     sbId: (h.sbIdx>=0 && h.players[h.sbIdx]) ? h.players[h.sbIdx].id : null,
     bbId: (h.bbIdx>=0 && h.players[h.bbIdx]) ? h.players[h.bbIdx].id : null,
     results: h.results, handNames: h.handNames,
-    tourney: G.tourney ? {startTs:G.tourney.startTs, levelMin:G.tourney.levelMin, level:G.tourney.level, ranks:G.tourney.ranks} : null,
+    tourney: G.tourney ? {startTs:G.tourney.startTs, levelMin:G.tourney.levelMin, structKey:G.tourney.structKey, curAnte:G.tourney.curAnte, level:G.tourney.level, ranks:G.tourney.ranks} : null,
     players: (function(){
       const meP = h.players.find(x=>x.id===myId);
       const humanFolded = !isMulti && meP && meP.folded; // ソロで人間がフォールド済み→CPUの手を公開

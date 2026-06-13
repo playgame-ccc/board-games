@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ASH RUNNER — 100 STAGES</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; background:#0c0820; overflow:hidden; touch-action:none; overscroll-behavior:none;
+    font-family:"Courier New", monospace; color:#ffe14d;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+  #wrap { width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
+  body.touch #wrap { align-items:flex-start; padding-top:6px; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges;
+    background:#1a1033; box-shadow:0 0 0 3px #ffd23f, 0 0 40px #000 inset; max-width:100%; }
+  #hint { position:fixed; bottom:6px; left:50%; transform:translateX(-50%);
+    font-size:12px; color:#7a6fb0; letter-spacing:1px; text-align:center; }
+
+  /* on-screen controls (mobile) */
+  #touch { position:fixed; inset:0; pointer-events:none; z-index:10;
+    display:flex; justify-content:space-between; align-items:flex-end; padding:0 14px 18px; }
+  #touch.hidden { display:none; }
+  #touch .grp { display:flex; gap:10px; align-items:flex-end; }
+  #acts { flex-wrap:wrap; justify-content:flex-end; max-width:62%; }
+  .ctl { pointer-events:auto; touch-action:none; -webkit-user-select:none; user-select:none;
+    width:60px; height:60px; border-radius:50%; border:2px solid #ffd23f;
+    background:rgba(40,25,70,0.55); color:#ffe14d; font:bold 12px monospace;
+    display:flex; align-items:center; justify-content:center; }
+  .ctl.big { width:76px; height:76px; border-color:#48b9ff; color:#cfe6ff; font-size:14px; }
+  .ctl.up { width:48px; height:48px; }
+  .ctl.on { background:rgba(255,210,63,0.45); }
+</style>
+</head>
+<body>
+  <div id="wrap"><canvas id="game"></canvas></div>
+  <div id="hint">移動 ← → / A D ・ ジャンプ SPACE ・ ショット J / Z ・ ダッシュ K / SHIFT ・ 上撃ち ↑ W ・ メニュー ENTER / R ・ 合言葉 P</div>
+  <div id="touch" class="hidden">
+    <div class="grp" id="dpad">
+      <button class="ctl" data-k="left">◀</button>
+      <button class="ctl" data-k="right">▶</button>
+    </div>
+    <div class="grp" id="acts">
+      <button class="ctl up" data-k="up">▲</button>
+      <button class="ctl" data-k="dash">DASH</button>
+      <button class="ctl" data-k="shoot">SHOT</button>
+      <button class="ctl big" data-k="jump">JUMP</button>
+    </div>
+  </div>
+<script>
+"use strict";
+/* ===========================================================
+   ASH RUNNER — 100 procedurally-generated stages
+   Internal res 512x288, pixelated scale. Seeded per stage.
+   =========================================================== */
+const W = 512, H = 288;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+const TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints||0) > 0;
+if(TOUCH){ document.body.classList.add("touch"); const _h=document.getElementById("hint"); if(_h) _h.style.display="none"; }
+
+function resize(){
+  canvas.width=W; canvas.height=H;
+  let s;
+  if(TOUCH){ const maxW=window.innerWidth, maxH=window.innerHeight*0.62; s=Math.min(maxW/W, maxH/H); }
+  else { s=Math.max(1, Math.floor(Math.min(window.innerWidth/W, window.innerHeight/H))); }
+  canvas.style.width=(W*s)+"px"; canvas.style.height=(H*s)+"px";
+  ctx.imageSmoothingEnabled=false;
+}
+addEventListener("resize", resize); resize();
+
+// ---- palette ----
+const C = {
+  skyTop:"#1a1033", skyMid:"#3b1f5e", horizon:"#6b2f6b", hill1:"#241447", hill2:"#160d2e",
+  hero:"#48b9ff", heroDark:"#2b7fd0", heroAccent:"#ffd23f", skin:"#ffd9b3", white:"#ffffff",
+  enemy:"#ff4d6d", enemyDark:"#b81f44", eye:"#1a1033",
+  ground:"#2a6f5e", groundDark:"#16433a", groundEdge:"#3fae8e",
+  bossA:"#9b5de5", bossB:"#f15bb5", bossDark:"#5a2d8c",
+  pBullet:"#ffe14d", eBullet:"#ff3860", parry:"#ff6ec7",
+  spike:"#cfd8dc", spikeDark:"#7f8a90", shadow:"rgba(0,0,0,0.35)"
+};
+
+// ---- audio (guarded) ----
+let AC=null;
+function actx(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ AC=null; } } return AC; }
+function beep(f,d,t,v){ const a=actx(); if(!a) return;
+  try{ const o=a.createOscillator(),g=a.createGain(); o.type=t||"square"; o.frequency.value=f;
+    g.gain.value=v||0.04; o.connect(g); g.connect(a.destination); const n=a.currentTime; o.start(n);
+    g.gain.exponentialRampToValueAtTime(0.0001,n+(d||0.08)); o.stop(n+(d||0.08)+0.02);}catch(e){} }
+const sfx = {
+  shot(){beep(880,0.05,"square",0.022);}, jump(){beep(520,0.10,"square",0.05);},
+  dash(){beep(220,0.12,"sawtooth",0.05);}, hit(){beep(140,0.18,"square",0.07);},
+  parry(){beep(1320,0.10,"triangle",0.07);}, ehit(){beep(300,0.04,"square",0.02);},
+  die(){beep(90,0.5,"sawtooth",0.08);}, win(){beep(660,0.4,"triangle",0.08);},
+  nav(){beep(440,0.03,"square",0.02);}, ok(){beep(740,0.08,"triangle",0.05);}
+};
+
+// ---- input ----
+const keys = {};
+const KEYMAP = {
+  ArrowLeft:"left", KeyA:"left", ArrowRight:"right", KeyD:"right",
+  ArrowUp:"up", KeyW:"up", ArrowDown:"down", KeyS:"down",
+  Space:"jump", KeyJ:"shoot", KeyZ:"shoot",
+  KeyK:"dash", ShiftLeft:"dash", ShiftRight:"dash", KeyL:"dash",
+  Enter:"start", KeyR:"restart"
+};
+addEventListener("keydown", e=>{
+  actx();
+  if(enteringCode){
+    if(e.code==="Escape"){ enteringCode=false; menuLock=10; codeMsg=""; e.preventDefault(); return; }
+    if(e.code==="Backspace"){ codeInput=codeInput.slice(0,-1); codeMsg=""; e.preventDefault(); return; }
+    if(e.code==="Enter"){ submitCode(); e.preventDefault(); return; }
+    let ch="";
+    if(e.code.indexOf("Key")===0) ch=e.code.slice(3);
+    else if(e.code.indexOf("Digit")===0) ch=e.code.slice(5);
+    else if(e.code.indexOf("Numpad")===0 && e.code.length===7 && e.code[6]>="0" && e.code[6]<="9") ch=e.code.slice(6);
+    if(ch && codeInput.length<6 && /^[A-Z0-9]$/.test(ch)){ codeInput+=ch; codeMsg=""; sfx.nav(); }
+    e.preventDefault(); return;
+  }
+  if((scene==="title"||scene==="select") && e.code==="KeyP"){ enteringCode=true; codeInput=""; codeMsg=""; sfx.ok(); e.preventDefault(); return; }
+  const k=KEYMAP[e.code];
+  if(k){ keys[k]=true; if(["jump","up","down","shoot","start","left","right"].indexOf(k)>=0) e.preventDefault(); }
+});
+addEventListener("keyup", e=>{ const k=KEYMAP[e.code]; if(k) keys[k]=false; });
+addEventListener("blur", ()=>{ for(const k in keys) keys[k]=false; });
+
+// ---- on-screen control buttons (mobile) ----
+const touchUI=document.getElementById("touch");
+document.querySelectorAll(".ctl").forEach(btn=>{
+  const k=btn.dataset.k;
+  const on=e=>{ keys[k]=true; btn.classList.add("on"); try{btn.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); };
+  const off=e=>{ keys[k]=false; btn.classList.remove("on"); e.preventDefault(); };
+  btn.addEventListener("pointerdown",on);
+  btn.addEventListener("pointerup",off);
+  btn.addEventListener("pointercancel",off);
+  btn.addEventListener("lostpointercapture",off);
+  btn.addEventListener("contextmenu",e=>e.preventDefault());
+});
+function updateTouchUI(){
+  const show = TOUCH && scene==="play" && !enteringCode;
+  if(show){ touchUI.classList.remove("hidden"); }
+  else if(!touchUI.classList.contains("hidden")){
+    touchUI.classList.add("hidden");
+    ["left","right","up","jump","shoot","dash"].forEach(k=>keys[k]=false);
+    document.querySelectorAll(".ctl.on").forEach(b=>b.classList.remove("on"));
+  }
+}
+
+// ---- tappable UI regions drawn on the canvas (menus + password keypad) ----
+let uiButtons=[];
+function addBtn(x,y,w,h,fn){ uiButtons.push({x,y,w,h,fn}); }
+canvas.addEventListener("pointerdown", e=>{
+  actx();
+  if(scene==="play" && !enteringCode) return;     // gameplay uses the on-screen buttons
+  const rect=canvas.getBoundingClientRect();
+  const ix=(e.clientX-rect.left)*(W/rect.width);
+  const iy=(e.clientY-rect.top)*(H/rect.height);
+  for(let i=uiButtons.length-1;i>=0;i--){ const b=uiButtons[i];
+    if(ix>=b.x && ix<=b.x+b.w && iy>=b.y && iy<=b.y+b.h){ b.fn(); break; } }
+  e.preventDefault();
+});
+
+// ---- pixel sprite drawing ----
+function drawSprite(grid,map,px,py,ps,flip){
+  for(let r=0;r<grid.length;r++){ const row=grid[r];
+    for(let c=0;c<row.length;c++){ const ch=row[c]; if(ch===" "||ch===".") continue;
+      const col=map[ch]; if(!col) continue; const cx=flip?(row.length-1-c):c;
+      ctx.fillStyle=col; ctx.fillRect(Math.round(px+cx*ps), Math.round(py+r*ps), ps, ps); } }
+}
+const HMAP={B:C.hero,D:C.heroDark,A:C.heroAccent,S:C.skin,W:C.white,K:"#13243a"};
+const HERO_IDLE=["...AAAA...","..AAAAAA..","..ASSSS A.","..SSWSWS..","..SSSSSS..","..BBBBBB..",".BBBBBBBB.",".BDBBBBDB.",".BBBBBBBB.","..BB..BB..","..DD..DD..","..KK..KK.."];
+const HERO_RUN =["...AAAA...","..AAAAAA..","..ASSSS A.","..SSWSWS..","..SSSSSS..","..BBBBBB..",".BBBBBBBB.",".BDBBBBDB.","..BBBBBB..","..BB.BBB..",".DD...DD..",".KK....K.."];
+const HERO_JUMP=["...AAAA...","..AAAAAA..","..ASSSS A.","..SSWSWS..",".BSSSSSSB.","BBBBBBBBBB",".BBBBBBBB.",".BDBBBBDB.","..BBBBBB..","..BB..BB..",".DD....DD.",".K......K."];
+const EMAP={E:C.enemy,D:C.enemyDark,Y:"#ffd23f",K:C.eye};
+const TURRET=["..EEEEEE..",".EEEEEEEE.","EEKEEEEKEE","EEEYYYYEEE","DDEEEEEEDD","DDDDDDDDDD",".D.D..D.D.",".D.D..D.D."];
+const FLYER =["..E...E..",".EEE.EEE.","EEEEEEEEE","EKEEYEEKE","EEEEEEEEE",".DDDDDDD.","..D.D.D.."];
+
+// ---- physics constants ----
+const GRAV=0.55, MAXFALL=11, GROUND_Y=232, ARENAW=512;
+
+// ===========================================================
+//  STAGE GENERATION (seeded, deterministic per stage number)
+// ===========================================================
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296; }; }
+
+function generateStage(n){
+  const rng = mulberry32(((n*2654435761)>>>0) ^ 0x9e3779b9);
+  const rand=(a,b)=>a+rng()*(b-a);
+  const ri=(a,b)=>Math.floor(rand(a,b+1));
+  const isBoss = (n % 5 === 0);
+  const GY = GROUND_Y;
+
+  if(isBoss){
+    const levelW = 1400;
+    const arenaL = levelW - ARENAW;       // 888
+    const arenaR = levelW;                // 1400
+    const bossX  = arenaL;
+    const platforms = [{x:0,y:GY,w:levelW,h:200}];
+    platforms.push({x:arenaL+120, y:150, w:110, h:14});
+    platforms.push({x:arenaR-240, y:150, w:110, h:14});
+    return { n, isBoss:true, levelW, platforms, spikes:[], enemies:[], goalX:null,
+             arenaL, arenaR, bossX, fireBase:90,
+             bossHP: Math.round(240 + n*5), diff:n };
+  }
+
+  // ---- run stage ----
+  const length = Math.round(2400 + n*24);
+  const platforms=[], spikes=[], enemies=[];
+  let x = ri(220,320);
+  platforms.push({x:0, y:GY, w:x, h:200});      // short safe spawn ground
+  const pitChance   = Math.min(0.70, 0.40 + n*0.004);
+  const spikeChance = Math.min(0.65, 0.35 + n*0.004);
+
+  while(x < length-360){
+    if(rng() < pitChance){
+      const gmax = Math.min(116, 84 + Math.floor(n/2));
+      const gap = ri(74, Math.max(76, gmax));   // wider; the widest need a dash
+      x += gap;
+    }
+    let w = ri(140,320);
+    if(x+w > length-200) w = length-200 - x;
+    if(w < 120) w = 120;
+    const seg = {x, y:GY, w, h:200};
+    platforms.push(seg);
+
+    // spikes: denser, placed mid-segment (both ends stay clear so it's survivable)
+    let patches = (w >= 150 && rng() < spikeChance) ? (rng()<0.35 ? 2 : 1) : 0;
+    for(let s=0;s<patches;s++){
+      const sw = ri(2,5)*8 + 24;
+      const room = w - 52 - sw;                 // keep ~26px clear at both ends
+      if(room > 0){ const sx = seg.x + 26 + ri(0, room); spikes.push({x:sx, y:GY-12, w:sw}); }
+    }
+    if(rng() < 0.25){
+      const fpw = ri(80,130);
+      const fpx = seg.x + ri(20, Math.max(20, w-fpw-20));
+      const fpy = GY - ri(58,76);
+      platforms.push({x:fpx, y:fpy, w:fpw, h:14});
+    }
+    x += w;
+  }
+  const levelW = Math.max(length, x+200);
+  platforms.push({x, y:GY, w:levelW-x, h:200});  // final ground
+  const goalX = levelW - 60;
+
+  const groundSegs = platforms.filter(p=>p.h>=100 && p.x>360);
+  const turretCount = Math.min(14, 3 + Math.floor(n/6));
+  const flyerCount  = Math.min(12, 2 + Math.floor(n/5));
+  for(let i=0;i<turretCount && groundSegs.length;i++){
+    for(let a=0;a<6;a++){
+      const seg = groundSegs[ri(0,groundSegs.length-1)];
+      const ex = seg.x + ri(20, Math.max(20, seg.w-40));
+      if(spikes.some(s=> ex>s.x-22 && ex<s.x+s.w+22)) continue;
+      enemies.push({type:"turret", x:ex, y:GY-32}); break;
+    }
+  }
+  for(let i=0;i<flyerCount;i++){
+    const fx = ri(560, levelW-260);
+    const fy = ri(80,150);
+    const range = ri(40, Math.min(95, 205-fy));
+    enemies.push({type:"flyer", x:fx, y:fy, range});
+  }
+  const fireBase = Math.max(28, Math.round(62 - n*0.4));
+  return { n, isBoss:false, levelW, platforms, spikes, enemies, goalX,
+           arenaL:null, arenaR:null, bossX:null, fireBase, diff:n };
+}
+
+// ---- live world globals, filled by loadStage ----
+let STAGE=null, platforms=[], spikes=[], enemySpawns=[];
+let LEVEL_W=0, BOSS_X=null, ARENA_L=null, ARENA_R=null;
+let curStage = 1;
+
+function loadStage(n){
+  curStage = n;
+  STAGE = generateStage(n);
+  platforms   = STAGE.platforms;
+  spikes      = STAGE.spikes;
+  enemySpawns = STAGE.enemies;
+  LEVEL_W = STAGE.levelW; BOSS_X = STAGE.bossX;
+  ARENA_L = STAGE.arenaL; ARENA_R = STAGE.arenaR;
+}
+
+// ===========================================================
+//  PROGRESS (localStorage with safe fallback)
+// ===========================================================
+const TOTAL = 100;
+let prog = { unlocked:1, cleared: new Array(TOTAL+1).fill(false) };
+function loadProg(){
+  try{ const raw = localStorage.getItem("ashrunner100");
+    if(raw){ const o=JSON.parse(raw);
+      if(o && typeof o.unlocked==="number" && Array.isArray(o.cleared)){
+        prog.unlocked = Math.min(TOTAL, Math.max(1, o.unlocked));
+        for(let i=1;i<=TOTAL;i++) prog.cleared[i] = !!o.cleared[i];
+      } } }catch(e){}
+}
+function saveProg(){ try{ localStorage.setItem("ashrunner100", JSON.stringify(prog)); }catch(e){} }
+loadProg();
+
+// ---- passwords: deterministic per stage, works even if save fails ----
+const CODE_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 32 chars, no I O 0 1
+const stageToCode={}, codeToStage={};
+for(let n=1;n<=TOTAL;n++){
+  let seed=((n*0x1f1f1f1f)^0xABCD1234)>>>0, code="", tries=0;
+  do{
+    const r=mulberry32((seed+tries*0x9e3779b9)>>>0); code="";
+    for(let k=0;k<4;k++) code+=CODE_ALPHABET[Math.floor(r()*CODE_ALPHABET.length)];
+    tries++;
+  } while(codeToStage[code]!==undefined && tries<60);
+  stageToCode[n]=code; codeToStage[code]=n;
+}
+function codeFor(n){ return stageToCode[n]||"----"; }
+function jumpToStage(n){
+  n=Math.max(1,Math.min(TOTAL,n));
+  prog.unlocked=Math.max(prog.unlocked,n);
+  for(let i=1;i<n;i++) prog.cleared[i]=true;   // reaching n means earlier stages were cleared
+  saveProg(); loadStage(n); resetRun(); setScene("play");
+}
+function submitCode(){
+  const c=codeInput.toUpperCase().trim(), n=codeToStage[c];
+  if(n){ enteringCode=false; codeInput=""; codeMsg=""; sfx.ok(); jumpToStage(n); }
+  else { codeMsg="WRONG CODE"; sfx.hit(); }
+}
+function selectStage(n){
+  selCursor=n-1;
+  if(n<=prog.unlocked){ sfx.ok(); loadStage(n); resetRun(); setScene("play"); }
+  else sfx.hit();
+}
+
+// ===========================================================
+//  GAME STATE
+// ===========================================================
+let scene="title", menuLock=0, flash=0, shake=0, slowmo=0;
+let totalDeaths=0, selCursor=0, navCd=0;
+let enteringCode=false, codeInput="", codeMsg="";
+let player, enemies, eBullets, pBullets, particles, boss, camX;
+
+function setScene(s){ scene=s; if(s!=="play") menuLock=14; }
+
+function resetRun(){
+  player = { x:60, y:GROUND_Y-48, w:20, h:24, vx:0, vy:0, onGround:false, facing:1,
+    hp:3, iframe:0, dashing:0, dashCd:0, dashDir:1, shootCd:0, animT:0,
+    jumpHeld:false, coyote:0, jumpBuffer:0, meter:0, dead:false, deadTimer:0 };
+  enemies = enemySpawns.map(makeEnemy);
+  eBullets=[]; pBullets=[]; particles=[]; boss=null; camX=0; flash=0; shake=0;
+}
+function makeEnemy(s){
+  const fb = (STAGE && STAGE.fireBase) || 90;
+  if(s.type==="turret")
+    return {type:"turret", x:s.x, y:s.y, w:20, h:16, hp:6, alive:true, t:Math.random()*100, cd:40+Math.random()*fb};
+  return {type:"flyer", x:s.x, baseY:s.y, y:s.y, w:18, h:14, hp:4, alive:true,
+          t:Math.random()*Math.PI*2, range:s.range||60, cd:40+Math.random()*fb};
+}
+function startBoss(){
+  boss = { x:ARENA_R-150, y:60, w:120, h:96,
+    hp:STAGE.bossHP, maxhp:STAGE.bossHP, phase:1, t:0, atkCd:60, pattern:0,
+    bobT:0, hurt:0, dead:false, deadT:0, entering:30, diff:STAGE.diff, _cdm:1 };
+}
+loadStage(1); resetRun();
+
+// ===========================================================
+//  UPDATE
+// ===========================================================
+function pressedConfirm(){ return menuLock<=0 && (keys.start || keys.jump); }
+
+function update(){
+  if(flash>0)flash--; if(shake>0)shake--; if(slowmo>0)slowmo--; if(menuLock>0)menuLock--;
+
+  if(scene==="title"){ if(pressedConfirm()){ sfx.ok(); setScene("select"); } return; }
+  if(scene==="select"){ updateSelect(); return; }
+  if(scene==="clear"){ updateClear(); return; }
+  if(scene==="gameover"){ updateGameOver(); return; }
+  if(scene!=="play") return;
+
+  const p = player;
+
+  if(p.dead){
+    p.deadTimer--; p.vy=Math.min(p.vy+GRAV,MAXFALL); p.y+=p.vy;
+    spawnTrail(p.x+p.w/2,p.y+p.h/2,C.hero,1);
+    if(p.deadTimer<=0) setScene("gameover");
+    return;
+  }
+
+  const hasBoss = STAGE.isBoss;
+  const arenaLock = hasBoss && boss!==null;
+  const leftBound  = arenaLock ? ARENA_L+8 : 0;
+  const rightBound = arenaLock ? ARENA_R-8 : LEVEL_W;
+
+  // horizontal / dash
+  let move=(keys.right?1:0)-(keys.left?1:0);
+  const SPD=2.6;
+  if(p.dashCd>0)p.dashCd--;
+  if(keys.dash && p.dashCd<=0 && p.dashing<=0){ p.dashing=12; p.dashCd=42; p.dashDir=p.facing; p.iframe=Math.max(p.iframe,12); sfx.dash(); }
+  if(p.dashing>0){ p.vx=p.dashDir*6.2; p.dashing--; p.iframe=Math.max(p.iframe,2); spawnTrail(p.x+p.w/2,p.y+p.h/2,C.hero,0); }
+  else { if(move!==0){ p.vx=move*SPD; p.facing=move; } else p.vx*=0.6; }
+
+  // jump (coyote + buffer + variable) & parry
+  if(p.onGround) p.coyote=7; else if(p.coyote>0) p.coyote--;
+  if(keys.jump && !p.jumpHeld) p.jumpBuffer=7;
+  if(p.jumpBuffer>0) p.jumpBuffer--;
+  if(keys.jump && !p.jumpHeld){
+    for(const b of eBullets){
+      if(b.pink && !b.dead && overlap(p.x,p.y,p.w,p.h, b.x-b.r,b.y-b.r,b.r*2,b.r*2)){
+        b.dead=true; p.vy=-7.5; p.meter=Math.min(100,p.meter+25); p.iframe=Math.max(p.iframe,14);
+        flash=4; sfx.parry(); spawnBurst(b.x,b.y,C.parry,10); p.jumpBuffer=0; break;
+      }
+    }
+  }
+  if(p.jumpBuffer>0 && p.coyote>0){ p.vy=-9.4; p.onGround=false; p.coyote=0; p.jumpBuffer=0; sfx.jump(); spawnBurst(p.x+p.w/2,p.y+p.h,C.white,4); }
+  if(!keys.jump && p.vy<0) p.vy*=0.55;
+  p.jumpHeld=keys.jump;
+
+  p.vy=Math.min(p.vy+GRAV,MAXFALL);
+
+  p.x+=p.vx; collideAxis(p,"x");
+  if(p.x<leftBound){ p.x=leftBound; p.vx=0; }
+  if(p.x+p.w>rightBound){ p.x=rightBound-p.w; p.vx=0; }
+  p.onGround=false; p.y+=p.vy; collideAxis(p,"y");
+
+  for(const s of spikes){ if(overlap(p.x,p.y,p.w,p.h, s.x,s.y,s.w,12)) killPlayer(); }
+  if(p.y>H+30) killPlayer();
+  if(p.iframe>0) p.iframe--;
+
+  // boss trigger / goal
+  if(hasBoss && boss===null && p.x+p.w/2 >= BOSS_X){ startBoss(); slowmo=18; }
+  if(!hasBoss && p.x+p.w/2 >= STAGE.goalX){ stageClear(); return; }
+
+  // shooting
+  if(p.shootCd>0) p.shootCd--;
+  if(keys.shoot && p.shootCd<=0){ fireHero(p); p.shootCd=9; }
+  p.animT += (Math.abs(p.vx)>0.4 && p.onGround) ? 0.35 : 0.12;
+
+  // camera
+  let targetCam = arenaLock ? ARENA_L : (p.x+p.w/2 - W*0.42);
+  targetCam = Math.max(0, Math.min(LEVEL_W-W, targetCam));
+  camX += (targetCam-camX)*0.16;
+
+  // enemies
+  const fb = STAGE.fireBase;
+  for(const e of enemies){
+    if(!e.alive) continue;
+    const onScreen = e.x>camX-60 && e.x<camX+W+60;
+    if(e.type==="turret"){
+      e.t++;
+      if(onScreen){ e.cd--; if(e.cd<=0){ aimedShot(e.x+e.w/2,e.y+4,p,2.9,false); e.cd=fb+Math.random()*26; } }
+    } else {
+      e.t+=0.045; e.y=e.baseY+Math.sin(e.t)*e.range;
+      if(onScreen){ e.cd--; if(e.cd<=0){ aimedShot(e.x+e.w/2,e.y+e.h,p,3.1, Math.random()<0.20); e.cd=fb*0.85+Math.random()*30; } }
+    }
+  }
+
+  if(boss) updateBoss(p);
+
+  // player bullets
+  for(const b of pBullets){
+    b.x+=b.vx; b.y+=b.vy; b.life--; if(b.life<=0) b.dead=true;
+    for(const e of enemies){
+      if(e.alive && overlap(b.x-2,b.y-2,4,4, e.x,e.y,e.w,e.h)){
+        e.hp-=1; b.dead=true; spawnBurst(b.x,b.y,C.enemy,4); sfx.ehit();
+        if(e.hp<=0){ e.alive=false; spawnBurst(e.x+e.w/2,e.y+e.h/2,C.enemy,14); } break;
+      }
+    }
+    if(boss && !boss.dead && !b.dead && boss.entering<=0 &&
+       overlap(b.x-2,b.y-2,4,4, boss.x+10,boss.y+10,boss.w-20,boss.h-16)){
+      boss.hp-=1; b.dead=true; boss.hurt=4; spawnBurst(b.x,b.y,C.bossB,4); sfx.ehit();
+      if(boss.hp<=0){ boss.dead=true; boss.deadT=130; slowmo=40; shake=20; }
+    }
+  }
+  pBullets = pBullets.filter(b=>!b.dead && b.x>camX-30 && b.x<camX+W+30);
+
+  // enemy bullets
+  for(const b of eBullets){
+    if(b.dead) continue; b.x+=b.vx; b.y+=b.vy; b.life--; if(b.life<=0){ b.dead=true; continue; }
+    if(p.iframe<=0 && circleRect(b.x,b.y,b.r, p.x,p.y,p.w,p.h)){ b.dead=true; damagePlayer(); }
+  }
+  eBullets = eBullets.filter(b=>!b.dead && b.x>camX-40 && b.x<camX+W+40 && b.y>-40 && b.y<H+40);
+
+  for(const pt of particles){ pt.x+=pt.vx; pt.y+=pt.vy; pt.vy+=0.18; pt.life--; }
+  particles = particles.filter(pt=>pt.life>0);
+
+  if(boss && boss.dead && boss.deadT<=0) stageClear();
+}
+
+function stageClear(){
+  if(scene!=="play") return;
+  prog.cleared[curStage]=true;
+  if(curStage<TOTAL) prog.unlocked=Math.max(prog.unlocked, curStage+1);
+  saveProg(); sfx.win(); setScene("clear");
+}
+
+function updateSelect(){
+  if(navCd>0) navCd--;
+  const col = selCursor%10, row=Math.floor(selCursor/10);
+  let nc=col, nr=row, moved=false;
+  if(navCd<=0){
+    if(keys.left){ nc=(col+9)%10; moved=true; }
+    else if(keys.right){ nc=(col+1)%10; moved=true; }
+    else if(keys.up){ nr=(row+9)%10; moved=true; }
+    else if(keys.down){ nr=(row+1)%10; moved=true; }
+  }
+  if(!(keys.left||keys.right||keys.up||keys.down)) navCd=0;
+  if(moved){ selCursor=nr*10+nc; navCd=8; sfx.nav(); }
+  if(pressedConfirm()){
+    const n=selCursor+1;
+    if(n<=prog.unlocked){ sfx.ok(); loadStage(n); resetRun(); setScene("play"); }
+    else sfx.hit();
+  }
+  if(menuLock<=0 && keys.restart){ setScene("title"); }
+}
+
+function updateClear(){
+  if(menuLock>0) return;
+  if(keys.start || keys.jump){
+    if(curStage<TOTAL){ sfx.ok(); loadStage(curStage+1); resetRun(); setScene("play"); }
+    else { selCursor=TOTAL-1; setScene("select"); }
+  } else if(keys.restart){ selCursor=curStage-1; setScene("select"); }
+}
+function updateGameOver(){
+  if(menuLock>0) return;
+  if(keys.restart){ loadStage(curStage); resetRun(); setScene("play"); }
+  else if(keys.start){ selCursor=curStage-1; setScene("select"); }
+}
+
+// ---- boss AI (scaled by stage diff) ----
+function updateBoss(p){
+  const b=boss; b.bobT+=0.05;
+  if(b.entering>0){ b.entering--; b.y=60+b.entering*1.2; return; }
+  if(b.dead){ b.deadT--; if(b.deadT%6===0){ spawnBurst(b.x+Math.random()*b.w,b.y+Math.random()*b.h,C.bossB,8); shake=Math.max(shake,4);} return; }
+  if(b.hurt>0) b.hurt--;
+
+  const D=Math.max(0,Math.min(1,b.diff/100));     // aggressive even at stage 5
+  b._cdm = 0.82 - D*0.34;                          // faster overall
+  const extra = 1 + Math.round(D*7);
+
+  const r=b.hp/b.maxhp; b.phase = r>0.66?1:(r>0.33?2:3);
+  const desiredX=Math.max(ARENA_L+40, Math.min(ARENA_R-40-b.w, p.x-b.w/2+10));
+  b.x += (desiredX-b.x)*(0.016+0.007*b.phase);
+  b.y = 56+Math.sin(b.bobT)*10;
+  b.t++; b.atkCd--;
+
+  const set = v => Math.max(10, Math.round(v*b._cdm));
+  if(b.atkCd<=0){
+    const cx=b.x+b.w/2, cy=b.y+b.h-18;
+    if(b.phase===1){
+      if(b.pattern%2===0){
+        const n=6+extra, spread=1.0, base=Math.atan2(p.y-cy,p.x-cx);
+        for(let i=0;i<n;i++){ const a=base+(i-(n-1)/2)*(spread/(n-1)); eBullets.push(bullet(cx,cy,Math.cos(a)*3.0,Math.sin(a)*3.0,5,false)); }
+        b.atkCd=set(56);
+      } else { aimedShot(cx,cy,p,2.9,true); aimedShot(cx,cy,p,3.4,false); b.atkCd=set(40); }
+      b.pattern++;
+    } else if(b.phase===2){
+      if(b.pattern%3===2){
+        const n=16+extra;
+        for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2+b.t*0.06; eBullets.push(bullet(cx,cy,Math.cos(a)*2.7,Math.sin(a)*2.7,5,false)); }
+        b.atkCd=set(64);
+      } else { const base=Math.atan2(p.y-cy,p.x-cx);
+        for(const off of [-0.3,-0.1,0.1,0.3]) eBullets.push(bullet(cx,cy,Math.cos(base+off)*3.4,Math.sin(base+off)*3.4,5, b.pattern%2===0&&off===0.1));
+        b.atkCd=set(40); }
+      b.pattern++;
+    } else {
+      if(b.pattern%4===3){
+        const n=18+extra;
+        for(let i=0;i<n;i++){ const a=(i/n)*Math.PI*2+b.t*0.09;
+          eBullets.push(bullet(cx,cy,Math.cos(a)*2.4,Math.sin(a)*2.4,4,false));
+          eBullets.push(bullet(cx,cy,Math.cos(a+0.18)*3.5,Math.sin(a+0.18)*3.5,4,false)); }
+        b.atkCd=set(60);
+      } else { const base=Math.atan2(p.y-cy,p.x-cx);
+        for(const off of [-0.4,-0.2,0,0.2,0.4]) eBullets.push(bullet(cx,cy,Math.cos(base+off)*3.8,Math.sin(base+off)*3.8,4, off===0&&b.pattern%2===0));
+        b.atkCd=set(28); }
+      b.pattern++;
+    }
+  }
+}
+
+// ===========================================================
+//  HELPERS
+// ===========================================================
+function overlap(ax,ay,aw,ah,bx,by,bw,bh){ return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by; }
+function circleRect(cx,cy,r,rx,ry,rw,rh){ const nx=Math.max(rx,Math.min(cx,rx+rw)),ny=Math.max(ry,Math.min(cy,ry+rh)); const dx=cx-nx,dy=cy-ny; return dx*dx+dy*dy<=r*r; }
+function collideAxis(o,axis){
+  for(const pf of platforms){
+    if(!overlap(o.x,o.y,o.w,o.h, pf.x,pf.y,pf.w,pf.h)) continue;
+    if(axis==="x"){ if(o.vx>0)o.x=pf.x-o.w; else if(o.vx<0)o.x=pf.x+pf.w; o.vx=0; }
+    else { if(o.vy>0){ o.y=pf.y-o.h; o.onGround=true; o.vy=0; } else if(o.vy<0){ o.y=pf.y+pf.h; o.vy=0; } }
+  }
+}
+function bullet(x,y,vx,vy,r,pink){ return {x,y,vx,vy,r:r||5,life:240,dead:false,pink:!!pink}; }
+function aimedShot(x,y,t,spd,pink){ const a=Math.atan2((t.y+t.h/2)-y,(t.x+t.w/2)-x); eBullets.push(bullet(x,y,Math.cos(a)*spd,Math.sin(a)*spd,pink?6:5,pink)); }
+function fireHero(p){
+  const cx=p.x+p.w/2, cy=p.y+p.h/2; let ax=p.facing, ay=0;
+  if(keys.up && (keys.left||keys.right)){ ay=-0.8; ax=p.facing*0.8; }
+  else if(keys.up){ ax=0; ay=-1; }
+  else if(keys.down && !p.onGround){ ax=0; ay=1; }
+  const m=Math.hypot(ax,ay)||1, sp=7.5;
+  pBullets.push({x:cx,y:cy,vx:ax/m*sp,vy:ay/m*sp,life:45,dead:false});
+  spawnBurst(cx+ax*8,cy+ay*8,C.pBullet,2); sfx.shot();
+}
+function damagePlayer(){ const p=player; if(p.iframe>0)return;
+  p.hp--; p.iframe=55; flash=6; shake=8; sfx.hit(); p.vy=-4; p.vx=-p.facing*3;
+  spawnBurst(p.x+p.w/2,p.y+p.h/2,C.hero,10); if(p.hp<=0) killPlayer(); }
+function killPlayer(){ const p=player; if(p.dead)return;
+  p.dead=true; p.deadTimer=80; p.vy=-7; shake=14; totalDeaths++; sfx.die();
+  spawnBurst(p.x+p.w/2,p.y+p.h/2,C.hero,24); }
+function spawnBurst(x,y,color,n){ for(let i=0;i<n;i++){ const a=Math.random()*Math.PI*2,s=0.5+Math.random()*3;
+  particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1,life:14+Math.random()*16,color,size:1+Math.floor(Math.random()*2)});} }
+function spawnTrail(x,y,color,big){ particles.push({x:x+(Math.random()*6-3),y:y+(Math.random()*6-3),vx:0,vy:0,life:8+Math.random()*6,color,size:big?2:1}); }
+
+// ===========================================================
+//  RENDER
+// ===========================================================
+function render(){
+  uiButtons.length=0;
+  ctx.save();
+  const sx=shake>0?(Math.random()*shake-shake/2):0, sy=shake>0?(Math.random()*shake-shake/2):0;
+  ctx.translate(Math.round(sx),Math.round(sy));
+  drawBackground();
+
+  if(scene==="title"){ drawTitle(); if(enteringCode) drawCodeEntry(); ctx.restore(); return; }
+  if(scene==="select"){ drawSelect(); if(enteringCode) drawCodeEntry(); ctx.restore(); return; }
+
+  ctx.save(); ctx.translate(-Math.round(camX),0);
+  drawPlatforms(); drawSpikes(); if(!STAGE.isBoss) drawGoal();
+  drawEnemies(); if(boss) drawBoss(); drawBullets(); drawPlayer(); drawParticles();
+  ctx.restore();
+
+  drawHUD();
+  if(flash>0){ ctx.fillStyle="rgba(255,80,80,"+(flash/14)+")"; ctx.fillRect(0,0,W,H); }
+  if(scene==="gameover") drawGameOver();
+  if(scene==="clear") drawClear();
+  ctx.restore();
+}
+
+function drawBackground(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,C.skyTop); g.addColorStop(0.55,C.skyMid); g.addColorStop(1,C.horizon);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(255,255,255,0.5)";
+  for(let i=0;i<40;i++){ let x=(i*97-camX*0.15)%(W+40); if(x<0)x+=W+40; ctx.fillRect(Math.round(x),(i*53)%120,2,2); }
+  drawHills(C.hill2,0.25,150,240); drawHills(C.hill1,0.5,175,200);
+}
+function drawHills(color,par,baseY,period){
+  ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(0,H);
+  const off=-(camX*par)%period;
+  for(let x=-period;x<=W+period;x+=8){ const y=baseY+Math.sin((x-off)/period*Math.PI*2)*14+Math.cos((x-off)/(period*0.6))*8; ctx.lineTo(x,y); }
+  ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+}
+function drawPlatforms(){
+  for(const pf of platforms){
+    ctx.fillStyle=C.groundDark; ctx.fillRect(pf.x,pf.y,pf.w,pf.h);
+    ctx.fillStyle=C.ground; ctx.fillRect(pf.x,pf.y,pf.w,Math.min(10,pf.h));
+    ctx.fillStyle=C.groundEdge; ctx.fillRect(pf.x,pf.y,pf.w,3);
+    ctx.fillStyle="rgba(0,0,0,0.18)";
+    for(let x=pf.x+6;x<pf.x+pf.w-3;x+=14) for(let y=pf.y+14;y<pf.y+pf.h-3;y+=14) ctx.fillRect(x,y,2,2);
+  }
+  if(STAGE.isBoss && ARENA_L!=null){
+    ctx.fillStyle="rgba(155,93,229,0.15)";
+    ctx.fillRect(ARENA_L,0,6,H); ctx.fillRect(ARENA_R-6,0,6,H);
+  }
+}
+function drawSpikes(){
+  for(const s of spikes){ const n=Math.floor(s.w/8);
+    for(let i=0;i<n;i++){ const x=s.x+i*8;
+      ctx.fillStyle=C.spikeDark; ctx.beginPath(); ctx.moveTo(x,s.y+12); ctx.lineTo(x+4,s.y); ctx.lineTo(x+8,s.y+12); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=C.spike; ctx.beginPath(); ctx.moveTo(x+1,s.y+12); ctx.lineTo(x+4,s.y+2); ctx.lineTo(x+5,s.y+12); ctx.closePath(); ctx.fill(); } }
+}
+function drawGoal(){
+  const gx=STAGE.goalX; ctx.fillStyle="#cfd8dc"; ctx.fillRect(gx,GROUND_Y-42,3,42);
+  const wave=Math.sin(performance.now()/200)*2;
+  ctx.fillStyle="#ffd23f"; ctx.beginPath();
+  ctx.moveTo(gx+3,GROUND_Y-42); ctx.lineTo(gx+22+wave,GROUND_Y-35); ctx.lineTo(gx+3,GROUND_Y-28); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#ff6ec7"; ctx.fillRect(gx-1,GROUND_Y-44,5,4);
+}
+function drawEnemies(){
+  for(const e of enemies){ if(!e.alive) continue;
+    ctx.fillStyle=C.shadow; if(e.type==="turret") ctx.fillRect(e.x,GROUND_Y-3,e.w,3);
+    if(e.type==="turret") drawSprite(TURRET,EMAP,e.x,e.y,2,false);
+    else drawSprite(FLYER,EMAP,e.x,e.y,2,Math.sin(e.t*4)>0); }
+}
+function drawBoss(){
+  const b=boss; const hurtFlash=b.hurt>0&&(b.hurt%2===0);
+  ctx.fillStyle=C.shadow; ctx.fillRect(b.x+10,GROUND_Y-4,b.w-20,4);
+  ctx.fillStyle="rgba(241,91,181,0.10)"; ctx.fillRect(b.x-8,b.y-8,b.w+16,b.h+16);
+  const main=hurtFlash?"#ffffff":C.bossA, dark=hurtFlash?"#ffd0ee":C.bossDark;
+  ctx.fillStyle=dark; ctx.fillRect(b.x,b.y+6,b.w,b.h-6);
+  ctx.fillStyle=main; ctx.fillRect(b.x+4,b.y,b.w-8,b.h-10); ctx.fillRect(b.x,b.y+14,b.w,b.h-24);
+  ctx.fillStyle=dark; ctx.fillRect(b.x-6,b.y-6,10,18); ctx.fillRect(b.x+b.w-4,b.y-6,10,18);
+  const look=player?Math.sign(player.x-(b.x+b.w/2)):0;
+  ctx.fillStyle="#1a1033"; ctx.fillRect(b.x+24,b.y+30,22,18); ctx.fillRect(b.x+b.w-46,b.y+30,22,18);
+  ctx.fillStyle=b.phase===3?"#ff3860":C.bossB; ctx.fillRect(b.x+30+look*4,b.y+34,10,10); ctx.fillRect(b.x+b.w-40+look*4,b.y+34,10,10);
+  ctx.fillStyle="#1a1033"; const mw=b.atkCd<14?40:28; ctx.fillRect(b.x+b.w/2-mw/2,b.y+b.h-22,mw,b.atkCd<14?16:8);
+  ctx.fillStyle=main; for(let i=0;i<mw;i+=8) ctx.fillRect(b.x+b.w/2-mw/2+i,b.y+b.h-22,3,4);
+}
+function drawBullets(){
+  for(const b of pBullets){ ctx.fillStyle=C.white; ctx.fillRect(Math.round(b.x)-1,Math.round(b.y)-1,4,4); ctx.fillStyle=C.pBullet; ctx.fillRect(Math.round(b.x)-2,Math.round(b.y)-2,5,5); }
+  for(const b of eBullets){ const r=b.r;
+    if(b.pink){ const pulse=(Math.sin(performance.now()/80)+1)/2;
+      ctx.fillStyle="rgba(255,110,199,0.35)"; ctx.fillRect(Math.round(b.x-r-1),Math.round(b.y-r-1),r*2+2,r*2+2);
+      ctx.fillStyle=C.parry; ctx.fillRect(Math.round(b.x-r),Math.round(b.y-r),r*2,r*2);
+      ctx.fillStyle="#fff"; ctx.fillRect(Math.round(b.x-1),Math.round(b.y-1-pulse),2,2);
+    } else { ctx.fillStyle="#ffd0d8"; ctx.fillRect(Math.round(b.x-r),Math.round(b.y-r),r*2,r*2); ctx.fillStyle=C.eBullet; ctx.fillRect(Math.round(b.x-r+1),Math.round(b.y-r+1),r*2-2,r*2-2); } }
+}
+function drawPlayer(){
+  const p=player;
+  if(p.dead){ drawSprite(HERO_JUMP,HMAP,p.x,p.y,2,p.facing<0); return; }
+  ctx.fillStyle=C.shadow; ctx.fillRect(p.x+1,GROUND_Y-3,p.w-2,3);
+  if(p.iframe>0 && Math.floor(p.iframe/3)%2===0 && p.dashing<=0){ /* blink */ }
+  else { let grid=HERO_IDLE;
+    if(!p.onGround) grid=HERO_JUMP; else if(Math.abs(p.vx)>0.5) grid=(Math.floor(p.animT)%2===0)?HERO_RUN:HERO_IDLE;
+    if(p.dashing>0) ctx.globalAlpha=0.9;
+    drawSprite(grid,HMAP,Math.round(p.x),Math.round(p.y),2,p.facing<0); ctx.globalAlpha=1; }
+}
+function drawParticles(){ for(const pt of particles){ ctx.fillStyle=pt.color; ctx.fillRect(Math.round(pt.x),Math.round(pt.y),pt.size,pt.size); } }
+
+// ---- HUD ----
+function drawHUD(){
+  for(let i=0;i<3;i++) drawHeart(10+i*16,10, player && i<player.hp);
+  ctx.fillStyle="#2a1f4f"; ctx.fillRect(10,26,60,6);
+  ctx.fillStyle=C.parry; ctx.fillRect(10,26,Math.round(60*(player?player.meter:0)/100),6);
+  ctx.fillStyle="#7a6fb0"; ctx.font="8px monospace"; ctx.textAlign="left"; ctx.fillText("PARRY",10,42);
+
+  ctx.fillStyle=STAGE.isBoss?"#ff6ec7":"#ffd23f"; ctx.font="11px monospace"; ctx.textAlign="center";
+  ctx.fillText((STAGE.isBoss?"BOSS  ":"STAGE  ")+String(curStage).padStart(3,"0"), W/2, 12);
+  ctx.fillStyle="#ff6ec7"; ctx.font="10px monospace"; ctx.textAlign="right"; ctx.fillText("DEATHS "+totalDeaths, W-10, 16);
+
+  if(!STAGE.isBoss){
+    const pct=Math.min(1,(player?player.x:0)/STAGE.goalX);
+    ctx.fillStyle="#2a1f4f"; ctx.fillRect(W-110,24,100,6);
+    ctx.fillStyle="#48b9ff"; ctx.fillRect(W-110,24,Math.round(100*pct),6);
+    ctx.fillStyle="#7a6fb0"; ctx.font="8px monospace"; ctx.textAlign="right"; ctx.fillText("GOAL →",W-10,40);
+  } else if(boss && !boss.dead && boss.entering<=0){
+    const bw=260,bx=(W-bw)/2,by=28;
+    ctx.fillStyle="#000"; ctx.fillRect(bx-2,by-2,bw+4,12);
+    ctx.fillStyle="#3a1530"; ctx.fillRect(bx,by,bw,8);
+    ctx.fillStyle=boss.phase===3?"#ff3860":C.bossB; ctx.fillRect(bx,by,Math.round(bw*Math.max(0,boss.hp)/boss.maxhp),8);
+  }
+  if(boss && boss.entering>0){ ctx.fillStyle="#ff6ec7"; ctx.font="16px monospace"; ctx.textAlign="center"; ctx.fillText("! BOSS !",W/2,H/2-10); }
+}
+function drawHeart(x,y,on){ const col=on?C.enemy:"#3a2a4a";
+  const px=[[1,0],[2,0],[4,0],[5,0],[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[1,3],[2,3],[3,3],[4,3],[5,3],[2,4],[3,4],[4,4],[3,5]];
+  ctx.fillStyle=col; for(const [dx,dy] of px) ctx.fillRect(x+dx*2,y+dy*2,2,2); }
+
+// ---- title ----
+function drawTitle(){
+  ctx.textAlign="center"; ctx.fillStyle="#ffd23f"; ctx.font="26px monospace"; ctx.fillText("ASH  RUNNER",W/2,64);
+  ctx.fillStyle="#ff6ec7"; ctx.font="11px monospace"; ctx.fillText("100  STAGES  •  CUPHEAD-GRADE",W/2,84);
+  drawSprite(HERO_IDLE,HMAP,W/2-10,104,2,false);
+  ctx.fillStyle=(Math.floor(performance.now()/400)%2===0)?"#ffffff":"#7a6fb0"; ctx.font="12px monospace";
+  ctx.fillText(TOUCH?"TAP  TO  START":"PRESS  SPACE / ENTER",W/2,168);
+  ctx.fillStyle="#7a6fb0"; ctx.font="9px monospace";
+  ctx.fillText(TOUCH?"画面下のボタンで操作 / ピンク弾はジャンプでパリィ":"← → 移動  SPACE ジャンプ  J ショット  K ダッシュ",W/2,196);
+  ctx.fillStyle="#ff6ec7"; ctx.fillText("5の倍数はボスステージ",W/2,210);
+  const done=prog.cleared.filter(Boolean).length;
+  ctx.fillStyle="#48b9ff"; ctx.fillText("CLEARED  "+done+" / "+TOTAL+"    UNLOCKED  "+prog.unlocked,W/2,226);
+  if(!enteringCode){
+    addBtn(0,0,W,H, ()=>{ if(menuLock>0)return; sfx.ok(); setScene("select"); });
+    const pw=170,ph=24,px=(W-pw)/2,py=244;
+    ctx.fillStyle="#23304a"; ctx.fillRect(px,py,pw,ph); ctx.strokeStyle="#48b9ff"; ctx.lineWidth=1; ctx.strokeRect(px,py,pw,ph);
+    ctx.fillStyle="#cfe6ff"; ctx.font="11px monospace"; ctx.fillText("合言葉を入力 "+(TOUCH?"":"(P)"),W/2,py+16);
+    addBtn(px,py,pw,ph, ()=>{ enteringCode=true; codeInput=""; codeMsg=""; sfx.ok(); });
+  }
+}
+
+// ---- stage select (10x10) ----
+function drawSelect(){
+  ctx.textAlign="center"; ctx.fillStyle="#ffd23f"; ctx.font="16px monospace"; ctx.fillText("SELECT  STAGE",W/2,30);
+  const cols=10, cw=44, ch=20, startX=(W-cols*cw)/2, startY=44;
+  for(let i=0;i<TOTAL;i++){
+    const n=i+1, cx=startX+(i%10)*cw, cy=startY+Math.floor(i/10)*ch;
+    const unlocked=n<=prog.unlocked, cleared=prog.cleared[n], isBoss=(n%5===0);
+    // cell bg
+    if(!unlocked) ctx.fillStyle="#1c1430";
+    else if(isBoss) ctx.fillStyle=cleared?"#4a2d6b":"#3a1f5e";
+    else ctx.fillStyle=cleared?"#1f4a40":"#23304a";
+    ctx.fillRect(cx+2,cy+2,cw-4,ch-3);
+    // number
+    ctx.font="10px monospace"; ctx.textAlign="center";
+    ctx.fillStyle = !unlocked ? "#4a3f66" : (isBoss?"#ff9ee0":"#cfe6ff");
+    ctx.fillText(unlocked?String(n):"—", cx+cw/2, cy+14);
+    if(cleared){ ctx.fillStyle="#ffd23f"; ctx.fillRect(cx+cw-9,cy+4,4,4); }
+    if(isBoss && unlocked){ ctx.fillStyle="#ff6ec7"; ctx.fillRect(cx+5,cy+5,3,3); }
+  }
+  // cursor
+  const cx=startX+(selCursor%10)*cw, cy=startY+Math.floor(selCursor/10)*ch;
+  ctx.strokeStyle=(Math.floor(performance.now()/200)%2===0)?"#ffffff":"#ffd23f";
+  ctx.lineWidth=2; ctx.strokeRect(cx+2,cy+2,cw-4,ch-3);
+  // footer + tappable cells
+  const n=selCursor+1;
+  ctx.textAlign="center"; ctx.font="9px monospace";
+  if(n<=prog.unlocked){ ctx.fillStyle="#fff"; ctx.fillText("STAGE "+n+(n%5===0?" (BOSS)":"")+"   合言葉 "+codeFor(n), W/2, 250); }
+  else { ctx.fillStyle="#7a6fb0"; ctx.fillText("ロック中（前をクリア、または合言葉）", W/2, 250); }
+  if(!enteringCode){
+    for(let i=0;i<TOTAL;i++){ const ccx=startX+(i%cols)*cw, ccy=startY+Math.floor(i/cols)*ch;
+      addBtn(ccx+2,ccy+2,cw-4,ch-3, (function(s){return function(){ selectStage(s); };})(i+1)); }
+    const bw=132,bh=24,gap=12,by=260, pX=W/2-bw-gap/2, tX=W/2+gap/2;
+    ctx.fillStyle="#23304a"; ctx.fillRect(pX,by,bw,bh); ctx.strokeStyle="#48b9ff"; ctx.lineWidth=1; ctx.strokeRect(pX,by,bw,bh);
+    ctx.fillStyle="#cfe6ff"; ctx.font="11px monospace"; ctx.fillText("合言葉 "+(TOUCH?"":"(P)"),pX+bw/2,by+16);
+    addBtn(pX,by,bw,bh, ()=>{ enteringCode=true; codeInput=""; codeMsg=""; sfx.ok(); });
+    ctx.fillStyle="#3a1f3a"; ctx.fillRect(tX,by,bw,bh); ctx.strokeStyle="#ff6ec7"; ctx.strokeRect(tX,by,bw,bh);
+    ctx.fillStyle="#ff9ee0"; ctx.fillText("タイトル "+(TOUCH?"":"(R)"),tX+bw/2,by+16);
+    addBtn(tX,by,bw,bh, ()=>{ if(menuLock>0)return; setScene("title"); });
+  }
+}
+
+// ---- gameover / clear ----
+function drawCodeEntry(){
+  ctx.fillStyle="rgba(8,4,22,0.94)"; ctx.fillRect(0,0,W,H); ctx.textAlign="center";
+  ctx.fillStyle="#ffd23f"; ctx.font="14px monospace"; ctx.fillText("ENTER PASSWORD",W/2,22);
+  const bw=180,bx=(W-bw)/2,by=30;
+  ctx.fillStyle="#23304a"; ctx.fillRect(bx,by,bw,30);
+  ctx.strokeStyle="#48b9ff"; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,30);
+  const cur=(Math.floor(performance.now()/300)%2===0)?"_":" ";
+  ctx.fillStyle="#fff"; ctx.font="22px monospace"; ctx.fillText((codeInput+cur)||"_",W/2,by+22);
+  if(codeMsg){ ctx.fillStyle="#ff3860"; ctx.font="11px monospace"; ctx.fillText(codeMsg,W/2,76); }
+  // keypad: the 32-char alphabet, 8 columns x 4 rows
+  const cols=8, kw=52, kh=30, gx=6, gy=6;
+  const totalW=cols*kw+(cols-1)*gx, kx0=(W-totalW)/2, ky0=88;
+  for(let i=0;i<CODE_ALPHABET.length;i++){
+    const ch=CODE_ALPHABET[i], cx=kx0+(i%cols)*(kw+gx), cy=ky0+Math.floor(i/cols)*(kh+gy);
+    ctx.fillStyle="#2a1f4f"; ctx.fillRect(cx,cy,kw,kh);
+    ctx.strokeStyle="#6b5fb0"; ctx.lineWidth=1; ctx.strokeRect(cx,cy,kw,kh);
+    ctx.fillStyle="#ffe14d"; ctx.font="15px monospace"; ctx.fillText(ch,cx+kw/2,cy+20);
+    addBtn(cx,cy,kw,kh, (function(c){return function(){ if(codeInput.length<6){ codeInput+=c; codeMsg=""; sfx.nav(); } };})(ch));
+  }
+  // control row: DEL / OK / ESC
+  const ry=ky0+4*(kh+gy)+6, cw2=120, g2=14, delX=W/2-cw2*1.5-g2, okX=W/2-cw2/2, escX=W/2+cw2/2+g2;
+  function ctlBtn(x,label,bord,fill,fn){
+    ctx.fillStyle=fill; ctx.fillRect(x,ry,cw2,30); ctx.strokeStyle=bord; ctx.lineWidth=1; ctx.strokeRect(x,ry,cw2,30);
+    ctx.fillStyle="#fff"; ctx.font="13px monospace"; ctx.fillText(label,x+cw2/2,ry+20); addBtn(x,ry,cw2,30,fn);
+  }
+  ctlBtn(delX,"DEL","#ff6ec7","#3a1f3a", ()=>{ codeInput=codeInput.slice(0,-1); codeMsg=""; });
+  ctlBtn(okX,"OK","#3fae8e","#1f4a40", ()=>submitCode());
+  ctlBtn(escX,"ESC","#48b9ff","#23304a", ()=>{ enteringCode=false; menuLock=10; codeMsg=""; });
+}
+function drawGameOver(){
+  ctx.fillStyle="rgba(10,5,25,0.85)"; ctx.fillRect(0,0,W,H); ctx.textAlign="center";
+  ctx.fillStyle="#ff3860"; ctx.font="24px monospace"; ctx.fillText("YOU  DIED",W/2,64);
+  ctx.fillStyle="#ffd23f"; ctx.font="11px monospace"; ctx.fillText("STAGE "+curStage+"   DEATHS "+totalDeaths,W/2,86);
+  ctx.fillStyle="#48b9ff"; ctx.font="10px monospace"; ctx.fillText("このステージの合言葉",W/2,120);
+  ctx.fillStyle="#ffd23f"; ctx.font="26px monospace"; ctx.fillText(codeFor(curStage),W/2,152);
+  ctx.fillStyle="#ff6ec7"; ctx.font="10px monospace"; ctx.fillText("※スクショ推奨（保存されない時の復帰用）",W/2,174);
+  const bw=120,bh=28,gap=16,by=200, rX=W/2-bw-gap/2, mX=W/2+gap/2;
+  ctx.fillStyle="#3a1530"; ctx.fillRect(rX,by,bw,bh); ctx.strokeStyle="#ff3860"; ctx.lineWidth=1; ctx.strokeRect(rX,by,bw,bh);
+  ctx.fillStyle="#ffd0d8"; ctx.font="13px monospace"; ctx.fillText("RETRY",rX+bw/2,by+18);
+  addBtn(rX,by,bw,bh, ()=>{ if(menuLock>0)return; loadStage(curStage); resetRun(); setScene("play"); });
+  ctx.fillStyle="#23304a"; ctx.fillRect(mX,by,bw,bh); ctx.strokeStyle="#48b9ff"; ctx.strokeRect(mX,by,bw,bh);
+  ctx.fillStyle="#cfe6ff"; ctx.fillText("MAP",mX+bw/2,by+18);
+  addBtn(mX,by,bw,bh, ()=>{ if(menuLock>0)return; selCursor=curStage-1; setScene("select"); });
+  ctx.fillStyle="#7a6fb0"; ctx.font="9px monospace"; ctx.fillText(TOUCH?"タップで選択":"R: RETRY    ENTER: MAP",W/2,242);
+}
+function drawClear(){
+  ctx.fillStyle="rgba(10,5,25,0.85)"; ctx.fillRect(0,0,W,H); ctx.textAlign="center";
+  if(curStage>=TOTAL && prog.cleared[TOTAL]){
+    ctx.fillStyle="#ffd23f"; ctx.font="22px monospace"; ctx.fillText("ALL  CLEAR!",W/2,96);
+    ctx.fillStyle="#ff6ec7"; ctx.font="11px monospace"; ctx.fillText("100 STAGES COMPLETE  •  DEATHS "+totalDeaths,W/2,120);
+    const bw=150,bh=28,by=160,mX=(W-bw)/2;
+    ctx.fillStyle="#23304a"; ctx.fillRect(mX,by,bw,bh); ctx.strokeStyle="#48b9ff"; ctx.lineWidth=1; ctx.strokeRect(mX,by,bw,bh);
+    ctx.fillStyle="#cfe6ff"; ctx.font="13px monospace"; ctx.fillText("MAP へ",mX+bw/2,by+18);
+    addBtn(mX,by,bw,bh, ()=>{ if(menuLock>0)return; selCursor=TOTAL-1; setScene("select"); });
+  } else {
+    const nx=curStage+1;
+    ctx.fillStyle="#ffd23f"; ctx.font="22px monospace"; ctx.fillText("STAGE  CLEAR!",W/2,64);
+    ctx.fillStyle="#48b9ff"; ctx.font="11px monospace"; ctx.fillText("STAGE "+curStage+" CLEARED",W/2,86);
+    ctx.fillStyle="#48b9ff"; ctx.font="10px monospace"; ctx.fillText("次のステージ("+nx+")の合言葉",W/2,118);
+    ctx.fillStyle="#ffd23f"; ctx.font="26px monospace"; ctx.fillText(codeFor(nx),W/2,150);
+    ctx.fillStyle="#ff6ec7"; ctx.font="10px monospace"; ctx.fillText("※スクショ推奨（保存されない時の復帰用）",W/2,172);
+    const bw=120,bh=28,gap=16,by=198, nX=W/2-bw-gap/2, mX=W/2+gap/2;
+    ctx.fillStyle="#1f4a40"; ctx.fillRect(nX,by,bw,bh); ctx.strokeStyle="#3fae8e"; ctx.lineWidth=1; ctx.strokeRect(nX,by,bw,bh);
+    ctx.fillStyle="#cfe6ff"; ctx.font="13px monospace"; ctx.fillText("NEXT",nX+bw/2,by+18);
+    addBtn(nX,by,bw,bh, ()=>{ if(menuLock>0)return; if(curStage<TOTAL){ sfx.ok(); loadStage(curStage+1); resetRun(); setScene("play"); } });
+    ctx.fillStyle="#23304a"; ctx.fillRect(mX,by,bw,bh); ctx.strokeStyle="#48b9ff"; ctx.strokeRect(mX,by,bw,bh);
+    ctx.fillStyle="#cfe6ff"; ctx.fillText("MAP",mX+bw/2,by+18);
+    addBtn(mX,by,bw,bh, ()=>{ if(menuLock>0)return; selCursor=curStage-1; setScene("select"); });
+    ctx.fillStyle="#7a6fb0"; ctx.font="9px monospace"; ctx.fillText(TOUCH?"タップで選択":"SPACE: NEXT    R: MAP",W/2,238);
+  }
+}
+
+// ===========================================================
+//  MAIN LOOP (fixed step + brief slow-mo)
+// ===========================================================
+let acc=0, last=performance.now(); const STEP=1000/60;
+function loop(now){
+  let dt=now-last; last=now; if(dt>100)dt=100; acc+=dt;
+  const slowFactor=slowmo>0?2:1; let steps=0;
+  while(acc>=STEP*slowFactor && steps<5){ update(); acc-=STEP*slowFactor; steps++; }
+  updateTouchUI(); render(); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

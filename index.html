@@ -597,6 +597,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="stichlen"]   { --tab-color:#b94c8c; }
 .game-tab[data-game="splendor"]   { --tab-color:#ffd84d; }
 .game-tab[data-game="mixpoker"]   { --tab-color:#2fd4b2; }
+.game-tab[data-game="ashrunner"]  { --tab-color:#ffd23f; }
 
 .game-tab.active {
   border-color: var(--tab-color);
@@ -619,6 +620,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="stichlen"].active   { background:rgba(185,76,140,0.12); }
 .game-tab[data-game="splendor"].active   { background:rgba(255,216,77,0.12); }
 .game-tab[data-game="mixpoker"].active   { background:rgba(47,212,178,0.12); }
+.game-tab[data-game="ashrunner"].active  { background:rgba(255,210,63,0.12); }
 .game-tab.active .game-tab-name { color:var(--text); }
 .game-tab.active .game-tab-icon { filter:drop-shadow(0 0 6px var(--tab-color)); }
 
@@ -933,6 +935,10 @@ h3 { font-size: 1rem; font-weight: 600; }
       <button class="game-tab" id="tab-mx" data-game="mixpoker" onclick="selectLobbyGame('mixpoker')">
         <span class="game-tab-icon">🃏</span>
         <span class="game-tab-name">MIXポーカー</span>
+      </button>
+      <button class="game-tab" id="tab-ar" data-game="ashrunner" onclick="selectLobbyGame('ashrunner')">
+        <span class="game-tab-icon">🏃</span>
+        <span class="game-tab-name">アッシュランナー</span>
       </button>
     </div>
 
@@ -1257,6 +1263,25 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- ASH RUNNER section（別ページ誘導） -->
+    <div id="lobby-ar" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(255,210,63,0.05); border:1px solid rgba(255,210,63,0.3); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">🏃</div>
+          <div style="font-family:var(--mono); color:#ffd23f; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">アッシュランナー</div>
+          <div style="color:var(--muted); font-size:0.72rem;">ASH RUNNER · 100 STAGES</div>
+        </div>
+        <a href="pixel-runner-100.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(255,210,63,0.12); color:#ffd23f; border:1px solid rgba(255,210,63,0.5);">
+            🏃 アッシュランナーのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
+          ※ アッシュランナーは専用のページで動作します<br>1人用アクションゲーム（オンライン接続は不要）
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1369,6 +1394,12 @@ h3 { font-size: 1rem; font-weight: 600; }
         <strong style="color:#2fd4b2;">スタッド系</strong>：7スタッド / スタッド8 / ラズ（アンティ＋ブリングイン、表札公開）<br>
         ゲーム中いつでも種目変更OK（次のハンドから適用）。<br>
         フィックスリミット種目はベット額固定・1ラウンド4ベットまで。ハンドごとに収支を表示。
+      </p>
+      <p id="rules-ar" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        <strong style="color:#ffd23f;">100ステージ</strong>を走り抜ける1人用アクションゲーム。<br>
+        タップ／クリックで<strong style="color:#ffd23f;">ジャンプ</strong>し、障害物を避けてゴールを目指します。<br>
+        <strong style="color:#ff6ec7;">5の倍数のステージはボス戦</strong>。<br>
+        オンライン接続は不要で、1人でいつでも遊べます。
       </p>
     </div>
   </div>
@@ -3850,13 +3881,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
