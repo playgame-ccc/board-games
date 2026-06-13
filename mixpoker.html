@@ -529,10 +529,50 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   .screen.active { animation: none; }
   .btn { transition: none; }
 }
+
+/* ===== トーナメント情報バー（演出強化） ===== */
+.tbar {
+  background: var(--surface);
+  border: 1px solid var(--surface3);
+  border-radius: 12px;
+  padding: 8px 12px 9px;
+  margin: 2px auto 6px;
+  max-width: 440px;
+}
+.tbar-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; font-family: 'Share Tech Mono', monospace;
+}
+.tbar-lv { font-weight: 800; color: var(--gold-bright); font-size: 0.82rem; letter-spacing: 0.03em; }
+.tbar-blinds { color: var(--text); font-size: 0.82rem; }
+.tbar-meta { display: flex; gap: 12px; margin-top: 5px; font-size: 0.68rem; color: var(--muted); }
+.tbar-meta b { color: var(--text); font-weight: 700; }
+.tbar-clock { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.tbar-clock.warn { color: var(--gold-bright); }
+.tbar-clock.urgent { color: var(--red); animation: tclock-blink 1s steps(2) infinite; }
+@keyframes tclock-blink { 50% { opacity: 0.35; } }
+.tbar-progress {
+  height: 4px; border-radius: 3px; background: var(--surface3);
+  margin-top: 7px; overflow: hidden;
+}
+.tbar-progress > span {
+  display: block; height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--green), var(--felt-rim));
+  transition: width 0.5s linear;
+}
+.tbar-progress.urgent > span { background: var(--red); }
+.tbar-next {
+  text-align: center; font-size: 0.66rem; color: var(--felt-rim);
+  margin-top: 6px; font-family: 'Share Tech Mono', monospace;
+}
+@media (prefers-reduced-motion: reduce){
+  .tbar-clock.urgent { animation: none; }
+}
 </style>
 </head>
 <body>
 <a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
+<button id="global-stats-btn" onclick="openStatsScreen()" style="position:fixed;top:8px;right:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;cursor:pointer;">📊 成績</button>
 <div class="wrap">
 
   <!-- ===== ロビー ===== -->
@@ -607,6 +647,38 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
     </div>
 
     <div class="panel">
+      <h3 class="center">CPUの強さ</h3>
+      <div class="count-selector" id="cpu-level-select">
+        <button class="count-btn" data-lv="easy" onclick="setCpuLevel('easy')" style="width:auto;padding:0 14px;">弱い</button>
+        <button class="count-btn selected" data-lv="normal" onclick="setCpuLevel('normal')" style="width:auto;padding:0 14px;">普通</button>
+        <button class="count-btn" data-lv="hard" onclick="setCpuLevel('hard')" style="width:auto;padding:0 14px;">強い</button>
+      </div>
+      <div class="center muted small" id="cpu-level-label" style="margin-top:8px;">標準的な強さ。各CPUに個性（タイト/ルース/アグレ）がランダムに付きます</div>
+    </div>
+
+    <div class="panel">
+      <h3 class="center">種目ローテーション</h3>
+      <div class="count-selector" id="rotation-select" style="flex-wrap:wrap; gap:6px;">
+        <button class="count-btn selected" data-r="manual" onclick="setRotationMode('manual')" style="width:auto;padding:0 12px;">手動</button>
+        <button class="count-btn" data-r="horse" onclick="setRotationMode('horse')" style="width:auto;padding:0 12px;">HORSE</button>
+        <button class="count-btn" data-r="8game" onclick="setRotationMode('8game')" style="width:auto;padding:0 12px;">8-Game</button>
+        <button class="count-btn" data-r="all" onclick="setRotationMode('all')" style="width:auto;padding:0 12px;">全10種</button>
+      </div>
+      <div id="rotation-every-row" style="display:none; margin-top:10px;">
+        <div class="center muted small">切替間隔（ハンド数）</div>
+        <div class="count-selector" style="margin-top:6px;">
+          <button class="count-btn" data-re="3" onclick="setRotationEvery(3)" style="width:46px;">3</button>
+          <button class="count-btn selected" data-re="5" onclick="setRotationEvery(5)" style="width:46px;">5</button>
+          <button class="count-btn" data-re="8" onclick="setRotationEvery(8)" style="width:46px;">8</button>
+          <button class="count-btn" data-re="10" onclick="setRotationEvery(10)" style="width:46px;">10</button>
+        </div>
+      </div>
+      <div class="center muted small" id="rotation-label" style="margin-top:8px;">手動で種目を切り替えます（ゲーム中の変更ボタン）</div>
+    </div>
+
+    <button class="btn btn-ghost" onclick="openStatsScreen()" style="margin-bottom:14px;">📊 これまでの成績を見る</button>
+
+    <div class="panel">
       <input class="input" id="my-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12">
     </div>
 
@@ -674,7 +746,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <button id="btn-change-game" class="btn-ghost" style="display:none; width:auto; padding:5px 12px; margin:0; font-size:0.76rem; border-radius:8px; background:transparent; border:1px solid var(--surface3); color:var(--muted); cursor:pointer; font-family:inherit;" onclick="openGamePicker()">変更 ▼</button>
     </div>
     <div class="phase-label" id="phase-label">PREFLOP</div>
-    <div id="tourney-bar" style="display:none; text-align:center; font-size:0.74rem; color:var(--gold); font-family:'Share Tech Mono',monospace; margin:2px 0 4px;"></div>
+    <div id="tourney-bar" style="display:none;"></div>
 
     <div class="poker-table" id="poker-table">
       <!-- 相手プレイヤー（楕円周囲に配置） -->
@@ -713,6 +785,26 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
     <div class="panel" id="result-detail"></div>
     <button class="btn btn-gold" onclick="nextHand()">▶ 次のハンド</button>
     <button class="btn btn-ghost" onclick="backToLobby()">ロビーに戻る</button>
+  </div>
+
+  <!-- ===== 成績・ハンド履歴 ===== -->
+  <div id="screen-stats" class="screen">
+    <h2>📊 成績</h2>
+    <div id="stats-session-panel" class="panel">
+      <h3 class="center">今回のセッション</h3>
+      <div id="stats-session-body" class="center muted small">まだプレイしていません</div>
+    </div>
+    <div class="panel">
+      <h3 class="center">ゲーム別 収支（bb/100）</h3>
+      <div class="center muted small" id="stats-scope" style="margin-bottom:10px;">通算（このブラウザに保存）</div>
+      <div id="stats-chart"></div>
+    </div>
+    <div class="panel">
+      <h3 class="center">最近のハンド</h3>
+      <div id="stats-history" style="max-height:340px; overflow-y:auto;"></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="clearAllStats()" style="color:var(--red); border-color:var(--red);">通算記録を消去</button>
+    <button class="btn btn-felt" onclick="closeStatsScreen()">戻る</button>
   </div>
 
 </div>
@@ -1151,6 +1243,16 @@ let pendingJoins = [];   // ゲーム中の途中参加待ち（次ハンドか�
 let soloSelectedGame = 'holdem';  // ソロの種目
 let hostSelectedGame = 'holdem';  // マルチの現在種目（ホストが切替）
 
+// ===== 新機能の状態 =====
+// CPU難易度（ロビー設定。ゲーム開始時に各CPUへプロファイル割当）
+let cpuLevel = 'normal';   // 'easy' | 'normal' | 'hard'
+// 種目ローテーション（ロビー設定）
+let rotationMode = 'manual'; // 'manual' | 'horse' | '8game' | 'all'
+let rotationEvery = 3;       // 何ハンドごとに切替（ローテーション時）
+// ハンド履歴・セッション収支（メモリ＋localStorage）
+let sessionStats = null;     // 現在セッションの集計（startSolo/ploHostStartで初期化）
+let handHistory = [];        // 直近ハンドの詳細（リプレイ用、最大200件）
+
 function g(id){ return document.getElementById(id); }
 function show(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -1268,12 +1370,311 @@ function tourneyCurrentLevel(t){
 
 const CPU_NAMES = ['アル','ベラ','カイ','デフ','エコ','フィン','ジン','ハナ'];
 
+// ===== CPU難易度 / ローテーション 設定 =====
+function setCpuLevel(lv){
+  cpuLevel = lv;
+  document.querySelectorAll('#cpu-level-select .count-btn').forEach(b=>b.classList.toggle('selected', b.dataset.lv===lv));
+  const txt = {
+    easy:'ミスが多くブラフも単純。基礎練習向け',
+    normal:'標準的な強さ。各CPUに個性（タイト/ルース/アグレ）がランダムに付きます',
+    hard:'タイトかつGTO寄り。エクイティ計算とブラフ頻度が精密',
+  };
+  g('cpu-level-label').textContent = txt[lv];
+}
+
+// ローテーション順の定義
+const ROTATION_SETS = {
+  horse:  ['holdem','plo8','razz','stud','studhi'],          // H-O-R-S-E（OmahaはHi-Loを採用）
+  '8game':['sd27','holdem','plo','razz','stud','studhi','plo8','a5'], // 8-Game Mix
+  all:    MIX_ORDER.slice(),
+};
+const ROTATION_LABELS = {
+  manual:'手動で種目を切り替えます（ゲーム中の変更ボタン）',
+  horse: 'H→O8→Razz→Stud→Stud8 を順番に自動切替',
+  '8game':'8種目を順番に自動切替',
+  all:   '全10種を順番に自動切替',
+};
+function setRotationMode(m){
+  rotationMode = m;
+  document.querySelectorAll('#rotation-select .count-btn').forEach(b=>b.classList.toggle('selected', b.dataset.r===m));
+  g('rotation-every-row').style.display = (m==='manual') ? 'none' : 'block';
+  g('rotation-label').textContent = ROTATION_LABELS[m];
+  // ローテーション選択時、開始種目をその先頭に合わせる
+  if(m!=='manual'){
+    const first = ROTATION_SETS[m][0];
+    setInitGame(first);
+  }
+}
+function setRotationEvery(n){
+  rotationEvery = n;
+  document.querySelectorAll('#rotation-every-row .count-btn').forEach(b=>b.classList.toggle('selected', parseInt(b.dataset.re)===n));
+}
+
 // 続きは次のスクリプトブロックで
 </script>
 <script>
 // ============================================================
 // ソロゲーム本体（配牌・進行・CPU・描画）
 // ============================================================
+
+// ============================================================
+// CPUプロファイル / ローテーション / セッション集計 ヘルパー
+// ============================================================
+// 各CPUに「難易度ベース＋個性」を持たせる。cpuDecideで参照。
+//   eqShift: エクイティ閾値の下駄（+で弱気=タイト、-で強気=ルース）
+//   bluffMul: ブラフ頻度倍率
+//   raiseMul: バリューレイズ頻度倍率
+//   err: ランダムミス確率（弱いCPUほど高い）
+function buildCpuProfile(level){
+  const styles = [
+    {tag:'タイト',  eq:+0.04, bluff:0.6, raise:0.9},
+    {tag:'ルース',  eq:-0.05, bluff:1.3, raise:1.1},
+    {tag:'アグレ',  eq:-0.02, bluff:1.5, raise:1.4},
+    {tag:'バランス',eq:0.0,   bluff:1.0, raise:1.0},
+    {tag:'消極',    eq:+0.06, bluff:0.4, raise:0.6},
+  ];
+  const base = {
+    easy:   {eq:-0.04, bluff:1.4, raise:1.2, err:0.22}, // 緩く入ってミスもする
+    normal: {eq:0.0,   bluff:1.0, raise:1.0, err:0.06},
+    hard:   {eq:+0.03, bluff:0.95,raise:1.0, err:0.0},  // 規律的・搾取されにくい
+  }[level] || {eq:0,bluff:1,raise:1,err:0.06};
+  // hardは個性を弱め（全員GTO寄り）、easy/normalは個性を強める
+  const s = styles[Math.floor(Math.random()*styles.length)];
+  const styleW = level==='hard' ? 0.4 : 1.0;
+  return {
+    style: s.tag,
+    eqShift: base.eq + s.eq*styleW,
+    bluffMul: base.bluff * (1 + (s.bluff-1)*styleW),
+    raiseMul: base.raise * (1 + (s.raise-1)*styleW),
+    err: base.err,
+  };
+}
+// G.ids 全員ぶんのプロファイルを生成（人間はnull）
+// 注: マルチプレイは全員が人間プレイヤーのため、実際にプロファイルが付くのはソロのCPUのみ
+function buildAllCpuProfiles(){
+  const prof = {};
+  G.ids.forEach(id=>{
+    const isCpu = !isMulti && id !== 'human';
+    prof[id] = isCpu ? buildCpuProfile(G.cpuLevel||'normal') : null;
+  });
+  return prof;
+}
+// ローテーション初期化（Gに保存）
+function initRotation(){
+  if(rotationMode==='manual'){ G.rotation = null; return; }
+  G.rotation = { mode: rotationMode, every: rotationEvery, seq: ROTATION_SETS[rotationMode].slice(), idx: 0 };
+  G.currentGame = G.rotation.seq[0];
+  if(!isMulti) soloSelectedGame = G.currentGame;
+  if(isMulti && isHost) hostSelectedGame = G.currentGame;
+}
+// 次ハンド開始時にローテーションを進める（startNewHand内、handNo++後に呼ぶ）
+function advanceRotation(){
+  if(!G || !G.rotation) return;
+  const r = G.rotation;
+  // handNoは1始まり。every手ごとに種目交代。
+  // 例: every=3 なら hand 1-3=種目0, hand 4-6=種目1 …
+  // → handNo>1 かつ (handNo-1)%every===0 のハンドで次へ
+  if(G.handNo > 1 && (G.handNo - 1) % r.every === 0){
+    r.idx = (r.idx + 1) % r.seq.length;
+    const gk = r.seq[r.idx];
+    G.currentGame = gk;
+    if(!isMulti) soloSelectedGame = gk;
+    if(isMulti && isHost) hostSelectedGame = gk;
+    G.log.unshift(`🔄 ローテーション: 「${MIX_GAMES[gk].label}」へ`);
+  }
+}
+
+// ===== セッション集計（ハンド履歴・収支） =====
+const STATS_LS_KEY = 'mixpoker_stats_v1';
+function loadPersistStats(){
+  try { const raw = localStorage.getItem(STATS_LS_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
+}
+function savePersistStats(obj){
+  try { localStorage.setItem(STATS_LS_KEY, JSON.stringify(obj)); } catch(e){}
+}
+// セッション開始時に初期化
+function initSession(mode){
+  sessionStats = {
+    startTs: Date.now(),
+    mode, // 'solo' | 'multi'
+    hands: 0,
+    net: 0,                 // 自分の通算収支（チップ）
+    byGame: {},             // gameKey -> {hands, net, bbSum}
+    bb: soloBB || 20,
+  };
+}
+// ハンド確定時に自分の収支を記録（logHandPnlからフック）
+function recordHandResult(h){
+  if(!sessionStats) return;
+  const me = h.players.find(p=>p.id===myId);
+  if(!me) return;
+  const delta = (me.stack||0) - (me.startStack||0);
+  const gk = G.currentGame || 'holdem';
+  const bb = h.bbAmount || sessionStats.bb || 20;
+  sessionStats.hands++;
+  sessionStats.net += delta;
+  const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0});
+  bg.hands++; bg.net += delta; bg.bbSum += delta / bb;
+  // 履歴（リプレイ用・軽量）
+  handHistory.unshift({
+    ts: Date.now(),
+    game: gk,
+    gameLabel: MIX_GAMES[gk]?.label || gk,
+    handNo: G.handNo,
+    delta,
+    bb,
+    myCards: (me.hole||[]).map(c=>rankStr(c.r)+SUIT_SYM[c.s]),
+    board: (h.board||[]).map(c=>rankStr(c.r)+SUIT_SYM[c.s]),
+    myHandName: (h.handNames && h.handNames[me.id]) || '',
+    won: delta>0,
+    results: (h.results||[]).map(r=>({names:r.winnerNames, amount:r.amount})),
+  });
+  if(handHistory.length>200) handHistory.length=200;
+  // localStorageへ通算を加算保存
+  const persist = loadPersistStats() || {lifetimeHands:0, lifetimeNet:0, byGame:{}};
+  persist.lifetimeHands = (persist.lifetimeHands||0) + 1;
+  persist.lifetimeNet = (persist.lifetimeNet||0) + delta;
+  const pg = persist.byGame[gk] || (persist.byGame[gk] = {hands:0, net:0, bbSum:0});
+  pg.hands++; pg.net += delta; pg.bbSum += delta / bb;
+  savePersistStats(persist);
+}
+
+// ===== 成績画面 =====
+let statsReturnScreen = 'lobby'; // 戻る先（ゲーム中に開いた場合はgame）
+function openStatsScreen(){
+  // 現在アクティブな画面を記録（ロビー or ゲーム）
+  const active = document.querySelector('.screen.active');
+  statsReturnScreen = (active && active.id==='screen-game') ? 'game' : 'lobby';
+  renderStatsScreen();
+  show('stats');
+}
+function closeStatsScreen(){ show(statsReturnScreen); }
+
+function fmtSigned(n){ return n>0?'+'+n.toLocaleString():(n<0?n.toLocaleString():'±0'); }
+
+function renderStatsScreen(){
+  // --- セッション ---
+  const sBody = g('stats-session-body');
+  if(sessionStats && sessionStats.hands>0){
+    const mins = Math.max(1, Math.round((Date.now()-sessionStats.startTs)/60000));
+    const bbTotal = (sessionStats.net / (sessionStats.bb||20));
+    const per100 = sessionStats.hands>0 ? (bbTotal/sessionStats.hands*100) : 0;
+    const cls = sessionStats.net>0?'pnl-plus':(sessionStats.net<0?'pnl-minus':'pnl-zero');
+    sBody.innerHTML = `
+      <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'Share Tech Mono',monospace;">
+        <div><div class="muted" style="font-size:0.66rem;">ハンド数</div><div style="font-size:1.1rem; font-weight:700;">${sessionStats.hands}</div></div>
+        <div><div class="muted" style="font-size:0.66rem;">収支</div><div style="font-size:1.1rem; font-weight:700;" class="${sessionStats.net>0?'':''}"><span class="${cls}" style="padding:1px 10px; border-radius:10px;">${fmtSigned(sessionStats.net)}</span></div></div>
+        <div><div class="muted" style="font-size:0.66rem;">bb/100</div><div style="font-size:1.1rem; font-weight:700; color:${per100>=0?'var(--green-dim)':'var(--red)'};">${per100>=0?'+':''}${per100.toFixed(1)}</div></div>
+        <div><div class="muted" style="font-size:0.66rem;">経過</div><div style="font-size:1.1rem; font-weight:700;">${mins}分</div></div>
+      </div>`;
+  } else {
+    sBody.innerHTML = 'まだプレイしていません';
+  }
+
+  // --- ゲーム別 bb/100（通算）---
+  renderStatsChart();
+
+  // --- 履歴 ---
+  renderStatsHistory();
+}
+
+function renderStatsChart(){
+  const persist = loadPersistStats();
+  const chart = g('stats-chart');
+  if(!persist || !persist.byGame || Object.keys(persist.byGame).length===0){
+    chart.innerHTML = '<div class="center muted small">まだ記録がありません</div>';
+    return;
+  }
+  // MIX_ORDER順で、記録のある種目だけ表示
+  const rows = MIX_ORDER.filter(gk=>persist.byGame[gk] && persist.byGame[gk].hands>0).map(gk=>{
+    const d = persist.byGame[gk];
+    const per100 = d.hands>0 ? (d.bbSum/d.hands*100) : 0;
+    return { gk, short:MIX_GAMES[gk].short, label:MIX_GAMES[gk].label, per100, hands:d.hands, net:d.net };
+  });
+  if(rows.length===0){ chart.innerHTML = '<div class="center muted small">まだ記録がありません</div>'; return; }
+  // スケール（左右対称、0中央）
+  const maxAbs = Math.max(10, ...rows.map(r=>Math.abs(r.per100)));
+  chart.innerHTML = rows.map(r=>{
+    const isPos = r.per100>=0;
+    const w = Math.min(50, Math.abs(r.per100)/maxAbs*50); // 中央から最大50%
+    const barColor = isPos?'var(--green)':'var(--red)';
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.72rem; margin-bottom:3px;">
+          <span style="font-weight:700;">${r.label}</span>
+          <span class="muted mono">${r.hands}手 ・ ${fmtSigned(r.net)}</span>
+        </div>
+        <div style="position:relative; height:18px; background:var(--bg); border-radius:5px; overflow:hidden;">
+          <div style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--surface3);"></div>
+          <div style="position:absolute; top:0; bottom:0; ${isPos?'left:50%':'right:50%'}; width:${w}%; background:${barColor}; border-radius:3px;"></div>
+          <div style="position:absolute; ${isPos?'left:calc(50% + '+w+'% + 4px)':'right:calc(50% + '+w+'% + 4px)'}; top:0; bottom:0; display:flex; align-items:center; font-size:0.66rem; font-weight:700; font-family:'Share Tech Mono',monospace; color:${isPos?'var(--green-dim)':'var(--red)'}; white-space:nowrap;">
+            ${isPos?'+':''}${r.per100.toFixed(0)}
+          </div>
+        </div>
+      </div>`;
+  }).join('') + `<div class="center muted small" style="margin-top:6px;">単位 bb/100（100ハンドあたりの獲得bb）</div>`;
+}
+
+function renderStatsHistory(){
+  const cont = g('stats-history');
+  if(!handHistory || handHistory.length===0){
+    cont.innerHTML = '<div class="center muted small">このセッションの履歴はまだありません</div>';
+    return;
+  }
+  cont.innerHTML = handHistory.slice(0,60).map((hh,i)=>{
+    const cls = hh.delta>0?'pnl-plus':(hh.delta<0?'pnl-minus':'pnl-zero');
+    const cards = hh.myCards.join(' ');
+    const board = hh.board.length ? ` ・ 場 ${hh.board.join(' ')}` : '';
+    return `
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:1px solid var(--surface2);">
+        <span style="font-size:0.6rem; background:var(--surface2); color:var(--muted); padding:1px 6px; border-radius:5px; font-weight:700; white-space:nowrap;">${hh.gameLabel.length>6?MIX_GAMES[hh.game].short:hh.gameLabel}</span>
+        <span class="mono" style="flex:1; font-size:0.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cards}${board}</span>
+        <span class="${cls}" style="font-size:0.7rem; padding:1px 9px; border-radius:10px; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${fmtSigned(hh.delta)}</span>
+      </div>`;
+  }).join('');
+}
+
+function clearAllStats(){
+  if(!confirm('保存された通算成績をすべて消去します。よろしいですか？')) return;
+  try { localStorage.removeItem(STATS_LS_KEY); } catch(e){}
+  handHistory = [];
+  renderStatsScreen();
+}
+
+// ゲスト用: 受信した公開状態から自分の収支を1ハンド1回だけ記録
+let guestLastRecordedHand = -1;
+function maybeRecordGuestHand(pub){
+  if(!sessionStats) return;
+  if(pub.phase!=='showdown' || !pub.results) return;
+  const handNo = pub.handNo || 0;
+  if(handNo===guestLastRecordedHand) return; // このハンドは記録済み
+  const me = pub.players.find(p=>p.id===myId);
+  if(!me || me.startStack==null) return;
+  guestLastRecordedHand = handNo;
+  const delta = (me.stack||0) - (me.startStack||0);
+  const gk = pub.currentGame || 'holdem';
+  const bb = pub.bbAmount || sessionStats.bb || 20;
+  sessionStats.hands++;
+  sessionStats.net += delta;
+  const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0});
+  bg.hands++; bg.net += delta; bg.bbSum += delta/bb;
+  handHistory.unshift({
+    ts: Date.now(), game: gk, gameLabel: MIX_GAMES[gk]?.label||gk, handNo,
+    delta, bb,
+    myCards: (me.hole||[]).map(c=>rankStr(c.r)+SUIT_SYM[c.s]),
+    board: (pub.board||[]).map(c=>rankStr(c.r)+SUIT_SYM[c.s]),
+    myHandName: (pub.handNames && pub.handNames[me.id])||'',
+    won: delta>0,
+    results: (pub.results||[]).map(r=>({names:r.winnerNames, amount:r.amount})),
+  });
+  if(handHistory.length>200) handHistory.length=200;
+  const persist = loadPersistStats() || {lifetimeHands:0, lifetimeNet:0, byGame:{}};
+  persist.lifetimeHands=(persist.lifetimeHands||0)+1;
+  persist.lifetimeNet=(persist.lifetimeNet||0)+delta;
+  const pg = persist.byGame[gk] || (persist.byGame[gk]={hands:0,net:0,bbSum:0});
+  pg.hands++; pg.net+=delta; pg.bbSum+=delta/bb;
+  savePersistStats(persist);
+}
 
 function startSolo(){
   const nameInput = g('my-name').value.trim();
@@ -1295,7 +1696,11 @@ function startSolo(){
     handNo: 0,
     log: [],
     currentGame: soloSelectedGame || 'holdem',
+    cpuLevel,
   };
+  G.cpuProfiles = buildAllCpuProfiles();
+  initRotation();
+  initSession('solo');
   if(gameFormat === 'tourney'){
     G.tourney = {startTs: Date.now(), levelMin: tourneyLevelMin, structKey: tourneyStructKey, level: 0, ranks: {}};
     soloSB = 10; soloBB = 20;
@@ -1347,10 +1752,12 @@ function startNewHand(){
     return;
   }
 
-  // 種目変更を適用（ホスト/ソロが切り替えていた場合）
+  // 種目変更を適用（ホスト/ソロが手動で切り替えていた場合）
   applyPendingGameChange();
 
   G.handNo++;
+  // 種目ローテーション（HORSE/8-Game/全10種）を進める
+  advanceRotation();
   // ボタンを次へ（生存者の中で）
   // 単純化: 毎ハンド buttonIdx を +1（脱落者はスキップ）
   do {
@@ -2334,6 +2741,8 @@ function logHandPnl(h){
       return `${p.name} ${d>0?'+'+d:(d<0?d:'±0')}`;
     });
   G.log.unshift(`💰 収支: ${parts.join(' / ')}`);
+  // セッション集計（自分視点）。ソロ＝常に、マルチ＝ホスト自身ぶん
+  try { recordHandResult(h); } catch(e){}
 }
 
 function awardToLastPlayer(){
@@ -2623,16 +3032,55 @@ function updateTourneyBar(){
   const [sb, bb] = tourneyBlindsAt(t, applied);
   const ante = tourneyAnteAt(t, applied);
   const nextAt = t.startTs + (lvNow + 1) * per * 60000;
+  const total = per * 60000;
   const remain = Math.max(0, nextAt - Date.now());
+  const elapsed = total - remain;
+  const pct = Math.max(0, Math.min(100, (elapsed/total)*100));
   const mm = Math.floor(remain/60000), ss = Math.floor((remain%60000)/1000);
-  let txt = `🏆 Lv${applied+1} ・ ブラインド ${sb}/${bb}${ante>0?` ・ アンティ${ante}`:''}`;
-  if(lvNow > applied){
-    const [nsb, nbb] = tourneyBlindsAt(t, lvNow);
-    txt += ` ・ 次のハンドから ${nsb}/${nbb}`;
-  } else {
-    txt += ` ・ アップまで ${mm}:${String(ss).padStart(2,'0')}`;
+  const clockTxt = `${mm}:${String(ss).padStart(2,'0')}`;
+  // 残り時間に応じた緊急度
+  let urgency = '';
+  if(remain <= 15000) urgency = 'urgent';
+  else if(remain <= 60000) urgency = 'warn';
+
+  // 残り人数・平均スタック（ホスト/ソロ=G、ゲスト=ploPub）
+  let alive = 0, totalChips = 0, totalEntrants = 0;
+  if(typeof G!=='undefined' && G && G.ids){
+    totalEntrants = G.ids.length;
+    G.ids.forEach((id,i)=>{ if(G.stacks[i]>0){ alive++; totalChips += G.stacks[i]; } });
+  } else if(ploPub && Array.isArray(ploPub.players)){
+    totalEntrants = ploPub.players.length;
+    ploPub.players.forEach(p=>{ if((p.stack||0)>0){ alive++; totalChips += p.stack; } });
   }
-  bar.textContent = txt;
+  const avg = alive>0 ? Math.round(totalChips/alive) : 0;
+
+  // 次レベルのブラインド
+  const nextLv = (lvNow > applied) ? lvNow : applied+1;
+  const [nsb, nbb] = tourneyBlindsAt(t, nextLv);
+  const nante = tourneyAnteAt(t, nextLv);
+
+  let nextLine;
+  if(lvNow > applied){
+    nextLine = `⬆ 次のハンドから Lv${lvNow+1}: ${nsb}/${nbb}${nante>0?` (ante ${nante})`:''}`;
+  } else {
+    nextLine = `次 Lv${nextLv+1}: ${nsb}/${nbb}${nante>0?` (ante ${nante})`:''}`;
+  }
+
+  bar.innerHTML = `
+    <div class="tbar">
+      <div class="tbar-row">
+        <span class="tbar-lv">🏆 Lv ${applied+1}</span>
+        <span class="tbar-blinds">${sb}/${bb}${ante>0?` <span class="muted">a${ante}</span>`:''}</span>
+        <span class="tbar-clock ${urgency}">${lvNow>applied?'UP':clockTxt}</span>
+      </div>
+      <div class="tbar-progress ${urgency}"><span style="width:${pct}%"></span></div>
+      <div class="tbar-meta">
+        <span>残り <b>${alive}</b>${totalEntrants?` / ${totalEntrants}`:''}人</span>
+        <span>平均 <b>${avg.toLocaleString()}</b></span>
+        <span>${bb>0?`<b>${Math.round(avg/bb)}</b>bb`:''}</span>
+      </div>
+      <div class="tbar-next">${nextLine}</div>
+    </div>`;
 }
 function startTourneyBar(){
   stopTourneyBar();
@@ -3133,9 +3581,20 @@ function openThr(gd, pos){
   if(gd.hi && gd.lo) return 0.39; // スタッドHi-Lo（studHilo3校正値・上位40%）
   return (typeof G!=='undefined'&&G&&G.currentGame==='razz') ? 0.25 : 0.30; // スタッドは表札順でポジション固定でない
 }
-function preflopRangeDecide(h, idx, p, gd, limits){
+function preflopRangeDecide(h, idx, p, gd, limits, prof){
+  prof = prof || {eqShift:0, bluffMul:1, raiseMul:1, err:0};
+  // 難易度→プリフロップ調整: tightは参加閾値を上げ、looseは下げる
+  const thrAdj = (prof.eqShift||0) * 2.0;   // strength(0-1)スケールに変換
+  const RM = prof.raiseMul!=null ? prof.raiseMul : 1;
+  // 弱いCPU: 一定確率でレンジ判断をミス（甘くコール）
+  const pErr = prof.err || 0;
   // NLH系（2枚コミュニティ種目）はソルバーテーブルで判断
   if(gd.type==='community' && gd.holeN===2 && p.hole.length===2){
+    // 弱いCPUはテーブルから外れて甘く参加するミスをたまにする
+    if(pErr>0 && Math.random()<pErr*0.5){
+      const toCall0 = limits.toCall;
+      if(toCall0>0 && toCall0 <= (p.stack+p.roundBet)*0.25) return {type:'call'}; // ルースコール
+    }
     const act = nlhTableDecide(h, idx, p, gd, limits);
     if(act) return act;
     return null; // テーブル対象外の局面はエクイティロジックへ
@@ -3152,7 +3611,7 @@ function preflopRangeDecide(h, idx, p, gd, limits){
 
   // ショートスタック: プッシュ/フォールド（NLのみ・理論どおり2択へ）
   if(limits.betting==='nl' && (p.stack + p.roundBet) <= 10*bb){
-    const pushThr = openThr(gd, pos) * 0.85;
+    const pushThr = openThr(gd, pos) * 0.85 + thrAdj;
     if(s >= pushThr && limits.canRaise) return {type:'raise', amount: limits.maxRaiseTo};
     if(toCall>0 && toCall <= (p.stack+p.roundBet)*0.3 && s >= pushThr*0.9) return {type:'call'};
     return toCall===0 ? {type:'check'} : {type:'fold'};
@@ -3173,30 +3632,34 @@ function preflopRangeDecide(h, idx, p, gd, limits){
         const v = upv(u[u.length-1]);
         return isRz ? myV < v : myV > v;
       });
-      if(dominate && r < 0.30) return {type:'raise', amount: limits.minRaiseTo};
+      if(dominate && r < 0.30*RM) return {type:'raise', amount: limits.minRaiseTo};
     }
   }
   if(unopened){
-    const thr = openThr(gd, pos);
+    const thr = openThr(gd, pos) + thrAdj;
     if(toCall===0){
-      if(s >= thr && limits.canRaise && r<0.8) return {type:'raise', amount: openAmt()};
+      if(s >= thr && limits.canRaise && r<Math.min(0.95,0.8*RM)) return {type:'raise', amount: openAmt()};
       return {type:'check'};
     }
     // リンプ排除: 参加するならレイズ（低頻度でコールをミックス）
     if(s >= thr && limits.canRaise){
-      return r<0.85 ? {type:'raise', amount: openAmt()} : {type:'call'};
+      return r<Math.min(0.95,0.85*RM) ? {type:'raise', amount: openAmt()} : {type:'call'};
     }
     if((idx===h.sbIdx || idx===h.bbIdx) && toCall <= bb && s >= thr*0.7 && r<0.4) return {type:'call'}; // ブラインドの好オッズ防御
+    // 弱いCPU: フォールドすべき手をたまにコール
+    if(pErr>0 && toCall<=bb*1.5 && Math.random()<pErr) return {type:'call'};
     return {type:'fold'};
   }
   // オープンに直面（リレイズ判断）
   const facing = h.highBet / bb;
   if(facing <= 5){
-    const thr3 = (gd.type==='community' && gd.holeN>=4) ? ((gd.hi&&gd.lo)?0.43:0.35) : openThr(gd, Math.min(1,pos)) + 0.045; // PLO/PLO8 3bet=上位13%
-    if(s >= thr3 && limits.canRaise && r < 0.55) return {type:'raise', amount: reraiseAmt()};
-    if(s >= openThr(gd,pos)) return {type:'call'};
-    if(limits.canRaise && pos>0.7 && r < 0.06) return {type:'raise', amount: reraiseAmt()}; // 低頻度ブラフ3bet
-    if(s >= openThr(gd,pos)*0.8 && toCall<=bb*2.5 && r<0.35) return {type:'call'};
+    const thr3base = (gd.type==='community' && gd.holeN>=4) ? ((gd.hi&&gd.lo)?0.43:0.35) : openThr(gd, Math.min(1,pos)) + 0.045;
+    const thr3 = thr3base + thrAdj; // PLO/PLO8 3bet=上位13%（難易度で増減）
+    if(s >= thr3 && limits.canRaise && r < 0.55*RM) return {type:'raise', amount: reraiseAmt()};
+    if(s >= openThr(gd,pos) + thrAdj) return {type:'call'};
+    if(limits.canRaise && pos>0.7 && r < 0.06*RM) return {type:'raise', amount: reraiseAmt()}; // 低頻度ブラフ3bet
+    if(s >= (openThr(gd,pos)+thrAdj)*0.8 && toCall<=bb*2.5 && r<0.35) return {type:'call'};
+    if(pErr>0 && toCall<=bb*2 && Math.random()<pErr*0.7) return {type:'call'}; // 弱いCPUの甘いコール
     return {type:'fold'};
   }
   return null; // 大きなリレイズに直面: エクイティ計算（レンジフィルタ済み）で精密対応
@@ -3251,9 +3714,15 @@ function cpuDecide(idx){
   const finalSt = isFinalStreet(h, gd);
   const pf = posFactor(h, idx);
 
+  // CPUプロファイル（難易度＋個性）。未設定時は中立
+  const prof = (G.cpuProfiles && G.cpuProfiles[p.id]) || {eqShift:0, bluffMul:1, raiseMul:1, err:0};
+  const eqShift = prof.eqShift || 0;     // +で要求エクイティ上昇=タイト
+  const BM = prof.bluffMul!=null ? prof.bluffMul : 1;
+  const RM = prof.raiseMul!=null ? prof.raiseMul : 1;
+
   // 初回ベッティングラウンド: ポジション別レンジ戦略（オープン/3ベット/プッシュフォールド）
   if(isFirstRound(h, gd)){
-    const act = preflopRangeDecide(h, idx, p, gd, limits);
+    const act = preflopRangeDecide(h, idx, p, gd, limits, prof);
     if(act) return act;
   }
 
@@ -3268,6 +3737,16 @@ function cpuDecide(idx){
   // エクイティ計算（モンテカルロ・レンジ加重）
   const eq = calcEquity(h, idx);
   const rnd = Math.random();
+
+  // 弱いCPUのミス: 一定確率で「降りるべき手をコール」または「強い手を消極的に」
+  if(prof.err>0 && Math.random()<prof.err){
+    if(toCall>0){
+      const odds = toCall/(pot+toCall);
+      if(eq < odds && toCall < p.stack && Math.random()<0.6) return {type:'call'}; // ルースコール（ミス）
+    } else {
+      return {type:'check'}; // チェックすべきでない場面でもチェック（消極ミス）
+    }
+  }
   // ハイロー種目: スクープ（両取り）濃厚なら強気、ハーフ止まりならポットを膨らませない
   let hlThr = 0, hlRaiseMul = 1.0;
   if(gd.hi && gd.lo && lastEqStats){
@@ -3286,23 +3765,23 @@ function cpuDecide(idx){
 
   // ===== チェック可能 =====
   if(toCall === 0){
-    if(eq > 0.70 - flAdj - hlThr){
-      if(canRaiseNow() && rnd < (0.85 + texFreq*0.5)*hlRaiseMul) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
+    if(eq > 0.70 - flAdj - hlThr + eqShift){
+      if(canRaiseNow() && rnd < (0.85 + texFreq*0.5)*hlRaiseMul*RM) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
       return {type:'check'}; // たまにトラップ
     }
-    if(eq > 0.52 - flAdj - hlThr){
-      if(canRaiseNow() && rnd < (0.55 + texFreq)*hlRaiseMul) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
+    if(eq > 0.52 - flAdj - hlThr + eqShift){
+      if(canRaiseNow() && rnd < (0.55 + texFreq)*hlRaiseMul*RM) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
       return {type:'check'};
     }
     if(eq > 0.35){
       // セミブラフ（ドロー価値が残る間のみ。最終ストリートでは縮小）
-      const f = (finalSt ? 0.10 : 0.22) * pf * bluffVs / oppCount;
+      const f = (finalSt ? 0.10 : 0.22) * pf * bluffVs * BM / oppCount;
       if(canRaiseNow() && rnd < f) return {type:'raise', amount: raiseAmt(0.7)};
       return {type:'check'};
     }
     // 弱い手のブラフ: 最終ストリートはベットサイズに応じた均衡比率 α=s/(1+2s)
     const s = 0.7;
-    const bluffF = (finalSt ? (s/(1+2*s)) * 0.9 : 0.12) * pf * bluffVs / oppCount;
+    const bluffF = (finalSt ? (s/(1+2*s)) * 0.9 : 0.12) * pf * bluffVs * BM / oppCount;
     if(canRaiseNow() && rnd < bluffF) return {type:'raise', amount: raiseAmt(0.7)};
     return {type:'check'};
   }
@@ -3315,30 +3794,30 @@ function cpuDecide(idx){
     return eq > potOdds + 0.02 ? {type:'call'} : {type:'fold'};
   }
 
-  if(eq > 0.72 - flAdj - hlThr){
-    if(canRaiseNow() && rnd < 0.65*hlRaiseMul) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
+  if(eq > 0.72 - flAdj - hlThr + eqShift){
+    if(canRaiseNow() && rnd < 0.65*hlRaiseMul*RM) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
     return {type:'call'};
   }
-  if(eq > 0.55 - flAdj - hlThr){
-    if(canRaiseNow() && rnd < 0.28*hlRaiseMul) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
+  if(eq > 0.55 - flAdj - hlThr + eqShift){
+    if(canRaiseNow() && rnd < 0.28*hlRaiseMul*RM) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
     return {type:'call'};
   }
-  if(eq > potOdds + 0.03){
+  if(eq > potOdds + 0.03 + eqShift*0.5){
     // オッズに合う: コール主体、非最終ストリートはセミブラフレイズ少々
-    if(!finalSt && canRaiseNow() && rnd < 0.10 * pf) return {type:'raise', amount: raiseAmt(0.7)};
+    if(!finalSt && canRaiseNow() && rnd < 0.10 * pf * RM) return {type:'raise', amount: raiseAmt(0.7)};
     return {type:'call'};
   }
-  if(eq > potOdds - 0.05){
+  if(eq > potOdds - 0.05 + eqShift*0.5){
     return rnd < 0.60 ? {type:'call'} : {type:'fold'}; // 境界域ミックス
   }
-  if(eq > potOdds - 0.12){
+  if(eq > potOdds - 0.12 + eqShift*0.5){
     // MDF確保のブラフキャッチ（降りすぎると搾取されるため一定頻度で継続）
     const mdf = pot / (pot + toCall);
-    return rnd < 0.18 + 0.12*mdf ? {type:'call'} : {type:'fold'};
+    return rnd < (0.18 + 0.12*mdf) ? {type:'call'} : {type:'fold'};
   }
   // オッズに大きく合わない: 基本フォールド、低頻度ブラフレイズ
   const s2 = 0.85;
-  const bluffRaiseF = ((finalSt ? (s2/(1+2*s2))*0.45 : 0.07) * pf * bluffVs / oppCount) * (limits.betting==='nl'?1:0.7);
+  const bluffRaiseF = ((finalSt ? (s2/(1+2*s2))*0.45 : 0.07) * pf * bluffVs * BM / oppCount) * (limits.betting==='nl'?1:0.7);
   if(canRaiseNow() && rnd < bluffRaiseF) return {type:'raise', amount: raiseAmt(0.9)};
   return {type:'fold'};
 }
@@ -3811,6 +4290,7 @@ async function ploJoinRoom(){
   soloStack = meta.stack; soloSB = meta.sb; soloBB = meta.bb;
   fbListen();
   await fbSendToHost({type:'join', name:myName, id:myId});
+  initSession('multi');
   ploSaveSession();
   show('waiting');
   g('disp-code').textContent = roomCode;
@@ -3913,7 +4393,10 @@ function ploHostStart(){
   const ids = waitingPlayers.map(p=>p.id);
   const names = {};
   waitingPlayers.forEach(p=>names[p.id]=p.name);
-  G = { ids, names, stacks: ids.map(()=>soloStack), buttonIdx: Math.floor(Math.random()*ids.length), handNo: 0, log: [], isMulti: true, currentGame: hostSelectedGame || 'holdem' };
+  G = { ids, names, stacks: ids.map(()=>soloStack), buttonIdx: Math.floor(Math.random()*ids.length), handNo: 0, log: [], isMulti: true, currentGame: hostSelectedGame || 'holdem', cpuLevel };
+  G.cpuProfiles = buildAllCpuProfiles();
+  initRotation();
+  initSession('multi');
   if(gameFormat === 'tourney'){
     G.tourney = {startTs: Date.now(), levelMin: tourneyLevelMin, structKey: tourneyStructKey, level: 0, ranks: {}};
     soloSB = 10; soloBB = 20;
@@ -3951,6 +4434,7 @@ function ploPub_build(){
     toActId: (h.toActIdx>=0 && h.players[h.toActIdx]) ? h.players[h.toActIdx].id : null,
     buttonId: G.ids[G.buttonIdx], bbAmount: h.bbAmount,
     currentGame: G.currentGame,
+    rotation: G.rotation ? { every: G.rotation.every, idx: G.rotation.idx, seq: G.rotation.seq, handNo: G.handNo } : null,
     drawDone: h.drawDone, studStreet: h.studStreet, studVisible: h.studVisible,
     raiseCount: h.raiseCount || 0, minRaise: h.minRaise,
     sbId: (h.sbIdx>=0 && h.players[h.sbIdx]) ? h.players[h.sbIdx].id : null,
@@ -4003,6 +4487,8 @@ function renderGuest(){
   // Firebaseは空配列を削除するため、boardがundefinedの場合は空配列に正規化
   if(!Array.isArray(pub.board)) pub.board = [];
   pub.players.forEach(p=>{ if(p.hole && !Array.isArray(p.hole)) p.hole=null; });
+  // ゲスト自身の収支をセッション記録（showdown時に1ハンド1回）
+  try { maybeRecordGuestHand(pub); } catch(e){}
   updateGameTypeBar();
   g('phase-label').textContent = phaseLabelFor({phase:pub.phase, drawDone:pub.drawDone, studStreet:pub.studStreet}, pub.currentGame);
   g('pot-display').textContent = `POT: ${pub.pot + pub.roundBetTotal}`;
@@ -4390,6 +4876,7 @@ async function ploReconnectToRoom(){
   const meta = await fbGet('meta');
   if(!meta){ ploClearSession(); ploSetErr('ルームが見つかりません'); ploSetSt(''); ploShowReconnectOption(); return; }
   soloStack=meta.stack; soloSB=meta.sb; soloBB=meta.bb;
+  if(!sessionStats) initSession('multi'); // 再接続時もセッション集計を継続
   if(isHost){
     const hs = await fbGet('hostState');
     if(hs && hs.j){
@@ -4445,11 +4932,24 @@ function updateGameTypeBar(){
   const gk = (G && G.currentGame) || (isMulti && ploPub && ploPub.currentGame) || soloSelectedGame || 'holdem';
   const gd = MIX_GAMES[gk] || MIX_GAMES.holdem;
   const lbl = g('current-game-label');
-  if(lbl) lbl.textContent = gd.label + (pendingGameChange ? ` → ${MIX_GAMES[pendingGameChange].short}` : '');
-  // 変更ボタン: ソロは常に、マルチはホストのみ
+  // ローテーション情報（ホストはG、ゲストはploPub）
+  const rot = (G && G.rotation) ? {seq:G.rotation.seq, every:G.rotation.every, idx:G.rotation.idx, handNo:G.handNo}
+            : (isMulti && ploPub && ploPub.rotation) ? ploPub.rotation : null;
+  if(lbl){
+    if(rot){
+      // 現在の種目で残り何手か（現在のハンドを含む）。every - ((handNo-1) % every)
+      const left = rot.every - ((rot.handNo - 1) % rot.every);
+      const nextGk = rot.seq[(rot.idx+1)%rot.seq.length];
+      lbl.textContent = `${gd.label} ｜ 残り${left}手→${MIX_GAMES[nextGk].short}`;
+    } else {
+      lbl.textContent = gd.label + (pendingGameChange ? ` → ${MIX_GAMES[pendingGameChange].short}` : '');
+    }
+  }
+  // 変更ボタン: ソロは常に、マルチはホストのみ。ローテーション中は非表示
   const btn = g('btn-change-game');
   if(btn){
-    const canChange = !isMulti || isHost;
+    const rotating = !!rot;
+    const canChange = (!isMulti || isHost) && !rotating;
     btn.style.display = canChange ? '' : 'none';
   }
 }
