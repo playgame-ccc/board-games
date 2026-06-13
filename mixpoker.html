@@ -179,12 +179,12 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .table-center {
   position: absolute;
-  top: 52%; left: 50%;
+  top: 58%; left: 50%;
   transform: translate(-50%, -50%);
-  width: 92%;
-  z-index: 1;
+  width: 76%;
+  z-index: 4;
   text-align: center;
-  z-index: 1;
+  pointer-events: none;
 }
 .table-center .board-area { margin: 6px 0 0; }
 .table-center .board-area .card { width: 34px; height: 48px; border-radius: 6px; }
@@ -422,16 +422,20 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 /* ===== ボード/ポット ===== */
 .board-area {
   display: flex; justify-content: center; gap: 6px;
-  margin: 12px 0;
-  min-height: 74px; align-items: center;
+  margin: 10px 0 0;
+  min-height: 60px; align-items: center;
 }
 .pot-display {
+  display: inline-block;
   text-align: center;
   font-weight: 700;
   font-style: italic;
-  color: rgba(255,255,255,0.92);
+  color: rgba(255,255,255,0.95);
   font-size: 1.05rem;
-  margin-bottom: 4px;
+  padding: 3px 16px;
+  border-radius: 14px;
+  background: rgba(8,12,18,0.55);
+  backdrop-filter: blur(2px);
 }
 
 /* ===== フェーズラベル ===== */
@@ -2175,7 +2179,11 @@ function posBadge(h, idx){
 
 function phaseLabelFor(h, gameKey){
   const gd = MIX_GAMES[gameKey] || MIX_GAMES.holdem;
-  if(h.phase==='showdown') return 'SHOWDOWN';
+  if(h.phase==='showdown'){
+    // 全員フォールドで決着した場合はSHOWDOWNではなく「ハンド終了」
+    if(h.results && h.results[0] && h.results[0].uncontested) return 'ハンド終了';
+    return 'SHOWDOWN';
+  }
   if(gd.type==='community'){
     const m={preflop:'PREFLOP', flop:'FLOP', turn:'TURN', river:'RIVER'};
     return m[h.phase] || '';
@@ -2872,6 +2880,20 @@ function humanAction(action){
   scheduleNext();
 }
 
+// キャッシュゲーム: チップが0のCPUを次ハンド前に自動リバイ（ソロのみ。マルチは全員人間）
+function rebuyBustedCpus(){
+  if(G.tourney) return; // トーナメントはリバイなし
+  if(isMulti) return;   // マルチにCPUはいない
+  const buyin = soloStack;
+  G.ids.forEach((id,i)=>{
+    if(id==='human') return;
+    if(G.stacks[i] <= 0){
+      G.stacks[i] = buyin;
+      G.log.unshift(`💰 ${G.names[id]} がリバイ +${buyin}`);
+    }
+  });
+}
+
 function endHand(){
   // トーナメント: このハンドで飛んだプレイヤーを脱落として順位記録
   if(G.tourney){
@@ -2915,6 +2937,8 @@ function endHand(){
     showRebuyPrompt();
     return;
   }
+  // キャッシュゲーム: 飛んだCPUを自動リバイして卓を維持
+  rebuyBustedCpus();
   const alive = G.ids.filter((id,i)=>G.stacks[i] > 0);
   if(alive.length < 2){
     aiTimer = setTimeout(()=>showFinalResult(), 2000);
@@ -2969,6 +2993,8 @@ function doRebuy(amount){
   G.stacks[meIdx] += amount;
   G.log.unshift(`💰 ${G.names['human']} がリバイ +${amount}`);
   g('action-area').innerHTML = '';
+  // 飛んだCPUも一緒にリバイして卓を維持
+  rebuyBustedCpus();
   // リバイ後、次のハンドへ
   const alive = G.ids.filter((id,i)=>G.stacks[i] > 0);
   if(alive.length < 2){ aiTimer = setTimeout(()=>showFinalResult(), 1500); return; }
@@ -3847,16 +3873,17 @@ function cardHTML(card, opts={}){
 // 自分=下中央。相手は左→上→右の順で上半分に配置
 function oppPositions(count){
   if(count<=0) return [];
-  // 重なり防止: 上部は最大1〜2人、残りは左右の縁に縦分散
+  // 中央のボード/ポット帯（おおよそ x:28-72, y:36-64）を避けて配置する。
+  // 少人数では上寄り・左右端の上部に置き、ボードカードと被らないようにする。
   const presets = {
-    1: [{x:50,y:18}],
-    2: [{x:17,y:42},{x:83,y:42}],
-    3: [{x:14,y:52},{x:50,y:16},{x:86,y:52}],
-    4: [{x:13,y:62},{x:20,y:22},{x:80,y:22},{x:87,y:62}],
-    5: [{x:12,y:68},{x:15,y:28},{x:50,y:15},{x:85,y:28},{x:88,y:68}],
-    6: [{x:12,y:74},{x:13,y:42},{x:27,y:16},{x:73,y:16},{x:87,y:42},{x:88,y:74}],
-    7: [{x:12,y:78},{x:11,y:50},{x:16,y:22},{x:50,y:15},{x:84,y:22},{x:89,y:50},{x:88,y:78}],
-    8: [{x:11,y:82},{x:11,y:54},{x:13,y:27},{x:38,y:15},{x:62,y:15},{x:87,y:27},{x:89,y:54},{x:89,y:82}],
+    1: [{x:50,y:15}],
+    2: [{x:20,y:20},{x:80,y:20}],
+    3: [{x:18,y:20},{x:50,y:14},{x:82,y:20}],
+    4: [{x:14,y:30},{x:30,y:14},{x:70,y:14},{x:86,y:30}],
+    5: [{x:13,y:34},{x:24,y:15},{x:50,y:13},{x:76,y:15},{x:87,y:34}],
+    6: [{x:12,y:40},{x:18,y:18},{x:38,y:13},{x:62,y:13},{x:82,y:18},{x:88,y:40}],
+    7: [{x:12,y:44},{x:14,y:22},{x:30,y:14},{x:50,y:12},{x:70,y:14},{x:86,y:22},{x:88,y:44}],
+    8: [{x:11,y:46},{x:12,y:26},{x:22,y:15},{x:40,y:12},{x:60,y:12},{x:78,y:15},{x:88,y:26},{x:89,y:46}],
   };
   return presets[count] || presets[8].slice(0,count);
 }
@@ -3930,15 +3957,20 @@ function render(){
     if(isActive) cls += ' active';
     if(p.folded) cls += ' folded';
 
-    // カード（種目別: スタッドは表札のみ見える / ソロで人間フォールド後はCPUの手を公開）
+    // カード表示の条件:
+    //  マルチ: ショウダウンで降りていない相手のみ公開（通常のポーカー）
+    //  ソロ: ショウダウン時は降りた相手も含め全員公開。人間が降りた後も相手の手を公開
     let cardsH = '';
-    const humanFoldedSolo = !isMulti && me && me.folded;
-    const showCards = (h.phase==='showdown' && !p.folded) || humanFoldedSolo;
+    const isSolo = !isMulti;
+    const humanFoldedSolo = isSolo && me && me.folded;
+    const showCards = isSolo
+      ? (h.phase==='showdown' || humanFoldedSolo)   // ソロ: ショウダウンで全員公開
+      : (h.phase==='showdown' && !p.folded);        // マルチ: 降りた人は見せない
     const isStud = (MIX_GAMES[G.currentGame]||{}).type === 'stud';
     if(p.hole.length){
       p.hole.forEach((c,ci)=>{
         if(showCards){
-          cardsH += cardHTML(c,{xs:true, muck:p.folded});
+          cardsH += cardHTML(c,{xs:true, muck:p.folded}); // 降りた相手は暗めに表示
         } else if(isStud && p.faceUp && p.faceUp[ci]){
           cardsH += cardHTML(c,{xs:true}); // 表札
         } else {
@@ -4490,7 +4522,7 @@ function renderGuest(){
   // ゲスト自身の収支をセッション記録（showdown時に1ハンド1回）
   try { maybeRecordGuestHand(pub); } catch(e){}
   updateGameTypeBar();
-  g('phase-label').textContent = phaseLabelFor({phase:pub.phase, drawDone:pub.drawDone, studStreet:pub.studStreet}, pub.currentGame);
+  g('phase-label').textContent = phaseLabelFor({phase:pub.phase, drawDone:pub.drawDone, studStreet:pub.studStreet, results:pub.results}, pub.currentGame);
   g('pot-display').textContent = `POT: ${pub.pot + pub.roundBetTotal}`;
   const winCards = new Set();
   if(pub.phase==='showdown' && pub.results){
