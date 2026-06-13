@@ -572,11 +572,102 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 @media (prefers-reduced-motion: reduce){
   .tbar-clock.urgent { animation: none; }
 }
+
+/* ===== 種目チェンジ ポップアウト演出 ===== */
+#game-change-popout {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+}
+#game-change-popout.show {
+  animation: gcp-fade 1.8s ease forwards;
+}
+#game-change-popout .gcp-backdrop {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(8,12,18,0.78) 0%, rgba(8,12,18,0.45) 60%, transparent 100%);
+}
+#game-change-popout .gcp-inner {
+  position: relative;
+  text-align: center;
+  transform: scale(0.7);
+  animation: gcp-pop 1.8s cubic-bezier(0.18,0.9,0.3,1.2) forwards;
+}
+#game-change-popout .gcp-kicker {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: var(--green-bright, #4fe084);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  text-shadow: 0 0 18px rgba(79,224,132,0.6);
+}
+#game-change-popout .gcp-name {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  padding: 0 24px;
+  text-shadow: 0 4px 30px rgba(0,0,0,0.7), 0 0 40px rgba(47,212,178,0.4);
+}
+#game-change-popout .gcp-short {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 6px 22px;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #0a0c12;
+  background: linear-gradient(135deg, var(--gold-bright, #e8c84a), #f0d96a);
+  box-shadow: 0 6px 24px rgba(232,200,74,0.45);
+}
+#game-change-popout .gcp-rule {
+  margin-top: 16px;
+  font-size: 0.84rem;
+  color: rgba(255,255,255,0.75);
+  max-width: 300px;
+  line-height: 1.4;
+}
+@keyframes gcp-fade {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes gcp-pop {
+  0% { transform: scale(0.7); }
+  14% { transform: scale(1.04); }
+  22% { transform: scale(1.0); }
+  76% { transform: scale(1.0); }
+  100% { transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce){
+  #game-change-popout.show { animation: gcp-fade-rm 1.6s ease forwards; }
+  #game-change-popout .gcp-inner { animation: none; transform: none; }
+  @keyframes gcp-fade-rm { 0%{opacity:0} 10%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+}
 </style>
 </head>
 <body>
 <a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
 <button id="global-stats-btn" onclick="openStatsScreen()" style="position:fixed;top:8px;right:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;cursor:pointer;">📊 成績</button>
+
+<!-- 種目チェンジ ポップアウト演出 -->
+<div id="game-change-popout" aria-hidden="true">
+  <div class="gcp-backdrop"></div>
+  <div class="gcp-inner">
+    <div class="gcp-kicker">GAME CHANGE</div>
+    <div class="gcp-name" id="gcp-name"></div>
+    <div class="gcp-short" id="gcp-short"></div>
+    <div class="gcp-rule" id="gcp-rule"></div>
+  </div>
+</div>
 <div class="wrap">
 
   <!-- ===== ロビー ===== -->
@@ -710,7 +801,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
         <p><strong>PLO8</strong>【ポットリミット】：PLOのHi-Lo。ハイとロー(8以下5枚)でポット折半。</p>
         <div class="divider"></div>
         <p style="color:var(--gold);">■ ドロー系（カード交換あり）</p>
-        <p><strong>A-5</strong>【固定】：5枚。最も低い手が勝ち（A=1、ストレート無視）。1回交換。</p>
+        <p><strong>A-5</strong>【固定】：5枚。最も低い手が勝ち（A=1、ストレート無視）。3回交換（トリプルドロー）。</p>
         <p><strong>2-7シングル</strong>【ノーリミット】：5枚。最も低い手が勝ち（A=高い、ストレート/フラッシュは弱い）。1回交換。75432が最強。</p>
         <p><strong>2-7トリプル</strong>【固定】：2-7ルールで3回交換。</p>
         <p><strong>バドゥーギ</strong>【固定】：4枚。異なる数字かつ異なるスートの枚数が多く、低いほど強い。3回交換。</p>
@@ -887,7 +978,7 @@ const MIX_GAMES = {
   plo:    { label:"PLO（オマハ）",        short:'PLO', type:'community', betting:'pl', holeN:4, boardN:5, hi:true, lo:false, plo:true,  evalHi:'hi' },
   plo8:   { label:"PLO Hi-Lo (8b)",       short:'PLO8',type:'community', betting:'pl', holeN:4, boardN:5, hi:true, lo:true,  plo:true,  evalHi:'hi', evalLo:'lo8' },
   // --- ドロー系（場札なし、交換あり） ---
-  a5:     { label:"A-5 ローボール",       short:'A5',  type:'draw', betting:'fl', holeN:5, boardN:0, hi:false, lo:true,  plo:false, drawRounds:1, evalLo:'a5lo' },
+  a5:     { label:"A-5 トリプルドロー",   short:'A5',  type:'draw', betting:'fl', holeN:5, boardN:0, hi:false, lo:true,  plo:false, drawRounds:3, evalLo:'a5lo' },
   sd27:   { label:"2-7 シングルドロー",   short:'SD',  type:'draw', betting:'nl', holeN:5, boardN:0, hi:false, lo:true,  plo:false, drawRounds:1, evalLo:'deuce27' },
   td27:   { label:"2-7 トリプルドロー",   short:'TD',  type:'draw', betting:'fl', holeN:5, boardN:0, hi:false, lo:true,  plo:false, drawRounds:3, evalLo:'deuce27' },
   badugi: { label:"バドゥーギ",           short:'BAD', type:'draw', betting:'fl', holeN:4, boardN:0, hi:false, lo:true,  plo:false, drawRounds:3, evalLo:'badugi' },
@@ -1188,7 +1279,10 @@ function calcBetLimits(h, p){
     // フィックスリミット: レイズ額固定、1ラウンド4ベットまで
     flUnit = flBetUnit(h, gd);
     const capped = (h.raiseCount||0) >= 4;
-    minRaiseTo = h.highBet + flUnit;
+    // スタッド3rd: ブリングイン（最低額）に直面している場合のコンプリートは
+    // 「スモールベットまで上げる」= highBet + flUnit ではなく flUnit に合わせる。
+    const isBringInSpot = (gd.type==='stud') && (h.studStreet===3) && (h.highBet < flUnit);
+    minRaiseTo = isBringInSpot ? flUnit : (h.highBet + flUnit);
     maxRaiseTo = minRaiseTo; // 固定
     canRaise = !capped && (p.stack > toCall) && (minRaiseTo - p.roundBet <= p.stack + toCall);
     // スタック不足でもオールイン分のレイズは認める（最小限）
@@ -1488,6 +1582,37 @@ function advanceRotation(){
   }
 }
 
+// ===== 種目チェンジ ポップアウト演出 =====
+// 各種目の1行ルール説明（ポップアウトに表示）
+const GAME_RULE_BLURB = {
+  holdem: '2枚の手札＋場の5枚で最強の5枚',
+  plo:    '4枚のうち2枚＋場の3枚を必ず使う',
+  plo8:   'ハイとロー(8以下)でポット折半',
+  a5:     '3回ドローで最も低い手（A-5・ストフラ無視）',
+  sd27:   '5枚で最も低い手（2-7・ストレート/フラッシュは不利）',
+  td27:   '3回ドローで最も低い手（2-7）',
+  badugi: '異なるスート・ランク4枚で最も低い手',
+  stud:   '7枚から最強の5枚（コミュニティなし）',
+  studhi: 'ハイとロー(8以下)でポット折半（スタッド）',
+  razz:   '7枚から最も低い手（A-5）',
+};
+let gcpTimer = null;
+function showGameChangePopout(gameKey){
+  const el = g('game-change-popout');
+  if(!el) return;
+  const gd = MIX_GAMES[gameKey];
+  if(!gd) return;
+  g('gcp-name').textContent = gd.label;
+  g('gcp-short').textContent = gd.short;
+  g('gcp-rule').textContent = GAME_RULE_BLURB[gameKey] || '';
+  // 再生のためアニメーションを一旦リセット
+  el.classList.remove('show');
+  void el.offsetWidth; // reflowで強制リセット
+  el.classList.add('show');
+  if(gcpTimer) clearTimeout(gcpTimer);
+  gcpTimer = setTimeout(()=>{ el.classList.remove('show'); }, 1850);
+}
+
 // ===== セッション集計（ハンド履歴・収支） =====
 const STATS_LS_KEY = 'mixpoker_stats_v1';
 function loadPersistStats(){
@@ -1757,11 +1882,16 @@ function startNewHand(){
   }
 
   // 種目変更を適用（ホスト/ソロが手動で切り替えていた場合）
+  const prevGame = G.currentGame;
   applyPendingGameChange();
 
   G.handNo++;
   // 種目ローテーション（HORSE/8-Game/全10種）を進める
   advanceRotation();
+  // 種目が変わったら大きくポップアウト演出（ソロ/ホストの画面。ゲストはploPub受信時に表示）
+  if(G.currentGame !== prevGame && G.handNo > 1){
+    try { showGameChangePopout(G.currentGame); } catch(e){}
+  }
   // ボタンを次へ（生存者の中で）
   // 単純化: 毎ハンド buttonIdx を +1（脱落者はスキップ）
   do {
@@ -1836,11 +1966,13 @@ function startNewHand(){
     // アンティをポットに移動
     let anteTotal = 0;
     players.forEach(p=>{ anteTotal += p.roundBet; p.roundBet=0; });
-    // ブリングイン
+    // ブリングイン: 強制最低額を拠出。その後、ブリングインプレイヤー自身が
+    // 「ブリングインのまま（=チェック扱い）」か「コンプリート（=スモールベットまでレイズ）」を選ぶ。
     const bringIn = Math.max(soloSB, Math.floor(soloBB/2));
     postChips(biIdx, bringIn);
+    players[biIdx].acted = false; // 本人にアクション選択の番を与える
     highBet = bringIn;
-    firstActor = nextActorIn(players, biIdx);
+    firstActor = biIdx; // ブリングイン者が最初に動く（コンプリート選択可）
     G.hand = {
       deck, players, board: [],
       pot: anteTotal, phase: 'preflop',
@@ -1853,6 +1985,7 @@ function startNewHand(){
       drawDone: 0, studStreet: 3, studVisible: 3, needDraw: false,
       discards: [], // 捨て札パイル（山札枯渇時のリシャッフル用）
       bringInIdx: biIdx,
+      bringInPending: true, // ブリングイン者がまだコンプリート/継続を選んでいない
       raiseCount: 1, // ブリングインが1ベット目
     };
     G.log.unshift(`── ハンド #${G.handNo} (${gameDef.short}) ──`);
@@ -1984,6 +2117,8 @@ function applyAction(playerIdx, action){
     p.lastAction = p.allIn ? 'オールイン' : (toCall>0?'レイズ':'ベット');
     G.log.unshift(`${p.name}: ${p.lastAction} → ${p.roundBet}`);
   }
+  // スタッド3rd: ブリングイン者が動いたら選択完了フラグを下ろす
+  if(h.bringInPending && playerIdx===h.bringInIdx){ h.bringInPending = false; }
 }
 
 // スタッド系: 表札（faceUpカード）の強さで各ストリートの先頭アクターを決める
@@ -2727,6 +2862,23 @@ function doShowdown(){
     if(!p.hole || p.hole.length===0) return;
     try { h.handNames[p.id] = nameOf(p); } catch(e){ /* 役評価できない局面は省略 */ }
   });
+  // ショウダウン結果をログに記録（勝者と役）。複数ポットは代表してまとめる
+  try {
+    const shown = h.players.filter(p=>!p.folded);
+    // 各コンテンダーの手をログ（カードと役）
+    shown.forEach(p=>{
+      const cards = p.hole.map(cd=>rankStr(cd.r)+SUIT_SYM[cd.s]).join(' ');
+      const nm = h.handNames[p.id] ? `（${h.handNames[p.id]}）` : '';
+      G.log.unshift(`🃏 ${p.name}: ${cards}${nm}`);
+    });
+    // 勝者集計（全ポットの勝者を統合）
+    const winnerIds = [...new Set(results.flatMap(r=>r.winnerIds))];
+    const winnerNames = [...new Set(results.flatMap(r=>r.winnerNames))];
+    const totalWon = results.reduce((s,r)=>s+r.amount,0);
+    if(winnerNames.length){
+      G.log.unshift(`🏆 ショーダウン: ${winnerNames.join('・')} が ${totalWon} を獲得`);
+    }
+  } catch(e){}
   h.players.forEach((p,i)=>{ G.stacks[i] = p.stack; });
   logHandPnl(h);
 }
@@ -2776,6 +2928,7 @@ function awardToLastPlayer(){
       G.log.unshift(`🃏 ${p.name}: ${cards}${p.folded?'（フォールド済）':''}`);
     });
   }
+  G.log.unshift(`🏆 ${winner.name} が ${h.pot} を獲得（全員フォールド）`);
   // ソロ: 全員の役名を計算（ボードが十分にある＝役を作れる場合のみ）。
   // プリフロップ等で降りて決着した場合は役を作れないため役名は出さない。
   if(!isMulti){
@@ -4125,16 +4278,20 @@ function renderActionArea(){
 
   if(limits.betting === 'fl'){
     // フィックスリミット: 固定額（プリセット不要）
+    // スタッド3rd・ブリングイン者の番か？（ブリングイン継続 or コンプリートの選択）
+    const isBringInChoice = h.bringInPending && h.toActIdx===h.bringInIdx && toCall===0;
     html += '<div class="action-btns">';
     html += `<button class="btn btn-fold" onclick="humanAction({type:'fold'})">Fold</button>`;
     if(toCall === 0){
-      html += `<button class="btn btn-call" onclick="humanAction({type:'check'})">Check</button>`;
+      const checkLabel = isBringInChoice ? 'ブリングイン' : 'Check';
+      html += `<button class="btn btn-call" onclick="humanAction({type:'check'})">${checkLabel}</button>`;
     } else {
       const callAmt = Math.min(toCall, me.stack);
       html += `<button class="btn btn-call" onclick="humanAction({type:'call'})">Call ${callAmt}</button>`;
     }
     if(limits.canRaise){
-      html += `<button class="btn btn-raise" onclick="humanAction({type:'raise', amount:${limits.minRaiseTo}})">${toCall>0?'Raise':'Bet'} ${limits.minRaiseTo}</button>`;
+      const raiseLabel = isBringInChoice ? 'コンプリート' : (toCall>0?'Raise':'Bet');
+      html += `<button class="btn btn-raise" onclick="humanAction({type:'raise', amount:${limits.minRaiseTo}})">${raiseLabel} ${limits.minRaiseTo}</button>`;
     }
     html += '</div>';
     const cap = (h.raiseCount||0);
@@ -4550,10 +4707,16 @@ function broadcastState(){
   if(typeof pgSaveHostState==='function') pgSaveHostState();
 }
 
+let guestLastSeenGame = null;
 function onGuestStateUpdate(){
   if(!ploPub) return;
   if(ploPub.phase==='waiting'){ show('waiting'); renderWaitingPlayers(); return; }
   if(!g('screen-game').classList.contains('active')) show('game');
+  // ゲスト: 受信した現在種目が変わったら大きくポップアウト
+  if(ploPub.currentGame && guestLastSeenGame && ploPub.currentGame !== guestLastSeenGame){
+    try { showGameChangePopout(ploPub.currentGame); } catch(e){}
+  }
+  guestLastSeenGame = ploPub.currentGame || guestLastSeenGame;
   renderGuest();
 }
 
@@ -4694,7 +4857,8 @@ function calcBetLimitsGuest(pub, me){
     else if(gd.type==='draw') flUnit = (pub.drawDone||0) <= 1 ? small : big;
     else flUnit = small;
     const capped = (pub.raiseCount||0) >= 4;
-    minRaiseTo = pub.highBet + flUnit;
+    const isBringInSpot = (gd.type==='stud') && (pub.studStreet===3) && (pub.highBet < flUnit);
+    minRaiseTo = isBringInSpot ? flUnit : (pub.highBet + flUnit);
     maxRaiseTo = minRaiseTo;
     canRaise = !capped && (me.stack > toCall);
     if(!capped && me.stack > toCall && minRaiseTo - me.roundBet > me.stack){
