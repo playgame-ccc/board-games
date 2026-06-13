@@ -2704,9 +2704,10 @@ function doShowdown(){
   });
 
   h.results = results;
-  // 役名を記録（公開用）
+  // 役名を記録（公開用）。降りた相手の役も計算する（ソロのショウダウンで表示するため）
+  // ※マルチでは降りた相手のhandNameは配信されない（ploPub_buildで除外）ので画面には出ない
   h.handNames = {};
-  contenders.forEach(p=>{
+  const nameOf = (p)=>{
     const hi = gameDef.hi ? showdownEvalHi(p,h,gameDef) : null;
     const lo = gameDef.lo ? showdownEvalLo(p,h,gameDef) : null;
     let label = '';
@@ -2719,7 +2720,12 @@ function doShowdown(){
       else if(lo.kind==='badugi') loStr = lo.cards.slice().sort((a,b)=>(b.r===14?1:b.r)-(a.r===14?1:a.r)).map(c=>c.r===14?'A':rankStr(c.r)).join('') + '('+lo.cards.length+'枚)';
       label += (label?' / ':'') + 'Lo:' + loStr;
     }
-    h.handNames[p.id] = label || '-';
+    return label || '-';
+  };
+  // 全プレイヤー（降りた人含む）。ただし手札を持っている人のみ評価
+  h.players.forEach(p=>{
+    if(!p.hole || p.hole.length===0) return;
+    try { h.handNames[p.id] = nameOf(p); } catch(e){ /* 役評価できない局面は省略 */ }
   });
   h.players.forEach((p,i)=>{ G.stacks[i] = p.stack; });
   logHandPnl(h);
@@ -2769,6 +2775,34 @@ function awardToLastPlayer(){
       const cards = p.hole.map(cd=>rankStr(cd.r)+SUIT_SYM[cd.s]).join(' ');
       G.log.unshift(`🃏 ${p.name}: ${cards}${p.folded?'（フォールド済）':''}`);
     });
+  }
+  // ソロ: 全員の役名を計算（ボードが十分にある＝役を作れる場合のみ）。
+  // プリフロップ等で降りて決着した場合は役を作れないため役名は出さない。
+  if(!isMulti){
+    const gd = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
+    const canEval = (gd.type==='community' && h.board.length>=5) ||
+                    (gd.type!=='community'); // ドロー/スタッドは手札のみで評価可
+    if(canEval){
+      h.handNames = h.handNames || {};
+      h.players.forEach(p=>{
+        if(!p.hole || p.hole.length===0) return;
+        try {
+          const hi = gd.hi ? showdownEvalHi(p,h,gd) : null;
+          const lo = gd.lo ? showdownEvalLo(p,h,gd) : null;
+          let label = '';
+          if(hi) label += hi.name;
+          if(lo){
+            let loStr='';
+            if(lo.kind==='lo8') loStr = lo.lo.map(v=>v===1?'A':v).reverse().join('');
+            else if(lo.kind==='a5') loStr = lo.cards.slice().sort((a,b)=>(b.r===14?1:b.r)-(a.r===14?1:a.r)).map(c=>c.r===14?'A':rankStr(c.r)).join('');
+            else if(lo.kind==='27') loStr = lo.cards.slice().sort((a,b)=>b.r-a.r).map(c=>rankStr(c.r)).join('');
+            else if(lo.kind==='badugi') loStr = lo.cards.slice().sort((a,b)=>(b.r===14?1:b.r)-(a.r===14?1:a.r)).map(c=>c.r===14?'A':rankStr(c.r)).join('')+'('+lo.cards.length+'枚)';
+            label += (label?' / ':'')+'Lo:'+loStr;
+          }
+          if(label) h.handNames[p.id] = label;
+        } catch(e){}
+      });
+    }
   }
   h.players.forEach((p,i)=>{ G.stacks[i]=p.stack; });
   h.toActIdx = -1;
@@ -3979,9 +4013,12 @@ function render(){
       });
     }
 
-    // 役名
+    // 役名（ソロは降りた相手の役名も表示。マルチは降りていない相手のみ）
     let handName = '';
-    if(h.phase==='showdown' && !p.folded && h.handNames && h.handNames[p.id]){
+    const showName = isSolo
+      ? (h.phase==='showdown' && h.handNames && h.handNames[p.id])
+      : (h.phase==='showdown' && !p.folded && h.handNames && h.handNames[p.id]);
+    if(showName){
       handName = `<div class="opp-hand-name">${h.handNames[p.id]}</div>`;
     }
 
@@ -4471,7 +4508,14 @@ function ploPub_build(){
     raiseCount: h.raiseCount || 0, minRaise: h.minRaise,
     sbId: (h.sbIdx>=0 && h.players[h.sbIdx]) ? h.players[h.sbIdx].id : null,
     bbId: (h.bbIdx>=0 && h.players[h.bbIdx]) ? h.players[h.bbIdx].id : null,
-    results: h.results, handNames: h.handNames,
+    results: h.results,
+    handNames: (function(){
+      // マルチ配信: 降りた相手の役名は送らない（公開しているのは降りていない相手のみ）
+      if(!h.handNames) return null;
+      const out = {};
+      h.players.forEach(p=>{ if(!p.folded && h.handNames[p.id]!=null) out[p.id]=h.handNames[p.id]; });
+      return out;
+    })(),
     tourney: G.tourney ? {startTs:G.tourney.startTs, levelMin:G.tourney.levelMin, structKey:G.tourney.structKey, curAnte:G.tourney.curAnte, level:G.tourney.level, ranks:G.tourney.ranks} : null,
     players: (function(){
       const meP = h.players.find(x=>x.id===myId);
