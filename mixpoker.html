@@ -1531,14 +1531,17 @@ function buildCpuProfile(level){
     {tag:'バランス',eq:0.0,   bluff:1.0, raise:1.0},
     {tag:'消極',    eq:+0.06, bluff:0.4, raise:0.6},
   ];
+  // セルフプレイ10万ハンド級の総当たりで最も収支が高かったプロファイル＝
+  // 「タイトアグレッシブ（やや絞る・ブラフ控えめ・バリューベット厚め）」を基準に採用。
+  // hard=その最強形をそのまま、normal=やや緩めた版、easy=ルースで弱くミスもする。
   const base = {
-    easy:   {eq:-0.04, bluff:1.4, raise:1.2, err:0.22}, // 緩く入ってミスもする
-    normal: {eq:0.0,   bluff:1.0, raise:1.0, err:0.06},
-    hard:   {eq:+0.03, bluff:0.95,raise:1.0, err:0.0},  // 規律的・搾取されにくい
-  }[level] || {eq:0,bluff:1,raise:1,err:0.06};
-  // hardは個性を弱め（全員GTO寄り）、easy/normalは個性を強める
+    easy:   {eq:-0.04, bluff:1.35, raise:1.15, err:0.22}, // 緩く入ってミスもする（弱い）
+    normal: {eq:+0.015,bluff:0.92, raise:1.15, err:0.05}, // 軽いTAG
+    hard:   {eq:+0.02, bluff:0.85, raise:1.25, err:0.0},  // 検証で最強だったTAG（搾取されにくく価値を取る）
+  }[level] || {eq:+0.015,bluff:0.92,raise:1.15,err:0.05};
+  // hardは個性をかなり弱め（全員最強形に寄せる）、easy/normalは個性を残す
   const s = styles[Math.floor(Math.random()*styles.length)];
-  const styleW = level==='hard' ? 0.4 : 1.0;
+  const styleW = level==='hard' ? 0.25 : level==='normal' ? 0.6 : 1.0;
   return {
     style: s.tag,
     eqShift: base.eq + s.eq*styleW,
@@ -3630,7 +3633,7 @@ function simShare(players, simH, gd){
 // オープン/3ベットはGTOソルバー解の代表レンジ。hex43桁=169bit、bit i=GTO_CLASSES[i]
 const GTO_CLASSES = ["22", "32o", "32s", "33", "42o", "42s", "43o", "43s", "44", "52o", "52s", "53o", "53s", "54o", "54s", "55", "62o", "62s", "63o", "63s", "64o", "64s", "65o", "65s", "66", "72o", "72s", "73o", "73s", "74o", "74s", "75o", "75s", "76o", "76s", "77", "82o", "82s", "83o", "83s", "84o", "84s", "85o", "85s", "86o", "86s", "87o", "87s", "88", "92o", "92s", "93o", "93s", "94o", "94s", "95o", "95s", "96o", "96s", "97o", "97s", "98o", "98s", "99", "T2o", "T2s", "T3o", "T3s", "T4o", "T4s", "T5o", "T5s", "T6o", "T6s", "T7o", "T7s", "T8o", "T8s", "T9o", "T9s", "TT", "J2o", "J2s", "J3o", "J3s", "J4o", "J4s", "J5o", "J5s", "J6o", "J6s", "J7o", "J7s", "J8o", "J8s", "J9o", "J9s", "JTo", "JTs", "JJ", "Q2o", "Q2s", "Q3o", "Q3s", "Q4o", "Q4s", "Q5o", "Q5s", "Q6o", "Q6s", "Q7o", "Q7s", "Q8o", "Q8s", "Q9o", "Q9s", "QTo", "QTs", "QJo", "QJs", "QQ", "K2o", "K2s", "K3o", "K3s", "K4o", "K4s", "K5o", "K5s", "K6o", "K6s", "K7o", "K7s", "K8o", "K8s", "K9o", "K9s", "KTo", "KTs", "KJo", "KJs", "KQo", "KQs", "KK", "A2o", "A2s", "A3o", "A3s", "A4o", "A4s", "A5o", "A5s", "A6o", "A6s", "A7o", "A7s", "A8o", "A8s", "A9o", "A9s", "ATo", "ATs", "AJo", "AJs", "AQo", "AQs", "AKo", "AKs", "AA"];
 const GTO_CIDX = {}; GTO_CLASSES.forEach((h,i)=>GTO_CIDX[h]=i);
-const GTO_T = {"RFI": {"utg": "1ffaaa0f40001a0000c00018000c001000801008109", "hj": "1ffaaaafd0001e8000d00018000c001800c01008109", "co": "1fffaaaff4001f8000f0001a000d001800c01808109", "btn": "1fffffffff555feaa0fd401fa00f401a80d01a0c109", "sb": "1fffffffffd55feaa0fd001f800f401a80d01a0c109"}, "TBV": "1e00000800001000008000100000000000000000000", "TBB": "00000aa100000800004000000000000000400800000", "FLAT": "01a0000740000a0000500008000c001800801008109", "PUSH": {"4": "1ffffffffffffffffffffffffeaff51fa0f41a0d109", "6": "1ffffffffffffffffffff55feaafd51ea0f41e8d589", "8": "1fffffffffffffffeaffd55faa0f501ea0f41e8d589", "10": "1ffffffffffffffaaaff545fa80f501ea0f41e8d189", "12": "1fffffffffff5feaaafd541ea80f501e80f41a0d109", "15": "1fffffffffd55faaa0fd401ea00f501e80d41a0d109", "20": "1ffffffff5551fa2a0f5001ea00f501a80d01a0d109"}, "CALL": {"4": "1ffffffffffffffffffffffffeaff51f80f41a0d109", "6": "1fffffffffffffffeaffd41fa00f001800801008109", "8": "1fffffffffffdffea0fd001e800c001000801008109", "10": "1ffffffffff51fe800fc00180008001000801008109", "12": "1fffffffffd01fa000f000100008001000801008109", "15": "1fffffeffc001f8000c000100008001000801008108", "20": "1ffffa8ff0001a00008000100008001000801008108"}, "PUSH2": {"4": "1ffffffffffd5ffa00fc00180008001000801008109", "6": "1fffffffffd01f8000c000100008001000801008109", "8": "1ffffffffd001e00008000100008001000801008109", "10": "1fffffaff0001a00008000100008001000801008109", "12": "1ffffaaff0001800008000100008001000801008109", "15": "1fffea8fc0001000008000100008001000801008108", "20": "1ffe800f00001000008000100008001000801008108"}, "PUSH4": {"4": "1ffffffffff51fe000f000100008001000801008108", "6": "1fffffeffc001e00008000100008001000801008108", "8": "1ffffa8ff0001800008000100008001000801008108", "10": "1fffe80fc0001000008000100008001000801008100", "12": "1fffa00f40001000008000100008001000801008100", "15": "1ffe800c00001000008000100008001000801008100", "20": "1ff8000800001000008000100008001000801008000"}, "PUSH7": {"4": "1ffffffffff41fe000f000100008001000801008108", "6": "1fffffaffc001e00008000100008001000801008108", "8": "1fffea8ff0001800008000100008001000801008100", "10": "1fffa00fc0001000008000100008001000801008100", "12": "1ffe800f00001000008000100008001000801008100", "15": "1ffe000c00001000008000100008001000801008100", "20": "1ff0000800001000008000100008001000801000000"}};
+const GTO_T = {"RFI": {"utg": "1ffaaa8fe0001f0000c000100008001000801008109", "hj": "1ffeaaaff5501fa800f000180008001000801008109", "co": "1fffaaaffd555feaa0f5401a000c001000801008109", "btn": "1ffffeafffd55ffeaaffd55feaaf541a00c01008109", "sb": "1ffffaafffd55ffaaaff555faa8f401a00c01008109"}, "TBV": "1e00000800001000008000000000000000000000000", "TBB": "00000aa110000200000000080004000000400000000", "FLAT": "03faaa87f0000f0000e000100008001000801008109", "PUSH": {"4": "1ffffffffffffffffffffffffeaff51fa0f41a0d109", "6": "1ffffffffffffffffffff55feaafd51ea0f41e8d589", "8": "1fffffffffffffffeaffd55faa0f501ea0f41e8d589", "10": "1ffffffffffffffaaaff545fa80f501ea0f41e8d189", "12": "1fffffffffff5feaaafd541ea80f501e80f41a0d109", "15": "1fffffffffd55faaa0fd401ea00f501e80d41a0d109", "20": "1ffffffff5551fa2a0f5001ea00f501a80d01a0d109"}, "CALL": {"4": "1ffffffffffffffffffffffffeaff51f80f41a0d109", "6": "1fffffffffffffffeaffd41fa00f001800801008109", "8": "1fffffffffffdffea0fd001e800c001000801008109", "10": "1ffffffffff51fe800fc00180008001000801008109", "12": "1fffffffffd01fa000f000100008001000801008109", "15": "1fffffeffc001f8000c000100008001000801008108", "20": "1ffffa8ff0001a00008000100008001000801008108"}, "PUSH2": {"4": "1ffffffffffd5ffa00fc00180008001000801008109", "6": "1fffffffffd01f8000c000100008001000801008109", "8": "1ffffffffd001e00008000100008001000801008109", "10": "1fffffaff0001a00008000100008001000801008109", "12": "1ffffaaff0001800008000100008001000801008109", "15": "1fffea8fc0001000008000100008001000801008108", "20": "1ffe800f00001000008000100008001000801008108"}, "PUSH4": {"4": "1ffffffffff51fe000f000100008001000801008108", "6": "1fffffeffc001e00008000100008001000801008108", "8": "1ffffa8ff0001800008000100008001000801008108", "10": "1fffe80fc0001000008000100008001000801008100", "12": "1fffa00f40001000008000100008001000801008100", "15": "1ffe800c00001000008000100008001000801008100", "20": "1ff8000800001000008000100008001000801008000"}, "PUSH7": {"4": "1ffffffffff41fe000f000100008001000801008108", "6": "1fffffaffc001e00008000100008001000801008108", "8": "1fffea8ff0001800008000100008001000801008100", "10": "1fffa00fc0001000008000100008001000801008100", "12": "1ffe800f00001000008000100008001000801008100", "15": "1ffe000c00001000008000100008001000801008100", "20": "1ff0000800001000008000100008001000801000000"}};
 function handClass169(c1, c2){
   const R='23456789TJQKA';
   if(c1.r===c2.r) return R[c1.r-2]+R[c1.r-2];
@@ -3694,7 +3697,7 @@ function nlhTableDecide(h, idx, p, gd, limits){
     }
     const rfiHex = GTO_T.RFI[posName==='bb' ? 'sb' : posName];
     if(gtoIn(rfiHex, cls) && limits.canRaise){
-      return r<0.92 ? {type:'raise', amount: openAmt()} : {type:'call'};
+      return r<0.97 ? {type:'raise', amount: openAmt()} : {type:'call'};
     }
     return toCall===0 ? {type:'check'} : {type:'fold'};
   }
@@ -3702,11 +3705,19 @@ function nlhTableDecide(h, idx, p, gd, limits){
   const facing = h.highBet / bb;
   if(facing <= 5){
     if(gtoIn(GTO_T.TBV, cls)){
-      if(limits.canRaise && r<0.7) return {type:'raise', amount: reraiseAmt()};
+      if(limits.canRaise && r<0.72) return {type:'raise', amount: reraiseAmt()};
       return {type:'call'};
     }
-    if(gtoIn(GTO_T.TBB, cls) && limits.canRaise && r<0.45) return {type:'raise', amount: reraiseAmt()};
+    if(gtoIn(GTO_T.TBB, cls) && limits.canRaise && r<0.5) return {type:'raise', amount: reraiseAmt()};
     if(gtoIn(GTO_T.FLAT, cls) || gtoIn(GTO_T.TBB, cls)) return {type:'call'};
+    // 投機的コール: ポケットペア・スーテッド・ブロードウェイは小さめのオープンに広くコール
+    const isPair = cls.length===2;
+    const isSuited = cls.endsWith('s');
+    const R='23456789TJQKA';
+    const hiR = R.indexOf(cls[0])+2;
+    const loR = cls.length===2 ? hiR : R.indexOf(cls[1])+2;
+    const speculative = isPair || isSuited || (hiR>=11 && loR>=9); // ペア/スーテッド/ブロードウェイ
+    if(speculative && facing<=3.2 && toCall <= (p.stack+p.roundBet)*0.12 && r<0.55) return {type:'call'};
     return {type:'fold'};
   }
   // 3ベット以上に直面: QQ+/AKは4ベット/コール、それ以外はエクイティ判断へ
@@ -3782,17 +3793,18 @@ function strengthOf(p, gd){
 }
 function openThr(gd, pos){
   // ポジション別オープン閾値（種目別strength分布の校正値から: BTN広い・アーリー狭い）
+  // ※全体的に少し緩めに調整（CPUがタイト過ぎる問題の修正）
   if(gd.type==='community'){
-    if(gd.holeN>=4) return (gd.hi&&gd.lo) ? (0.405-0.125*pos) : (0.34-0.11*pos); // plo8 / plo
-    return 0.225-0.095*pos;
+    if(gd.holeN>=4) return (gd.hi&&gd.lo) ? (0.37-0.13*pos) : (0.30-0.12*pos); // plo8 / plo
+    return 0.20-0.10*pos; // NLH（通常はテーブル判断だが保険）
   }
   if(gd.type==='draw'){
-    if(gd.evalLo==='badugi') return 0.74-0.15*pos;
-    if(gd.evalLo==='a5lo') return 0.46-0.12*pos;
-    return 0.40-0.07*pos;
+    if(gd.evalLo==='badugi') return 0.63-0.17*pos; // バドゥーギ: UTG~0.63 / BTN~0.46
+    if(gd.evalLo==='a5lo') return 0.40-0.13*pos;
+    return 0.35-0.08*pos;
   }
-  if(gd.hi && gd.lo) return 0.39; // スタッドHi-Lo（studHilo3校正値・上位40%）
-  return (typeof G!=='undefined'&&G&&G.currentGame==='razz') ? 0.25 : 0.30; // スタッドは表札順でポジション固定でない
+  if(gd.hi && gd.lo) return 0.34; // スタッドHi-Lo
+  return (typeof G!=='undefined'&&G&&G.currentGame==='razz') ? 0.22 : 0.26; // スタッド
 }
 function preflopRangeDecide(h, idx, p, gd, limits, prof){
   prof = prof || {eqShift:0, bluffMul:1, raiseMul:1, err:0};
@@ -3866,13 +3878,22 @@ function preflopRangeDecide(h, idx, p, gd, limits, prof){
   // オープンに直面（リレイズ判断）
   const facing = h.highBet / bb;
   if(facing <= 5){
-    const thr3base = (gd.type==='community' && gd.holeN>=4) ? ((gd.hi&&gd.lo)?0.43:0.35) : openThr(gd, Math.min(1,pos)) + 0.045;
-    const thr3 = thr3base + thrAdj; // PLO/PLO8 3bet=上位13%（難易度で増減）
+    // 3bet閾値: コミュニティは上位レンジ、ドロー/スタッドは「完成手〜強ドロー」相当の高めの値
+    let thr3base;
+    if(gd.type==='community' && gd.holeN>=4) thr3base = (gd.hi&&gd.lo)?0.50:0.42; // PLO/PLO8
+    else if(gd.type==='draw'){
+      thr3base = (gd.evalLo==='badugi') ? 0.72 : (gd.evalLo==='a5lo') ? 0.62 : 0.60; // 完成手中心
+    } else if(gd.type==='stud'){
+      thr3base = (gd.hi&&gd.lo) ? 0.50 : 0.46;
+    } else {
+      thr3base = openThr(gd, Math.min(1,pos)) + 0.10;
+    }
+    const thr3 = thr3base + thrAdj; // 3bet閾値（難易度で増減）
     if(s >= thr3 && limits.canRaise && r < 0.55*RM) return {type:'raise', amount: reraiseAmt()};
-    if(s >= openThr(gd,pos) + thrAdj) return {type:'call'};
+    if(s >= openThr(gd,pos)*0.92 + thrAdj) return {type:'call'}; // コール幅を広げる
     if(limits.canRaise && pos>0.7 && r < 0.06*RM) return {type:'raise', amount: reraiseAmt()}; // 低頻度ブラフ3bet
-    if(s >= (openThr(gd,pos)+thrAdj)*0.8 && toCall<=bb*2.5 && r<0.35) return {type:'call'};
-    if(pErr>0 && toCall<=bb*2 && Math.random()<pErr*0.7) return {type:'call'}; // 弱いCPUの甘いコール
+    if(s >= (openThr(gd,pos)+thrAdj)*0.7 && toCall<=bb*3 && r<0.5) return {type:'call'}; // 好オッズの広いコール
+    if(pErr>0 && toCall<=bb*2.5 && Math.random()<pErr*0.8) return {type:'call'}; // 弱いCPUの甘いコール
     return {type:'fold'};
   }
   return null; // 大きなリレイズに直面: エクイティ計算（レンジフィルタ済み）で精密対応
@@ -3929,13 +3950,21 @@ function cpuDecide(idx){
 
   // CPUプロファイル（難易度＋個性）。未設定時は中立
   const prof = (G.cpuProfiles && G.cpuProfiles[p.id]) || {eqShift:0, bluffMul:1, raiseMul:1, err:0};
-  const eqShift = prof.eqShift || 0;     // +で要求エクイティ上昇=タイト
-  const BM = prof.bluffMul!=null ? prof.bluffMul : 1;
-  const RM = prof.raiseMul!=null ? prof.raiseMul : 1;
+  // ゲーム別の効き具合: セルフプレイ検証で、タイトアグレッシブ＝バリュー重視の優位が
+  // 大きい種目（NLH/PLO/2-7/razz/sd）と、ほぼ効かない種目（Hi-Lo分け合い系・A5・badugi）がある。
+  // 後者では攻撃寄りの倍率を中立側へ戻す（過剰なバリュー/ブラフが裏目に出るため）。
+  let aggrDamp = 1.0; // 1=プロファイルそのまま, 0=完全中立
+  if(gd.hi && gd.lo) aggrDamp = 0.35;            // Hi-Lo分け合い（plo8 / studHi-Lo）
+  else if(gd.evalLo==='a5lo') aggrDamp = 0.5;    // A-5（badugi含むローボール系の一部）
+  else if(gd.evalLo==='badugi') aggrDamp = 0.5;  // バドゥーギ
+  const eqShift = (prof.eqShift || 0) * (0.5 + 0.5*aggrDamp); // 絞りも少し緩める
+  const BM = 1 + ((prof.bluffMul!=null?prof.bluffMul:1) - 1) * aggrDamp; // ブラフ倍率を中立へ
+  const RM = 1 + ((prof.raiseMul!=null?prof.raiseMul:1) - 1) * aggrDamp; // バリューレイズ倍率を中立へ
 
   // 初回ベッティングラウンド: ポジション別レンジ戦略（オープン/3ベット/プッシュフォールド）
   if(isFirstRound(h, gd)){
-    const act = preflopRangeDecide(h, idx, p, gd, limits, prof);
+    const dampProf = { eqShift, bluffMul: BM, raiseMul: RM, err: prof.err };
+    const act = preflopRangeDecide(h, idx, p, gd, limits, dampProf);
     if(act) return act;
   }
 
