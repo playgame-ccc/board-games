@@ -210,23 +210,25 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .opp-cards.stacked .card { margin-left: -7px; box-shadow: -2px 2px 5px rgba(0,0,0,0.35); }
 .opp-cards.stacked .card:first-child { margin-left: 0; }
 .opp-panel {
-  background: rgba(26,32,48,0.94);
-  border: 1.5px solid transparent;
+  background: rgba(18,23,36,0.97);
+  border: 1.5px solid rgba(255,255,255,0.14);
   border-radius: 12px;
   padding: 6px 8px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.55);
   transition: border-color 0.2s;
+  position: relative;
+  z-index: 5;
 }
 .opp.active .opp-panel {
   border-color: var(--green);
-  box-shadow: 0 0 14px rgba(52,194,101,0.35), 0 4px 14px rgba(0,0,0,0.4);
+  box-shadow: 0 0 14px rgba(52,194,101,0.35), 0 4px 14px rgba(0,0,0,0.5);
 }
 .opp.folded { opacity: 0.55; }
 .opp-name {
   font-size: 0.74rem; font-weight: 700;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.opp-meta { display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px; }
+.opp-meta { display:flex; align-items:center; justify-content:center; gap:5px; margin-top:3px; }
 .pos-badge {
   display: inline-block;
   background: var(--green-dim);
@@ -238,9 +240,13 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .opp-stack {
   font-family: 'Share Tech Mono', monospace;
-  color: var(--muted); font-size: 0.74rem;
+  color: #eef2f8; font-size: 0.82rem; font-weight: 700;
+  background: rgba(0,0,0,0.35);
+  padding: 1px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
 }
-.opp.active .opp-stack { color: var(--text); }
+.opp.active .opp-stack { color: #fff; background: rgba(52,194,101,0.28); }
 /* タイマーバー風アクセント */
 .act-bar {
   height: 5px; border-radius: 3px;
@@ -473,9 +479,10 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   font-size: 1.05rem;
   min-width: 56px; text-align: right;
 }
-.quick-bets { display: flex; gap: 7px; margin-top: 10px; }
+.quick-bets { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 .quick-bets button {
-  flex: 1;
+  flex: 1 1 calc(33.333% - 5px);
+  min-width: 0;
   background: var(--surface2);
   border: none;
   color: var(--text);
@@ -4404,6 +4411,8 @@ function renderActionArea(){
         <div class="bet-controls" style="margin-top:0;">
           <div class="quick-bets">
             <button onclick="setBet('min')">ミニマム</button>
+            <button onclick="setBet('2x')">2倍</button>
+            <button onclick="setBet('3x')">3倍</button>
             <button onclick="setBet('third')">1/3</button>
             <button onclick="setBet('half')">1/2</button>
             <button onclick="setBet('pot')">ポット</button>
@@ -4450,6 +4459,8 @@ function setBet(kind){
   const min = parseInt(slider.min), max = parseInt(slider.max);
   let val;
   if(kind==='min') val = min;
+  else if(kind==='2x') val = h.highBet>0 ? h.highBet*2 : (h.bbAmount||20)*2;   // ベットの2倍へレイズ
+  else if(kind==='3x') val = h.highBet>0 ? h.highBet*3 : (h.bbAmount||20)*3;   // ベットの3倍へレイズ
   else if(kind==='third') val = h.highBet + Math.floor(pot/3);
   else if(kind==='half') val = h.highBet + Math.floor(pot*0.5);
   else if(kind==='pot') val = potLimitMaxRaiseTo(pot, toCall, me.roundBet);
@@ -5083,6 +5094,8 @@ function renderGuestActionArea(){
       html += `<div class="bet-controls" style="margin-top:0;">
         <div class="quick-bets">
           <button onclick="setBetGuest('min')">ミニマム</button>
+          <button onclick="setBetGuest('2x')">2倍</button>
+          <button onclick="setBetGuest('3x')">3倍</button>
           <button onclick="setBetGuest('third')">1/3</button>
           <button onclick="setBetGuest('half')">1/2</button>
           <button onclick="setBetGuest('pot')">ポット</button>
@@ -5115,6 +5128,8 @@ function setBetGuest(kind){
   const slider=g('bet-slider'); const min=parseInt(slider.min),max=parseInt(slider.max);
   let val;
   if(kind==='min')val=min;
+  else if(kind==='2x')val=pub.highBet>0?pub.highBet*2:(pub.bbAmount||20)*2;
+  else if(kind==='3x')val=pub.highBet>0?pub.highBet*3:(pub.bbAmount||20)*3;
   else if(kind==='third')val=pub.highBet+Math.floor(pot/3);
   else if(kind==='half')val=pub.highBet+Math.floor(pot*0.5);
   else if(kind==='pot')val=potLimitMaxRaiseTo(pot,toCall,me.roundBet);
