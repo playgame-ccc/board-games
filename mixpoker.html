@@ -204,11 +204,27 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .opp.compact .opp-name { font-size: 0.68rem; }
 .opp.compact .opp-stack { font-size: 0.68rem; }
 .opp.compact .opp-panel { padding: 4px 6px; }
-.opp-cards { display: flex; gap: 2px; justify-content: center; margin-bottom: 3px; }
+/* 7-8人の混雑時はさらに小さく（重なり軽減） */
+.opp.xcompact { width: 82px; }
+.opp.xcompact .opp-name { font-size: 0.62rem; }
+.opp.xcompact .opp-stack { font-size: 0.64rem; padding: 1px 5px; }
+.opp.xcompact .opp-panel { padding: 3px 5px; }
+.opp.xcompact .pos-badge { font-size: 0.52rem; padding: 1px 4px; }
+/* 7人相手(8人卓)はもっと小さく */
+.opp.xxcompact { width: 70px; }
+.opp.xxcompact .opp-name { font-size: 0.56rem; }
+.opp.xxcompact .opp-stack { font-size: 0.58rem; padding: 1px 4px; }
+.opp.xxcompact .opp-panel { padding: 2px 4px; border-radius: 9px; }
+.opp.xxcompact .pos-badge { font-size: 0.48rem; padding: 0px 3px; }
+.opp-cards { display: flex; gap: 2px; justify-content: center; margin-bottom: 3px; position: relative; z-index: 7; }
 /* 5枚以上は重ねてパネル幅に収める */
 .opp-cards.stacked { gap: 0; }
 .opp-cards.stacked .card { margin-left: -7px; box-shadow: -2px 2px 5px rgba(0,0,0,0.35); }
 .opp-cards.stacked .card:first-child { margin-left: 0; }
+/* カード枚数が多いほど強く重ねて、パネル幅からはみ出さないようにする */
+.opp-cards.stack5 .card { margin-left: -9px; }
+.opp-cards.stack6 .card { margin-left: -11px; }
+.opp-cards.stack7 .card { margin-left: -12px; }
 .opp-panel {
   background: rgba(18,23,36,0.97);
   border: 1.5px solid rgba(255,255,255,0.14);
@@ -274,6 +290,15 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   padding: 0 4px; margin-top: 2px;
   white-space: nowrap;
   display: inline-block;
+}
+/* WIN THE SHOW: 全員フォールド勝者がカードを公開していることを示すバッジ */
+.show-pill {
+  font-size: 0.56rem; font-weight: 800; color: #fff;
+  background: linear-gradient(180deg, #d4a92a, #b8860b);
+  border-radius: 5px; padding: 1px 6px; margin-top: 2px;
+  display: inline-block; white-space: nowrap;
+  letter-spacing: 0.03em;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 /* ベットピル（グレー） */
 .opp-bet {
@@ -394,9 +419,9 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .card.sm { width: 40px; height: 56px; border-radius: 7px; }
 .card.sm .rank { font-size: 1.25rem; }
 .card.sm .suit { font-size: 0.78rem; }
-.card.xs { width: 21px; height: 29px; border-radius: 4px; gap: 0; }
-.card.xs .rank { font-size: 0.66rem; }
-.card.xs .suit { font-size: 0.5rem; }
+.card.xs { width: 19px; height: 27px; border-radius: 4px; gap: 0; }
+.card.xs .rank { font-size: 0.62rem; }
+.card.xs .suit { font-size: 0.48rem; }
 .card.suit-red   { background: linear-gradient(180deg, #e84a5a, var(--card-red)); }
 .card.suit-black { background: linear-gradient(180deg, #454e63, var(--card-black)); }
 .card.suit-blue  { background: linear-gradient(180deg, #3d7ce4, var(--card-blue)); }
@@ -787,6 +812,15 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
     <button class="btn btn-gold" onclick="startSolo()">▶ ひとりで遊ぶ（CPU対戦）</button>
 
     <div class="divider"></div>
+
+    <div class="panel">
+      <h3 class="center">マルチプレイ設定（ホスト）</h3>
+      <div class="count-selector" id="wts-select" style="gap:6px;">
+        <button class="count-btn" data-wts="off" onclick="setWinTheShow(false)" style="width:auto;padding:0 16px;">OFF</button>
+        <button class="count-btn selected" data-wts="on" onclick="setWinTheShow(true)" style="width:auto;padding:0 16px;">WIN THE SHOW</button>
+      </div>
+      <div class="center muted small" id="wts-label" style="margin-top:8px;">全員フォールドで勝った人のカードを自動公開します</div>
+    </div>
 
     <button class="btn btn-felt" onclick="ploCreateRoom()">🏠 部屋を作る（ホスト・マルチ）</button>
     <div class="row" style="display:flex; gap:8px; align-items:center; margin-top:8px;">
@@ -1354,6 +1388,8 @@ let cpuLevel = 'normal';   // 'easy' | 'normal' | 'hard'
 // 種目ローテーション（ロビー設定）
 let rotationMode = 'manual'; // 'manual' | 'horse' | '8game' | 'all'
 let rotationEvery = 3;       // 何ハンドごとに切替（ローテーション時）
+// WIN THE SHOW（ホスト設定）: 全員フォールド勝ちで勝者のカードを自動公開するか
+let winTheShow = true;       // デフォルトON
 // ハンド履歴・セッション収支（メモリ＋localStorage）
 let sessionStats = null;     // 現在セッションの集計（startSolo/ploHostStartで初期化）
 let handHistory = [];        // 直近ハンドの詳細（リプレイ用、最大200件）
@@ -1509,6 +1545,14 @@ function setRotationMode(m){
     const first = ROTATION_SETS[m][0];
     setInitGame(first);
   }
+}
+function setWinTheShow(on){
+  winTheShow = !!on;
+  document.querySelectorAll('#wts-select .count-btn').forEach(b=>b.classList.toggle('selected', (b.dataset.wts==='on')===winTheShow));
+  const lbl = g('wts-label');
+  if(lbl) lbl.textContent = winTheShow
+    ? '全員フォールドで勝った人のカードを自動公開します'
+    : '全員フォールド勝ちのカードは公開しません（通常ルール）';
 }
 function setRotationEvery(n){
   rotationEvery = n;
@@ -2965,15 +3009,16 @@ function awardToLastPlayer(){
     });
   }
   G.log.unshift(`🏆 ${winner.name} が ${h.pot} を獲得（全員フォールド）`);
-  // ソロ: 全員の役名を計算（ボードが十分にある＝役を作れる場合のみ）。
-  // プリフロップ等で降りて決着した場合は役を作れないため役名は出さない。
-  if(!isMulti){
+  // 役名を計算（ボードが十分にある＝役を作れる場合のみ）。
+  // ソロ: 全員分。マルチ(WIN THE SHOW): 公開する勝者の分のみ。
+  {
     const gd = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
     const canEval = (gd.type==='community' && h.board.length>=5) ||
                     (gd.type!=='community'); // ドロー/スタッドは手札のみで評価可
     if(canEval){
       h.handNames = h.handNames || {};
-      h.players.forEach(p=>{
+      const targets = isMulti ? [winner] : h.players;
+      targets.forEach(p=>{
         if(!p.hole || p.hole.length===0) return;
         try {
           const hi = gd.hi ? showdownEvalHi(p,h,gd) : null;
@@ -4167,16 +4212,17 @@ function cardHTML(card, opts={}){
 function oppPositions(count){
   if(count<=0) return [];
   // 中央のボード/ポット帯（おおよそ x:28-72, y:36-64）を避けて配置する。
-  // 少人数では上寄り・左右端の上部に置き、ボードカードと被らないようにする。
+  // コンパクトboxは画面幅の約24%あるため、隣接boxは「横に十分離す」か「縦をずらす」必要がある。
+  // 5人以上は端のboxを下げ（y大）、中央を上げて（y小）、縦のずれで重なりを防ぐ。
   const presets = {
     1: [{x:50,y:15}],
     2: [{x:20,y:20},{x:80,y:20}],
     3: [{x:18,y:20},{x:50,y:14},{x:82,y:20}],
-    4: [{x:14,y:30},{x:30,y:14},{x:70,y:14},{x:86,y:30}],
-    5: [{x:13,y:34},{x:24,y:15},{x:50,y:13},{x:76,y:15},{x:87,y:34}],
-    6: [{x:12,y:40},{x:18,y:18},{x:38,y:13},{x:62,y:13},{x:82,y:18},{x:88,y:40}],
-    7: [{x:12,y:44},{x:14,y:22},{x:30,y:14},{x:50,y:12},{x:70,y:14},{x:86,y:22},{x:88,y:44}],
-    8: [{x:11,y:46},{x:12,y:26},{x:22,y:15},{x:40,y:12},{x:60,y:12},{x:78,y:15},{x:88,y:26},{x:89,y:46}],
+    4: [{x:14,y:30},{x:32,y:14},{x:68,y:14},{x:86,y:30}],
+    5: [{x:12,y:42},{x:27,y:17},{x:50,y:13},{x:73,y:17},{x:88,y:42}],
+    6: [{x:11,y:46},{x:20,y:20},{x:40,y:13},{x:60,y:13},{x:80,y:20},{x:89,y:46}],
+    7: [{x:9,y:50},{x:24,y:28},{x:32,y:13},{x:50,y:10},{x:68,y:13},{x:76,y:28},{x:91,y:50}],
+    8: [{x:9,y:54},{x:21,y:33},{x:28,y:16},{x:43,y:11},{x:57,y:11},{x:72,y:16},{x:79,y:33},{x:91,y:54}],
   };
   return presets[count] || presets[8].slice(0,count);
 }
@@ -4246,7 +4292,8 @@ function render(){
     const isDealer = (pi===G.buttonIdx) && (MIX_GAMES[G.currentGame]||{}).type!=='stud';
     const pos = positions[slot];
     let cls = 'opp';
-    if(oppOrder.length >= 5) cls += ' compact';
+    if(oppOrder.length >= 7) cls += ' compact xcompact xxcompact';
+    else if(oppOrder.length >= 5) cls += ' compact';
     if(isActive) cls += ' active';
     if(p.folded) cls += ' folded';
 
@@ -4256,20 +4303,32 @@ function render(){
     let cardsH = '';
     const isSolo = !isMulti;
     const humanFoldedSolo = isSolo && me && me.folded;
+    // 全員フォールド勝ち(uncontested)かどうか
+    const isUncontested = isMulti && h.results && h.results.length && h.results[0].uncontested;
     const showCards = isSolo
       ? (h.phase==='showdown' || humanFoldedSolo)   // ソロ: ショウダウンで全員公開
-      : (h.phase==='showdown' && !p.folded);        // マルチ: 降りた人は見せない
+      : isUncontested
+        ? (winTheShow && !p.folded)                 // マルチ全員フォールド: WIN THE SHOWがONの時だけ勝者公開
+        : (h.phase==='showdown' && !p.folded);      // マルチ通常ショウダウン: 降りていない人を公開
     const isStud = (MIX_GAMES[G.currentGame]||{}).type === 'stud';
     if(p.hole.length){
-      p.hole.forEach((c,ci)=>{
-        if(showCards){
-          cardsH += cardHTML(c,{xs:true, muck:p.folded}); // 降りた相手は暗めに表示
-        } else if(isStud && p.faceUp && p.faceUp[ci]){
-          cardsH += cardHTML(c,{xs:true}); // 表札
-        } else {
-          cardsH += `<div class="card xs back"></div>`; // 伏札
-        }
-      });
+      const studHidden = isStud && !showCards && p.faceUp;
+      if(studHidden && pos.x < 42){
+        // 左側の席: 表札(ドアカード)を左端に置き、中央側の隣人パネルに隠れないようにする
+        const ups=[], downs=[];
+        p.hole.forEach((c,ci)=>{ if(p.faceUp[ci]) ups.push(cardHTML(c,{xs:true})); else downs.push('<div class="card xs back"></div>'); });
+        cardsH = ups.join('') + downs.join('');
+      } else {
+        p.hole.forEach((c,ci)=>{
+          if(showCards){
+            cardsH += cardHTML(c,{xs:true, muck:p.folded}); // 降りた相手は暗めに表示
+          } else if(isStud && p.faceUp && p.faceUp[ci]){
+            cardsH += cardHTML(c,{xs:true}); // 表札
+          } else {
+            cardsH += `<div class="card xs back"></div>`; // 伏札
+          }
+        });
+      }
     }
 
     // 役名（ソロは降りた相手の役名も表示。マルチは降りていない相手のみ）
@@ -4282,6 +4341,9 @@ function render(){
     }
 
     const allinBadge = p.allIn ? '<span class="opp-badge-allin">ALLIN</span>' : '';
+    const isUncontestedWinner = isMulti && winTheShow && h.results && h.results.length && h.results[0].uncontested
+      && (h.results.flatMap(r=>r.winnerIds||[]).includes(p.id));
+    const showPill = isUncontestedWinner ? `<div class="show-pill">🏆 WIN THE SHOW</div>` : '';
     const pb = posBadge(h, pi);
     const posH = pb ? `<span class="pos-badge">${pb}</span>` : '';
     const foldPill = p.folded ? `<div class="fold-pill">Fold</div>` : '';
@@ -4299,14 +4361,15 @@ function render(){
     }
 
     oppH += `
-      <div class="${cls}" style="left:${pos.x}%; top:${pos.y}%;">
-        <div class="opp-cards${p.hole.length>=5?' stacked':''}">${cardsH}</div>
+      <div class="${cls}" style="left:${pos.x}%; top:${pos.y}%; z-index:${pos.y < 18 ? (18 + Math.round(8 - Math.abs(pos.x-50)/7)) : (2 + Math.round(pos.y))};">
+        <div class="opp-cards${p.hole.length>=4?' stacked':''}${p.hole.length>=7?' stack7':p.hole.length===6?' stack6':p.hole.length===5?' stack5':''}">${cardsH}</div>
         <div class="opp-panel" style="position:relative;">
           ${isDealer?'<span class="opp-dealer">D</span>':''}
           <div class="opp-name">${p.name} ${allinBadge}</div>
           <div class="opp-meta">${posH}<span class="opp-stack">${p.stack}</span></div>
           ${actBar}
         </div>
+        ${showPill}
         ${handName}
         ${foldPill}
         ${drawPill}
@@ -4767,6 +4830,7 @@ function ploPub_build(){
   return {
     phase: h.phase, board: h.board, pot: h.pot, roundBetTotal: roundBetTotal(),
     highBet: h.highBet,
+    handNames: h.handNames || null, // 役名（WIN THE SHOW / ショウダウンで公開）
     toActId: (h.toActIdx>=0 && h.players[h.toActIdx]) ? h.players[h.toActIdx].id : null,
     buttonId: G.ids[G.buttonIdx], bbAmount: h.bbAmount,
     currentGame: G.currentGame,
@@ -4787,15 +4851,29 @@ function ploPub_build(){
     players: (function(){
       const meP = h.players.find(x=>x.id===myId);
       const humanFolded = !isMulti && meP && meP.folded; // ソロで人間がフォールド済み→CPUの手を公開
+      // 全員フォールド勝ち(uncontested)か通常ショウダウンかを区別する
+      const isUncontested = h.results && h.results.length && h.results[0].uncontested;
+      // WIN THE SHOW(ホスト設定がONの時のみ): 全員フォールドで勝った人のカードを公開する
+      const uncontestedWinnerIds = (winTheShow && isUncontested)
+        ? new Set(h.results.flatMap(r=>r.winnerIds||[])) : null;
       return h.players.map((p,pi)=>{
       const isStud = (MIX_GAMES[G.currentGame]||{}).type === 'stud';
       // スタッド: 表札を公開（自分の手札は your_hand で別途送る）
       const upCards = isStud && p.faceUp ? p.hole.map((c,i)=> p.faceUp[i] ? c : null) : null;
+      const revealWin = uncontestedWinnerIds && uncontestedWinnerIds.has(p.id); // この人は勝者として公開
+      // カード公開条件:
+      //  - 全員フォールド勝ち → WIN THE SHOWがONの勝者のみ(revealWin)
+      //  - 通常のショウダウン → 降りていない人を公開
+      //  - ソロで人間が降りた → 相手を公開
+      const showHole = isUncontested
+        ? revealWin
+        : ((h.phase==='showdown' && !p.folded) || (humanFolded && p.id!==myId));
       return {
         id:p.id, name:p.name, stack:p.stack, roundBet:p.roundBet, totalBet:p.totalBet||0, aggCnt:p.aggCnt||0, folded:p.folded, allIn:p.allIn, lastAction:p.lastAction,
-        hole: ((h.phase==='showdown' && !p.folded) || (humanFolded && p.id!==myId)) ? p.hole : null,
+        hole: showHole ? p.hole : null,
         holeCount: p.hole.length,
         upCards, // スタッドの表札（nullの要素は伏札）
+        revealWin, // WIN THE SHOW: 全員フォールド勝者のカードを公開中
         pos: posBadge(h, pi), // ポジションバッジ
         lastDraw: p.lastDraw, // 直近ドローの交換枚数
         startStack: p.startStack, // ハンド開始時スタック（収支用）
@@ -4870,11 +4948,18 @@ function renderGuest(){
     const isActive=(pub.toActId===p.id && pub.phase!=='showdown');
     const isDealer=(pub.buttonId===p.id) && (MIX_GAMES[pub.currentGame]||{}).type!=='stud';
     const pos=positions[slot];
-    let cls='opp'; if(oppOrder.length>=5)cls+=' compact'; if(isActive)cls+=' active'; if(p.folded)cls+=' folded';
+    let cls='opp'; if(oppOrder.length>=7)cls+=' compact xcompact xxcompact'; else if(oppOrder.length>=5)cls+=' compact'; if(isActive)cls+=' active'; if(p.folded)cls+=' folded';
     let cardsH='';
     if(p.hole){ p.hole.forEach(c=> cardsH+=cardHTML(c,{xs:true,muck:p.folded})); }
     else if(p.upCards){ // スタッド: 表札は見える、伏札は裏
-      p.upCards.forEach(c=>{ cardsH += c ? cardHTML(c,{xs:true}) : `<div class="card xs back"></div>`; });
+      if(pos.x < 42){
+        // 左側の席: 表札を左端に置き中央側の隣人に隠れないようにする
+        const ups=[], downs=[];
+        p.upCards.forEach(c=>{ if(c) ups.push(cardHTML(c,{xs:true})); else downs.push('<div class="card xs back"></div>'); });
+        cardsH = ups.join('') + downs.join('');
+      } else {
+        p.upCards.forEach(c=>{ cardsH += c ? cardHTML(c,{xs:true}) : `<div class="card xs back"></div>`; });
+      }
     }
     else { for(let i=0;i<(p.holeCount||0);i++) cardsH+=`<div class="card xs back"></div>`; }
     let handName='';
@@ -4892,14 +4977,16 @@ function renderGuest(){
       const pc = d>0?'pnl-plus':(d<0?'pnl-minus':'pnl-zero');
       pnlPill = `<div class="pnl-pill ${pc}">${d>0?'+'+d:(d<0?d:'±0')}</div>`;
     }
-    oppH += `<div class="${cls}" style="left:${pos.x}%; top:${pos.y}%;">
-      <div class="opp-cards${((p.hole&&p.hole.length)||(p.upCards&&p.upCards.length)||p.holeCount||0)>=5?' stacked':''}">${cardsH}</div>
+    const showPill = p.revealWin ? `<div class="show-pill">🏆 WIN THE SHOW</div>` : '';
+    oppH += `<div class="${cls}" style="left:${pos.x}%; top:${pos.y}%; z-index:${pos.y < 18 ? (18 + Math.round(8 - Math.abs(pos.x-50)/7)) : (2 + Math.round(pos.y))};">
+      <div class="opp-cards${(()=>{const n=((p.hole&&p.hole.length)||(p.upCards&&p.upCards.length)||p.holeCount||0);return (n>=4?' stacked':'')+(n>=7?' stack7':n===6?' stack6':n===5?' stack5':'');})()}">${cardsH}</div>
       <div class="opp-panel" style="position:relative;">
         ${isDealer?'<span class="opp-dealer">D</span>':''}
         <div class="opp-name">${p.name} ${allinB}</div>
         <div class="opp-meta">${posH}<span class="opp-stack">${p.stack}</span></div>
         ${actBar}
       </div>
+      ${showPill}
       ${handName}
       ${foldPill}
       ${drawPill}
