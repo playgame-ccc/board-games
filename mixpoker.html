@@ -1540,15 +1540,18 @@ function buildCpuProfile(level){
     hard:   {eq:+0.02, bluff:0.85, raise:1.25, err:0.0},  // 検証で最強だったTAG（搾取されにくく価値を取る）
   }[level] || {eq:+0.015,bluff:0.92,raise:1.15,err:0.05};
   // hardは個性をかなり弱め（全員最強形に寄せる）、easy/normalは個性を残す
+  // ※最強を求めるhardは個性ランダム性を排除し、検証済みの最適プロファイルで統一する
   const s = styles[Math.floor(Math.random()*styles.length)];
-  const styleW = level==='hard' ? 0.25 : level==='normal' ? 0.6 : 1.0;
-  return {
-    style: s.tag,
+  const styleW = level==='hard' ? 0.0 : level==='normal' ? 0.6 : 1.0;
+  const prof = {
+    style: level==='hard' ? 'TAG' : s.tag,
     eqShift: base.eq + s.eq*styleW,
     bluffMul: base.bluff * (1 + (s.bluff-1)*styleW),
     raiseMul: base.raise * (1 + (s.raise-1)*styleW),
     err: base.err,
+    tough: level==='hard', // hard: 対人で搾取されにくい厳しめ調整を有効化
   };
+  return prof;
 }
 // G.ids 全員ぶんのプロファイルを生成（人間はnull）
 // 注: マルチプレイは全員が人間プレイヤーのため、実際にプロファイルが付くのはソロのCPUのみ
@@ -2519,9 +2522,18 @@ function drawStrength(hole, evalLo){
     const b = badugiScore(hole);
     if(!b) return 0;
     const n = b.count;
-    const vals = b.cards.map(cd=> cd.r===14?1:cd.r);
-    const hi = Math.max(...vals);
-    return Math.min(1, (n-1)/3 * 0.75 + (14-hi)/13 * 0.25);
+    const vals = b.cards.map(cd=> cd.r===14?1:cd.r).sort((a,b)=>a-b);
+    const hi = vals[vals.length-1];
+    // badugi定説: ①枚数(4>3>2>1)が最優先、②同じ枚数なら「最高札が低い」、
+    // ③さらに side card も低い「スムーズ」な手が上（A-2-3-4 > A-2-3-8、3枚なら A-2-3 > 7-8-9）。
+    const countScore = (n-1)/3;                 // 0,0.33,0.67,1.0
+    const hiScore = (14 - hi)/13;               // 最高札の低さ
+    // スムーズさ: 全札の低さの平均（A=1で最良）
+    const smooth = vals.reduce((s,v)=>s+(14-v),0) / (vals.length*13);
+    let s = countScore*0.62 + hiScore*0.24 + smooth*0.14;
+    // 3枚以下で高札ばかり（最高札9以上）の弱いドローは追加減点（8-badugi以下を狙うのは悪手）
+    if(n<4 && hi>=9) s -= (hi-8)*0.025;
+    return Math.max(0, Math.min(1, s));
   }
   const isA5 = (evalLo==='a5lo');
   const val = cd => isA5 ? (cd.r===14?1:cd.r) : cd.r;
@@ -2585,12 +2597,26 @@ function studRangeFloor(h, opp, isRazz){
 function studStart3(cards, isRazz){
   // スタッドの3枚スターティング強度（伏2+表1相当）
   if(isRazz){
-    const vals = cards.map(cd=> cd.r===14?1:cd.r);
+    // ラズ定説: ①8以下3枚が基準（9以上は大きく減点）、②3枚とも低いほど良い、
+    // ③ラズの手は「最高札」でランクされるので最高札が低いことを重視、④ペアは減点。
+    const vals = cards.map(cd=> cd.r===14?1:cd.r).sort((a,b)=>a-b);
     const uniq = new Set(vals);
-    let s = 0;
-    vals.forEach(v=>{ s += (9 - Math.min(9, v))/9; });
-    s = s/3 * 0.85;
-    s -= (cards.length - uniq.size) * 0.3; // ペアは大減点
+    const hi = vals[vals.length-1];
+    const mid = vals[1];
+    // 最高札ベースの基礎点（A-5=最強、8で実用下限、9+で急落）
+    let s;
+    if(hi <= 5) s = 0.92;        // 3枚 A-5（ホイール級ドロー）
+    else if(hi === 6) s = 0.82;
+    else if(hi === 7) s = 0.72;
+    else if(hi === 8) s = 0.58;  // 8ロー: 実用下限
+    else if(hi === 9) s = 0.33;  // 9含む: 大きく価値減（基本降り寄り）
+    else if(hi === 10) s = 0.20;
+    else s = 0.08;               // J以上を含む: ほぼ降り
+    // 中札・下札も低いとボーナス（例: 8ハイでも A-3-8 は 6-7-8 より良い）
+    s += (8 - Math.min(8, mid)) / 8 * 0.06;
+    s += (8 - Math.min(8, vals[0])) / 8 * 0.04;
+    // ペア（ラズでは役がついて最悪）大減点
+    s -= (cards.length - uniq.size) * 0.32;
     return Math.max(0, Math.min(1, s));
   }
   // stud/studhi: ペア・トリップス・スーテッド連結・ハイカード
@@ -3319,21 +3345,27 @@ function stopTourneyBar(){
 // プリフロップのハンド強度を概算（0-1）
 function ploStartStrength(hole){
   // PLO系4枚スターティング: ペアランク・ダブルスーテッド・ラップ・ダングラーを理論に沿って評価
+  // 定説の要点: ①4枚が連動する手が強い ②ダブルスーテッド>シングル>レインボー
+  // ③ナッツ性（A入りフラッシュ・高位ストレート）が重要、低rundown(6543)は非ナッツで価値減
+  // ④高ペア＋コネクト(AAJT)は高ペア＋2ペア(AAQQ)より straight 補完で僅かに上
   const ranks = hole.map(c=>c.r).sort((a,b)=>b-a);
   const counts={}; ranks.forEach(r=>counts[r]=(counts[r]||0)+1);
   let score=0;
   let pairScore=0;
+  let pairRanks=[];
   for(const r in counts){
-    if(counts[r]===2) pairScore += 0.10 + (r/14)*0.14;   // AA=0.24, 22=0.11
+    if(counts[r]===2){ pairScore += 0.10 + (r/14)*0.14; pairRanks.push(+r); }  // AA=0.24, 22=0.11
     if(counts[r]>=3) pairScore += 0.06;                   // トリップスはアウツが死ぬので僅か
   }
   score += Math.min(0.40, pairScore);
   const bySuit={};
   hole.forEach(cd=>{ (bySuit[cd.s]=bySuit[cd.s]||[]).push(cd.r); });
+  let nutFlush=0;
   for(const s in bySuit){
     if(bySuit[s].length>=2){
       const top=Math.max(...bySuit[s]);
       score += 0.05 + (top===14?0.06: top>=12?0.03:0.01); // Aハイスートが価値大
+      if(top===14) nutFlush += 1;                          // ナッツフラッシュ路線
       if(bySuit[s].length>=3) score -= 0.03;              // 3枚同スートは1枚無駄
     }
   }
@@ -3348,6 +3380,25 @@ function ploStartStrength(hole){
   if(uniq.length===4 && (uniq[0]-uniq[3])<=4) conn += 0.07; // 完全ラップ
   conn += ranks.filter(r=>r>=10).length*0.025;              // ブロードウェイ密集
   score += conn;
+  // 高ペア＋コネクトしたサイドカード（例 AAJT）への加点: ストレート補完で 2ペア型(AAQQ)より価値
+  if(pairRanks.length===1){
+    const pr = pairRanks[0];
+    const others = uniq.filter(r=>r!==pr).sort((a,b)=>b-a);
+    if(others.length>=2){
+      const g = others[0]-others[1];
+      if(g<=2 && others[0]>=10) score += 0.09;     // 高位コネクト側カード（JT等）
+      else if(g<=2) score += 0.05;                 // 中位コネクト
+    }
+  }
+  // ナッツ性: 低rundown（最高札が低くA・ブロードウェイ無し）は非ナッツになりやすく減点
+  const hiCard = ranks[0];
+  const hasBroadwayOrAce = ranks.some(r=>r>=11);
+  if(!hasBroadwayOrAce && pairRanks.length===0){
+    // 例: 6543, 7654 — つながってはいるがナッツになりにくい
+    score -= (11 - hiCard) * 0.018;
+  }
+  // ナッツフラッシュ路線（A入り同色）はボーナス
+  score += nutFlush * 0.03;
   if(uniq.length>=3){ // ダングラー（孤立低札）減点
     const lo = uniq[uniq.length-1];
     if(uniq[uniq.length-2]-lo>=5 && lo<=8 && counts[lo]===1) score -= 0.05;
@@ -3862,16 +3913,21 @@ function preflopRangeDecide(h, idx, p, gd, limits, prof){
   }
   if(unopened){
     const thr = openThr(gd, pos) + thrAdj;
+    // スタッド系の定説: 3rdストリートで参加する価値のある手は「コンプリート（フルベットへ上げる）」で入る。
+    // ブリングインへのフラットコールは原則しない（安く相手を入れてしまい、良い手の価値を取れない）。
+    const isStud = (gd.type==='stud');
     if(toCall===0){
-      if(s >= thr && limits.canRaise && r<Math.min(0.95,0.8*RM)) return {type:'raise', amount: openAmt()};
+      if(s >= thr && limits.canRaise && r<Math.min(0.97,0.85*RM)) return {type:'raise', amount: openAmt()};
       return {type:'check'};
     }
-    // リンプ排除: 参加するならレイズ（低頻度でコールをミックス）
+    // 参加するならレイズ（コンプリート）。スタッド系はコール混在をほぼ排除。
     if(s >= thr && limits.canRaise){
-      return r<Math.min(0.95,0.85*RM) ? {type:'raise', amount: openAmt()} : {type:'call'};
+      const callMix = isStud ? 0.995 : 0.85; // スタッド系はほぼ必ずコンプリート
+      return r<Math.min(0.995,callMix*RM) ? {type:'raise', amount: openAmt()} : {type:'call'};
     }
-    if((idx===h.sbIdx || idx===h.bbIdx) && toCall <= bb && s >= thr*0.7 && r<0.4) return {type:'call'}; // ブラインドの好オッズ防御
-    // 弱いCPU: フォールドすべき手をたまにコール
+    // ブラインドの好オッズ防御（ホールデム/ドロー等のブラインド構造のみ。スタッドはブラインド無し）
+    if(!isStud && (idx===h.sbIdx || idx===h.bbIdx) && toCall <= bb && s >= thr*0.7 && r<0.4) return {type:'call'};
+    // 弱いCPU: フォールドすべき手をたまにコール（スタッドはコンプリートで参加が定説なので弱CPUのみ）
     if(pErr>0 && toCall<=bb*1.5 && Math.random()<pErr) return {type:'call'};
     return {type:'fold'};
   }
@@ -3954,12 +4010,15 @@ function cpuDecide(idx){
   // 大きい種目（NLH/PLO/2-7/razz/sd）と、ほぼ効かない種目（Hi-Lo分け合い系・A5・badugi）がある。
   // 後者では攻撃寄りの倍率を中立側へ戻す（過剰なバリュー/ブラフが裏目に出るため）。
   let aggrDamp = 1.0; // 1=プロファイルそのまま, 0=完全中立
-  if(gd.hi && gd.lo) aggrDamp = 0.35;            // Hi-Lo分け合い（plo8 / studHi-Lo）
-  else if(gd.evalLo==='a5lo') aggrDamp = 0.5;    // A-5（badugi含むローボール系の一部）
+  if(G.currentGame==='studhi') aggrDamp = 0.1; // スタッドHi-Lo: 検証で攻撃寄りが裏目→ほぼ中立に
+  else if(gd.hi && gd.lo) aggrDamp = 0.35;       // その他Hi-Lo分け合い（plo8: 検証で攻撃が有効）
+  else if(gd.evalLo==='a5lo') aggrDamp = 0.5;    // A-5
   else if(gd.evalLo==='badugi') aggrDamp = 0.5;  // バドゥーギ
   const eqShift = (prof.eqShift || 0) * (0.5 + 0.5*aggrDamp); // 絞りも少し緩める
   const BM = 1 + ((prof.bluffMul!=null?prof.bluffMul:1) - 1) * aggrDamp; // ブラフ倍率を中立へ
   const RM = 1 + ((prof.raiseMul!=null?prof.raiseMul:1) - 1) * aggrDamp; // バリューレイズ倍率を中立へ
+  const tough = !!prof.tough && aggrDamp > 0.6; // hard: 対人で厳しめ調整（Hi-Lo等では無効）
+  const valueBoost = tough ? 1.18 : 1.0;        // 強い手のバリューベット頻度UP
 
   // 初回ベッティングラウンド: ポジション別レンジ戦略（オープン/3ベット/プッシュフォールド）
   if(isFirstRound(h, gd)){
@@ -4007,12 +4066,19 @@ function cpuDecide(idx){
 
   // ===== チェック可能 =====
   if(toCall === 0){
+    // スタッド系の「オートベット」セオリー: 4thストリート以降、ボードが強く（最初に動く＝最強ボード）
+    // 強い完成手があるなら自動的にベットして、ドローにフリーカードを与えず価値を取る・ポットを作る。
+    // （3rd以降のストリートで適用。eqが十分高い＝バリュー確実な局面）
+    if(gd.type==='stud' && h.studStreet>=4 && eq > 0.62 - hlThr + eqShift){
+      if(canRaiseNow() && rnd < 0.94*RM) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
+      return {type:'check'};
+    }
     if(eq > 0.70 - flAdj - hlThr + eqShift){
-      if(canRaiseNow() && rnd < (0.85 + texFreq*0.5)*hlRaiseMul*RM) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
+      if(canRaiseNow() && rnd < (0.85 + texFreq*0.5)*hlRaiseMul*RM*valueBoost) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
       return {type:'check'}; // たまにトラップ
     }
     if(eq > 0.52 - flAdj - hlThr + eqShift){
-      if(canRaiseNow() && rnd < (0.55 + texFreq)*hlRaiseMul*RM) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
+      if(canRaiseNow() && rnd < (0.55 + texFreq)*hlRaiseMul*RM*valueBoost) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
       return {type:'check'};
     }
     if(eq > 0.35){
@@ -4031,9 +4097,13 @@ function cpuDecide(idx){
   // ===== コールが必要 =====
   const potOdds = toCall / (pot + toCall);
   const allInCall = toCall >= p.stack;
+  // hard（tough）: 対人で搾取されにくくするため、ブラフキャッチを厚くする。
+  //   callBoost: 要求エクイティを下げてコール域を広げる / mdfBoost: 最低防御頻度の上乗せ
+  const callBoost = tough ? 0.015 : 0;   // 閾値を少しだけ下げる（搾取耐性、ただし入れすぎない）
+  const mdfBoost = tough ? 0.06 : 0;     // 限界域の防御を軽く上乗せ
 
   if(allInCall){
-    return eq > potOdds + 0.02 ? {type:'call'} : {type:'fold'};
+    return eq > potOdds + 0.02 - callBoost ? {type:'call'} : {type:'fold'};
   }
 
   if(eq > 0.72 - flAdj - hlThr + eqShift){
@@ -4044,18 +4114,18 @@ function cpuDecide(idx){
     if(canRaiseNow() && rnd < 0.28*hlRaiseMul*RM) return {type:'raise', amount: raiseAmt(pickBetFrac(eq, finalSt, tex))};
     return {type:'call'};
   }
-  if(eq > potOdds + 0.03 + eqShift*0.5){
+  if(eq > potOdds + 0.03 + eqShift*0.5 - callBoost){
     // オッズに合う: コール主体、非最終ストリートはセミブラフレイズ少々
     if(!finalSt && canRaiseNow() && rnd < 0.10 * pf * RM) return {type:'raise', amount: raiseAmt(0.7)};
     return {type:'call'};
   }
-  if(eq > potOdds - 0.05 + eqShift*0.5){
-    return rnd < 0.60 ? {type:'call'} : {type:'fold'}; // 境界域ミックス
+  if(eq > potOdds - 0.05 + eqShift*0.5 - callBoost){
+    return rnd < (0.60 + mdfBoost) ? {type:'call'} : {type:'fold'}; // 境界域ミックス
   }
-  if(eq > potOdds - 0.12 + eqShift*0.5){
+  if(eq > potOdds - 0.12 + eqShift*0.5 - callBoost){
     // MDF確保のブラフキャッチ（降りすぎると搾取されるため一定頻度で継続）
     const mdf = pot / (pot + toCall);
-    return rnd < (0.18 + 0.12*mdf) ? {type:'call'} : {type:'fold'};
+    return rnd < (0.18 + 0.12*mdf + mdfBoost) ? {type:'call'} : {type:'fold'};
   }
   // オッズに大きく合わない: 基本フォールド、低頻度ブラフレイズ
   const s2 = 0.85;
