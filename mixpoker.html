@@ -155,8 +155,8 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   position: relative;
   width: 100%;
   max-width: 440px;
-  margin: 6px auto;
-  aspect-ratio: 13 / 9;
+  margin: 4px auto;
+  aspect-ratio: 16 / 9;
   background: linear-gradient(180deg, var(--felt) 0%, var(--felt2) 100%);
   border-radius: 50% / 40%;
   box-shadow:
@@ -186,9 +186,9 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   text-align: center;
   pointer-events: none;
 }
-.table-center .board-area { margin: 6px 0 0; }
-.table-center .board-area .card { width: 34px; height: 48px; border-radius: 6px; }
-.table-center .board-area .card .corner { font-size: 0.78rem; }
+.table-center .board-area { margin: 4px 0 0; }
+.table-center .board-area .card { width: 29px; height: 41px; border-radius: 5px; }
+.table-center .board-area .card .corner { font-size: 0.68rem; }
 
 /* ===== 相手プレイヤー（パネル型） ===== */
 .opp {
@@ -366,12 +366,12 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 
 /* ===== 自分の席（2段構成: 情報行＋カード行） ===== */
 .my-seat {
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 5px;
   background: var(--surface);
   border: 1.5px solid transparent;
-  border-radius: 14px;
-  padding: 10px 14px;
-  margin: 8px auto 0;
+  border-radius: 12px;
+  padding: 7px 12px;
+  margin: 5px auto 0;
   max-width: 440px;
   transition: border-color 0.2s;
 }
@@ -416,9 +416,9 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .card .suit { order: -1; font-size: 0.95rem; line-height: 1; }
 .card .rank { font-size: 1.6rem; line-height: 1; }
-.card.sm { width: 40px; height: 56px; border-radius: 7px; }
-.card.sm .rank { font-size: 1.25rem; }
-.card.sm .suit { font-size: 0.78rem; }
+.card.sm { width: 34px; height: 48px; border-radius: 6px; }
+.card.sm .rank { font-size: 1.05rem; }
+.card.sm .suit { font-size: 0.68rem; }
 .card.xs { width: 19px; height: 27px; border-radius: 4px; gap: 0; }
 .card.xs .rank { font-size: 0.62rem; }
 .card.xs .suit { font-size: 0.48rem; }
@@ -489,7 +489,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   margin-top: 8px;
 }
 .action-btns { display: flex; flex-direction: row; gap: 8px; }
-.action-btns .btn { margin-bottom: 0; padding: 13px 4px; font-size: 0.98rem; border-radius: 14px; flex: 1; min-width: 0; white-space: nowrap; }
+.action-btns .btn { margin-bottom: 0; padding: 11px 4px; font-size: 0.94rem; border-radius: 13px; flex: 1; min-width: 0; white-space: nowrap; }
 
 .bet-controls { margin-top: 12px; }
 .bet-slider-row { display: flex; align-items: center; gap: 10px; }
@@ -504,16 +504,16 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   font-size: 1.05rem;
   min-width: 56px; text-align: right;
 }
-.quick-bets { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.quick-bets { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .quick-bets button {
-  flex: 1 1 calc(33.333% - 5px);
+  flex: 1 1 calc(33.333% - 4px);
   min-width: 0;
   background: var(--surface2);
   border: none;
   color: var(--text);
-  padding: 11px 4px;
-  border-radius: 10px;
-  font-size: 0.82rem; font-weight: 700; font-family: inherit;
+  padding: 7px 4px;
+  border-radius: 9px;
+  font-size: 0.76rem; font-weight: 700; font-family: inherit;
   cursor: pointer;
   transition: all 0.12s;
 }
