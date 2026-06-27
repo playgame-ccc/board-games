@@ -11,26 +11,26 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;0,700;0,800;1,600;1,700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* Ten-Four風: ネイビー×エメラルド×フラット */
-  --bg: #161e2e;
-  --bg2: #1a2334;
-  --surface: #242e42;
-  --surface2: #2b3650;
-  --surface3: #3a4660;
-  --felt: #1d8a76;
-  --felt2: #157a66;
-  --felt-rim: #2fd4b2;
+  /* JOPT風: 茶色木目×濃緑フェルト×金アクセント */
+  --bg: #2a1810;
+  --bg2: #1f120b;
+  --surface: #2d2218;
+  --surface2: #382b1d;
+  --surface3: #4a3925;
+  --felt: #126349;
+  --felt2: #0c4c38;
+  --felt-rim: #d9a441;
   --green: #34c265;
   --green-dim: #1f9d4e;
   --red: #e8404f;
   --blue: #3e7de0;
   --blue-dim: #3464b4;
-  --text: #f0f3f8;
-  --muted: #8b97ad;
-  --pill: #9aa5b8;
-  --gold: #34c265;
-  --gold-bright: #4fe084;
-  --gold-glow: rgba(52,194,101,0.4);
+  --text: #f5ede0;
+  --muted: #b09a7e;
+  --pill: #d8c5a8;
+  --gold: #c9962f;
+  --gold-bright: #f0c050;
+  --gold-glow: rgba(201,150,47,0.4);
   --chip-red: #e8404f;
   --card-black: #3a4254;
   --card-red: #e0394a;
@@ -41,7 +41,10 @@
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
-  background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(90,55,30,0.55) 0%, transparent 60%),
+    repeating-linear-gradient(92deg, rgba(0,0,0,0.10) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #3a2417 0%, #2a1810 45%, #1f120b 100%);
   color: var(--text);
   font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100vh;
@@ -49,6 +52,8 @@ body {
 }
 
 .wrap { max-width: 520px; margin: 0 auto; padding: 16px 14px 40px; }
+/* ゲーム画面表示中はwrapの余白を消し、1画面に固定 */
+.wrap:has(#screen-game.active) { padding: 0; max-width: none; height: 100dvh; overflow: hidden; }
 .mono { font-family: 'Share Tech Mono', monospace; }
 .center { text-align: center; }
 .small { font-size: 0.85rem; }
@@ -154,15 +159,17 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .poker-table {
   position: relative;
   width: 100%;
-  max-width: 440px;
-  margin: 4px auto;
-  aspect-ratio: 16 / 9;
-  background: linear-gradient(180deg, var(--felt) 0%, var(--felt2) 100%);
-  border-radius: 50% / 40%;
+  max-width: 480px;
+  margin: 2px auto 0;
+  aspect-ratio: 100 / 168;
+  background:
+    radial-gradient(ellipse 78% 64% at 50% 42%, #1a7d5e 0%, #126349 55%, #0c4c38 100%);
+  border-radius: 46% / 28%;
   box-shadow:
-    inset 0 0 0 3px rgba(47,212,178,0.65),
-    inset 0 0 50px rgba(0,0,0,0.18),
-    0 10px 40px rgba(0,0,0,0.4);
+    inset 0 0 0 4px #c9962f,
+    inset 0 0 0 9px #5a3a1c,
+    inset 0 0 60px rgba(0,0,0,0.45),
+    0 12px 44px rgba(0,0,0,0.6);
 }
 .poker-table::after {
   content: 'MIX';
@@ -173,22 +180,22 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   font-style: italic;
   font-size: 2rem;
   letter-spacing: 0.12em;
-  color: rgba(255,255,255,0.10);
+  color: rgba(217,164,65,0.13);
   pointer-events: none;
   user-select: none;
 }
 .table-center {
   position: absolute;
-  top: 58%; left: 50%;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  width: 76%;
+  width: 88%;
   z-index: 4;
   text-align: center;
   pointer-events: none;
 }
-.table-center .board-area { margin: 4px 0 0; }
-.table-center .board-area .card { width: 29px; height: 41px; border-radius: 5px; }
-.table-center .board-area .card .corner { font-size: 0.68rem; }
+.table-center .board-area { margin: 8px 0 0; }
+.table-center .board-area .card { width: 38px; height: 54px; border-radius: 6px; }
+.table-center .board-area .card .corner { font-size: 0.78rem; }
 
 /* ===== 相手プレイヤー（パネル型） ===== */
 .opp {
@@ -216,7 +223,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .opp.xxcompact .opp-stack { font-size: 0.58rem; padding: 1px 4px; }
 .opp.xxcompact .opp-panel { padding: 2px 4px; border-radius: 9px; }
 .opp.xxcompact .pos-badge { font-size: 0.48rem; padding: 0px 3px; }
-.opp-cards { display: flex; gap: 2px; justify-content: center; margin-bottom: 3px; position: relative; z-index: 7; }
+.opp-cards { display: flex; gap: 2px; justify-content: center; margin-bottom: 3px; position: relative; z-index: 7; align-items: flex-end; }
 /* 5枚以上は重ねてパネル幅に収める */
 .opp-cards.stacked { gap: 0; }
 .opp-cards.stacked .card { margin-left: -7px; box-shadow: -2px 2px 5px rgba(0,0,0,0.35); }
@@ -225,19 +232,22 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .opp-cards.stack5 .card { margin-left: -9px; }
 .opp-cards.stack6 .card { margin-left: -11px; }
 .opp-cards.stack7 .card { margin-left: -12px; }
+/* スタッドの表向き札(ドアカード)は重ねず、はっきり見せる */
+.opp-cards .card.up { margin-left: 1px !important; box-shadow: 0 1px 3px rgba(0,0,0,0.4); z-index: 8; }
+.opp-cards .card.up:first-child { margin-left: 0 !important; }
 .opp-panel {
-  background: rgba(18,23,36,0.97);
-  border: 1.5px solid rgba(255,255,255,0.14);
+  background: linear-gradient(180deg, rgba(28,30,38,0.98) 0%, rgba(14,15,20,0.98) 100%);
+  border: 1.5px solid rgba(201,150,47,0.5);
   border-radius: 12px;
   padding: 6px 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.55);
-  transition: border-color 0.2s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  transition: border-color 0.2s, box-shadow 0.2s;
   position: relative;
   z-index: 5;
 }
 .opp.active .opp-panel {
-  border-color: var(--green);
-  box-shadow: 0 0 14px rgba(52,194,101,0.35), 0 4px 14px rgba(0,0,0,0.5);
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 16px rgba(201,150,47,0.55), 0 4px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 .opp.folded { opacity: 0.55; }
 .opp-name {
@@ -247,12 +257,13 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .opp-meta { display:flex; align-items:center; justify-content:center; gap:5px; margin-top:3px; }
 .pos-badge {
   display: inline-block;
-  background: var(--green-dim);
+  background: linear-gradient(180deg, #f08a2c 0%, #d4621a 100%);
   color: #fff;
   font-size: 0.6rem; font-weight: 800;
   padding: 1px 6px;
   border-radius: 5px;
   letter-spacing: 0.04em;
+  box-shadow: 0 1px 4px rgba(212,98,26,0.5);
 }
 .opp-stack {
   font-family: 'Share Tech Mono', monospace;
@@ -364,41 +375,66 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   padding: 0 4px; border-radius: 4px;
 }
 
-/* ===== 自分の席（2段構成: 情報行＋カード行） ===== */
+/* ===== 自分の席（JOPT風: テーブル下部にカード＋名前プレート） ===== */
+#my-seat {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  z-index: 6;
+  width: auto;
+  display: flex;
+  justify-content: center;
+}
 .my-seat {
-  display: flex; flex-direction: column; gap: 5px;
-  background: var(--surface);
-  border: 1.5px solid transparent;
-  border-radius: 12px;
-  padding: 7px 12px;
-  margin: 5px auto 0;
-  max-width: 440px;
-  transition: border-color 0.2s;
+  display: flex; flex-direction: column-reverse; align-items: center; gap: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  max-width: none;
+  box-shadow: none;
+  transition: none;
 }
-.my-seat.active {
-  border-color: var(--green);
-  box-shadow: 0 0 16px rgba(52,194,101,0.3);
-}
+.my-seat.active { box-shadow: none; }
 .my-seat.folded { opacity: 0.55; }
 .my-avatar { display: none; }
-.my-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* 名前プレート（カードの下に小さく） */
+.my-top {
+  display: inline-flex; align-items: center; gap: 7px; flex-wrap: nowrap;
+  background: linear-gradient(180deg, rgba(28,30,38,0.98) 0%, rgba(14,15,20,0.98) 100%);
+  border: 1.5px solid rgba(201,150,47,0.5);
+  border-radius: 10px;
+  padding: 4px 12px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+  position: relative;
+}
+.my-seat.active .my-top {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 16px rgba(201,150,47,0.5), 0 3px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+}
 .my-info { display: contents; }
 .my-name {
-  font-weight: 700; font-size: 0.95rem;
+  font-weight: 700; font-size: 0.9rem;
   display: inline-flex; align-items: center; gap: 6px;
   white-space: nowrap;
 }
-.my-stack { font-family:'Share Tech Mono',monospace; color: var(--muted); font-size: 0.88rem; white-space: nowrap; }
-.my-seat.active .my-stack { color: var(--text); }
-.my-hand-name { font-size: 0.78rem; color: var(--gold-bright); font-weight:700; white-space: nowrap; }
-.my-cards { display: flex; gap: 5px; justify-content: center; flex-wrap: nowrap; }
+.my-stack {
+  font-family:'Share Tech Mono',monospace;
+  color: #6fd6ff; font-size: 0.86rem; font-weight: 700; white-space: nowrap;
+}
+.my-seat.active .my-stack { color: #8fe0ff; }
+.my-hand-name {
+  font-size: 0.72rem; color: var(--gold-bright); font-weight:700; white-space: nowrap;
+}
+.my-cards { display: flex; gap: 4px; justify-content: center; flex-wrap: nowrap; }
 .my-bet {
   font-family:'Share Tech Mono',monospace;
   background: var(--pill);
   color: #1a2334;
   font-weight: 700;
-  padding: 2px 12px; border-radius: 14px; font-size: 0.82rem;
-  margin-left: auto;
+  padding: 2px 11px; border-radius: 14px; font-size: 0.8rem;
   white-space: nowrap;
 }
 
@@ -426,6 +462,21 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .card.suit-black { background: linear-gradient(180deg, #454e63, var(--card-black)); }
 .card.suit-blue  { background: linear-gradient(180deg, #3d7ce4, var(--card-blue)); }
 .card.suit-green { background: linear-gradient(180deg, #2bb069, var(--card-green)); }
+/* 自分の手札はテーブル上に大きめに表示（JOPT風） */
+.my-cards .card.sm { width: 42px; height: 59px; border-radius: 7px; }
+.my-cards .card.sm .rank { font-size: 1.35rem; }
+.my-cards .card.sm .suit { font-size: 0.86rem; }
+/* 手札が多い時（スタッド系など）はカードを縮めてテーブル幅に収める */
+.my-cards.cards-5 .card.sm { width: 40px; height: 56px; }
+.my-cards.cards-5 .card.sm .rank { font-size: 1.3rem; }
+.my-cards.cards-6 { gap: 3px; }
+.my-cards.cards-6 .card.sm { width: 38px; height: 53px; }
+.my-cards.cards-6 .card.sm .rank { font-size: 1.2rem; }
+.my-cards.cards-6 .card.sm .suit { font-size: 0.78rem; }
+.my-cards.cards-7 { gap: 3px; }
+.my-cards.cards-7 .card.sm { width: 34px; height: 48px; border-radius: 6px; }
+.my-cards.cards-7 .card.sm .rank { font-size: 1.08rem; }
+.my-cards.cards-7 .card.sm .suit { font-size: 0.68rem; }
 .card.back {
   background:
     repeating-linear-gradient(45deg, rgba(255,255,255,0.16) 0 4px, transparent 4px 9px),
@@ -459,13 +510,14 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .pot-display {
   display: inline-block;
   text-align: center;
-  font-weight: 700;
-  font-style: italic;
-  color: rgba(255,255,255,0.95);
+  font-weight: 800;
+  color: var(--gold-bright);
   font-size: 1.05rem;
-  padding: 3px 16px;
-  border-radius: 14px;
-  background: rgba(8,12,18,0.55);
+  padding: 4px 18px;
+  border-radius: 16px;
+  background: rgba(6,10,14,0.7);
+  border: 1.5px solid rgba(201,150,47,0.55);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
   backdrop-filter: blur(2px);
 }
 
@@ -481,15 +533,81 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   margin-bottom: 6px;
 }
 
-/* ===== アクションバー ===== */
-.action-bar {
-  background: var(--surface);
-  border-radius: 16px;
-  padding: 10px;
-  margin-top: 8px;
+/* ===== アクションバー（JOPT風: 画面最下部） ===== */
+#action-area:not(:empty) {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  z-index: 50;
+  padding: 0 8px;
 }
+.action-bar {
+  background: linear-gradient(180deg, rgba(34,26,18,0.96), rgba(20,15,10,0.98));
+  border-radius: 16px 16px 0 0;
+  border-top: 1.5px solid rgba(201,150,47,0.35);
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  margin-top: 0;
+  box-shadow: 0 -6px 24px rgba(0,0,0,0.5);
+}
+/* 固定アクションバーと重ならないよう、ゲーム画面の下に余白 */
+#screen-game.active {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding: 48px 0 0;
+  overflow: hidden;
+}
+/* テーブルは残りの高さに収める（縮んでも1画面に） */
+#screen-game.active .poker-table {
+  flex: 1 1 auto;
+  min-height: 0;
+  aspect-ratio: auto;
+  max-width: 480px;
+  margin: 2px auto 0;
+}
+/* ログは1画面確保のため非表示（スクロール禁止優先） */
+#screen-game.active #log { display: none; }
+/* 種目バー・フェーズラベルをコンパクトに（縦長テーブルのスペース確保） */
+#screen-game #game-type-bar { margin-bottom: 3px; flex: 0 0 auto; }
+#screen-game .phase-label { margin-bottom: 2px; flex: 0 0 auto; }
+#screen-game #tourney-bar { flex: 0 0 auto; }
 .action-btns { display: flex; flex-direction: row; gap: 8px; }
 .action-btns .btn { margin-bottom: 0; padding: 11px 4px; font-size: 0.94rem; border-radius: 13px; flex: 1; min-width: 0; white-space: nowrap; }
+
+/* ===== JOPT風ベットUI ===== */
+.jopt-bet { display: flex; gap: 8px; align-items: stretch; }
+.jopt-left { flex: 1 1 auto; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.jopt-left > .btn { margin: 0; padding: 11px 4px; border-radius: 12px; font-size: 0.96rem; line-height: 1.15; }
+.jopt-amt { font-family:'Share Tech Mono',monospace; font-size: 0.82rem; font-weight: 700; opacity: 0.95; }
+.jopt-slider-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.jopt-slider-row input[type=range] {
+  width: calc(100% - 8px);
+  margin: 2px auto;
+  accent-color: var(--gold);
+  height: 6px;
+}
+.jopt-raise { margin: 0 !important; width: 100%; padding: 11px 14px !important; border-radius: 12px !important; font-size: 0.96rem !important; white-space: nowrap; }
+/* 右の縦積み額ボタン（JOPTのPot/4BB/3BB/2BB風） */
+.jopt-right { flex: 0 0 96px; display: flex; flex-direction: column; gap: 6px; }
+.jopt-amt-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 6px;
+  background: linear-gradient(180deg, rgba(40,32,22,0.98), rgba(22,17,11,0.98));
+  border: 1.5px solid rgba(201,150,47,0.45);
+  border-radius: 11px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.jopt-amt-btn:hover { background: linear-gradient(180deg, rgba(54,43,29,0.98), rgba(30,23,15,0.98)); border-color: var(--gold-bright); }
+.jopt-amt-btn:active { transform: translateY(1px); }
+.jopt-amt-lbl { font-size: 0.74rem; font-weight: 700; color: var(--muted); }
+.jopt-amt-val { font-family:'Share Tech Mono',monospace; font-size: 0.92rem; font-weight: 800; color: var(--gold-bright); }
+
 
 .bet-controls { margin-top: 12px; }
 .bet-slider-row { display: flex; align-items: center; gap: 10px; }
@@ -566,33 +684,34 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   .btn { transition: none; }
 }
 
-/* ===== トーナメント情報バー（演出強化） ===== */
+/* ===== トーナメント情報バー（コンパクト版） ===== */
 .tbar {
   background: var(--surface);
   border: 1px solid var(--surface3);
-  border-radius: 12px;
-  padding: 8px 12px 9px;
-  margin: 2px auto 6px;
+  border-radius: 10px;
+  padding: 5px 11px 6px;
+  margin: 1px auto 4px;
   max-width: 440px;
 }
 .tbar-row {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; font-family: 'Share Tech Mono', monospace;
 }
-.tbar-lv { font-weight: 800; color: var(--gold-bright); font-size: 0.82rem; letter-spacing: 0.03em; }
-.tbar-blinds { color: var(--text); font-size: 0.82rem; }
-.tbar-meta { display: flex; gap: 12px; margin-top: 5px; font-size: 0.68rem; color: var(--muted); }
+.tbar-lv { font-weight: 800; color: var(--gold-bright); font-size: 0.78rem; letter-spacing: 0.03em; }
+.tbar-blinds { color: var(--text); font-size: 0.78rem; }
+.tbar-meta { display: flex; gap: 10px; margin-top: 3px; font-size: 0.64rem; color: var(--muted); align-items: center; }
 .tbar-meta b { color: var(--text); font-weight: 700; }
-.tbar-clock { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.tbar-meta .tbar-next-inline { margin-left: auto; color: var(--felt-rim); font-family: 'Share Tech Mono', monospace; }
+.tbar-clock { font-size: 0.78rem; font-weight: 700; color: var(--text); }
 .tbar-clock.warn { color: var(--gold-bright); }
 .tbar-clock.urgent { color: var(--red); animation: tclock-blink 1s steps(2) infinite; }
 @keyframes tclock-blink { 50% { opacity: 0.35; } }
 .tbar-progress {
-  height: 4px; border-radius: 3px; background: var(--surface3);
-  margin-top: 7px; overflow: hidden;
+  height: 3px; border-radius: 2px; background: var(--surface3);
+  margin-top: 4px; overflow: hidden;
 }
 .tbar-progress > span {
-  display: block; height: 100%; border-radius: 3px;
+  display: block; height: 100%; border-radius: 2px;
   background: linear-gradient(90deg, var(--green), var(--felt-rim));
   transition: width 0.5s linear;
 }
@@ -892,10 +1011,9 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
         <div class="pot-display" id="pot-display">POT: 0</div>
         <div class="board-area" id="board-area"></div>
       </div>
+      <!-- 自分（テーブル下部・カードをフェルト上に載せる） -->
+      <div id="my-seat"></div>
     </div>
-
-    <!-- 自分（テーブル下） -->
-    <div id="my-seat"></div>
 
     <div id="action-area"></div>
 
@@ -3355,9 +3473,9 @@ function updateTourneyBar(){
 
   let nextLine;
   if(lvNow > applied){
-    nextLine = `⬆ 次のハンドから Lv${lvNow+1}: ${nsb}/${nbb}${nante>0?` (ante ${nante})`:''}`;
+    nextLine = `⬆ Lv${lvNow+1} ${nsb}/${nbb}${nante>0?`a${nante}`:''}`;
   } else {
-    nextLine = `次 Lv${nextLv+1}: ${nsb}/${nbb}${nante>0?` (ante ${nante})`:''}`;
+    nextLine = `次 ${nsb}/${nbb}${nante>0?`a${nante}`:''}`;
   }
 
   bar.innerHTML = `
@@ -3369,11 +3487,11 @@ function updateTourneyBar(){
       </div>
       <div class="tbar-progress ${urgency}"><span style="width:${pct}%"></span></div>
       <div class="tbar-meta">
-        <span>残り <b>${alive}</b>${totalEntrants?` / ${totalEntrants}`:''}人</span>
+        <span>残り <b>${alive}</b>${totalEntrants?`/${totalEntrants}`:''}人</span>
         <span>平均 <b>${avg.toLocaleString()}</b></span>
         <span>${bb>0?`<b>${Math.round(avg/bb)}</b>bb`:''}</span>
+        <span class="tbar-next-inline">${nextLine}</span>
       </div>
-      <div class="tbar-next">${nextLine}</div>
     </div>`;
 }
 function startTourneyBar(){
@@ -4200,30 +4318,31 @@ function cardHTML(card, opts={}){
   if(opts.xs) sizeCls = ' xs';
   else if(opts.sm) sizeCls = ' sm';
   if(opts.back){
-    return `<div class="card${sizeCls} back"></div>`;
+    return `<div class="card${sizeCls} back${opts.up?' up':''}"></div>`;
   }
   const color = SUIT_COLOR[card.s];
-  const cls = `card${sizeCls} ${color}${opts.win?' win':''}${opts.muck?' muck':''}${opts.down?' facedown':''}`;
+  const cls = `card${sizeCls} ${color}${opts.win?' win':''}${opts.muck?' muck':''}${opts.down?' facedown':''}${opts.up?' up':''}`;
   return `<div class="${cls}"><span class="rank">${rankStr(card.r)}</span><span class="suit">${SUIT_SYM[card.s]}</span></div>`;
 }
 
-// 相手プレイヤーを楕円周囲に配置する座標(%)を返す
-// 自分=下中央。相手は左→上→右の順で上半分に配置
+// 相手プレイヤーを縦長楕円の外周に配置する座標(%)を返す
+// 自分=下中央。相手は下右→右→上→左→下左 の順で外周に沿わせる
 function oppPositions(count){
   if(count<=0) return [];
-  // 中央のボード/ポット帯（おおよそ x:28-72, y:36-64）を避けて配置する。
-  // コンパクトboxは画面幅の約24%あるため、隣接boxは「横に十分離す」か「縦をずらす」必要がある。
-  // 5人以上は端のboxを下げ（y大）、中央を上げて（y小）、縦のずれで重なりを防ぐ。
+  // 縦長テーブル(aspect 100/168)。上端(y<8)はヘッダーと重なるため避ける。
+  // 中央のボード/ポット帯(y:40-62)も避ける。
   const presets = {
     1: [{x:50,y:15}],
-    2: [{x:20,y:20},{x:80,y:20}],
+    2: [{x:22,y:17},{x:78,y:17}],
     3: [{x:18,y:20},{x:50,y:14},{x:82,y:20}],
-    4: [{x:14,y:30},{x:32,y:14},{x:68,y:14},{x:86,y:30}],
-    5: [{x:12,y:42},{x:27,y:17},{x:50,y:13},{x:73,y:17},{x:88,y:42}],
-    6: [{x:11,y:46},{x:20,y:20},{x:40,y:13},{x:60,y:13},{x:80,y:20},{x:89,y:46}],
-    7: [{x:9,y:50},{x:24,y:28},{x:32,y:13},{x:50,y:10},{x:68,y:13},{x:76,y:28},{x:91,y:50}],
-    8: [{x:9,y:54},{x:21,y:33},{x:28,y:16},{x:43,y:11},{x:57,y:11},{x:72,y:16},{x:79,y:33},{x:91,y:54}],
+    4: [{x:16,y:32},{x:30,y:15},{x:70,y:15},{x:84,y:32}],
+    5: [{x:13,y:36},{x:24,y:17},{x:50,y:13},{x:76,y:17},{x:87,y:36}],
+    6: [{x:13,y:40},{x:24,y:19},{x:42,y:14},{x:58,y:14},{x:76,y:19},{x:87,y:40}],
+    7: [{x:12,y:62},{x:13,y:34},{x:28,y:15},{x:50,y:12},{x:72,y:15},{x:87,y:34},{x:88,y:62}],
+    8: [{x:12,y:64},{x:13,y:36},{x:27,y:16},{x:43,y:13},{x:57,y:13},{x:73,y:16},{x:87,y:36},{x:88,y:64}],
   };
+  // 6人は上中央が重複しないよう個別補正
+  if(count===6) return [{x:13,y:40},{x:24,y:19},{x:42,y:14},{x:58,y:14},{x:76,y:19},{x:87,y:40}];
   return presets[count] || presets[8].slice(0,count);
 }
 
@@ -4313,11 +4432,14 @@ function render(){
     const isStud = (MIX_GAMES[G.currentGame]||{}).type === 'stud';
     if(p.hole.length){
       const studHidden = isStud && !showCards && p.faceUp;
-      if(studHidden && pos.x < 42){
-        // 左側の席: 表札(ドアカード)を左端に置き、中央側の隣人パネルに隠れないようにする
-        const ups=[], downs=[];
-        p.hole.forEach((c,ci)=>{ if(p.faceUp[ci]) ups.push(cardHTML(c,{xs:true})); else downs.push('<div class="card xs back"></div>'); });
-        cardsH = ups.join('') + downs.join('');
+      if(studHidden){
+        // スタッド: 裏向き札を先にまとめ、表向き札(ドアカード)は重ねず横並びで全部見せる
+        const downs=[], ups=[];
+        p.hole.forEach((c,ci)=>{ if(p.faceUp[ci]) ups.push(cardHTML(c,{xs:true, up:true})); else downs.push('<div class="card xs back"></div>'); });
+        cardsH = downs.join('') + ups.join('');
+      } else if(isStud && showCards){
+        // スタッドのショーダウン: 7枚すべて重ねず見せる
+        p.hole.forEach(c=>{ cardsH += cardHTML(c,{xs:true, up:true, muck:p.folded}); });
       } else {
         p.hole.forEach((c,ci)=>{
           if(showCards){
@@ -4419,7 +4541,7 @@ function render(){
         ${myPnl}
         ${me.roundBet>0 ? `<div class="my-bet">${me.roundBet}</div>` : ''}
       </div>
-      <div class="my-cards">${myCardsH}</div>
+      <div class="my-cards cards-${me.hole.length}">${myCardsH}</div>
       ${meActive ? '<div class="act-bar" style="position:absolute; left:14px; right:14px; bottom:-9px;"></div>' : ''}
     </div>`;
 
@@ -4450,56 +4572,61 @@ function renderActionArea(){
     // スタッド3rd・ブリングイン者の番か？（ブリングイン継続 or コンプリートの選択）
     const isBringInChoice = h.bringInPending && h.toActIdx===h.bringInIdx && toCall===0;
     html += '<div class="action-btns">';
-    html += `<button class="btn btn-fold" onclick="humanAction({type:'fold'})">Fold</button>`;
+    html += `<button class="btn btn-fold" onclick="humanAction({type:'fold'})">フォールド</button>`;
     if(toCall === 0){
-      const checkLabel = isBringInChoice ? 'ブリングイン' : 'Check';
+      const checkLabel = isBringInChoice ? 'ブリングイン' : 'チェック';
       html += `<button class="btn btn-call" onclick="humanAction({type:'check'})">${checkLabel}</button>`;
     } else {
       const callAmt = Math.min(toCall, me.stack);
-      html += `<button class="btn btn-call" onclick="humanAction({type:'call'})">Call ${callAmt}</button>`;
+      html += `<button class="btn btn-call" onclick="humanAction({type:'call'})">コール ${callAmt}</button>`;
     }
     if(limits.canRaise){
-      const raiseLabel = isBringInChoice ? 'コンプリート' : (toCall>0?'Raise':'Bet');
+      const raiseLabel = isBringInChoice ? 'コンプリート' : (toCall>0?'レイズ':'ベット');
       html += `<button class="btn btn-raise" onclick="humanAction({type:'raise', amount:${limits.minRaiseTo}})">${raiseLabel} ${limits.minRaiseTo}</button>`;
     }
     html += '</div>';
     const cap = (h.raiseCount||0);
     html += `<div class="center muted small" style="margin-top:6px;">固定: ${limits.flUnit} / ベット${cap}/4${cap>=4?'（キャップ）':''}</div>`;
   } else {
-    // NL/PL: プリセット+スライダーを上段、アクション3ボタンを下段横並び
+    // NL/PL: JOPT風レイアウト（右に縦積みレイズ額ボタン、左にFold/Call）
     if(limits.canRaise){
-      const initVal = Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, h.highBet + Math.floor(pot*0.5)));
+      const pot3_4 = Math.max(limits.minRaiseTo, Math.min(limits.maxRaiseTo, h.highBet + Math.floor(pot*0.75)));
+      const pot1_2 = Math.max(limits.minRaiseTo, Math.min(limits.maxRaiseTo, h.highBet + Math.floor(pot*0.5)));
+      const potRaise = Math.max(limits.minRaiseTo, Math.min(limits.maxRaiseTo, potLimitMaxRaiseTo(pot, toCall, me.roundBet)));
+      const minR = limits.minRaiseTo;
       const allinLabel = limits.betting==='nl' ? 'ALL IN' : '最大';
+      const initVal = pot1_2;
+      const callAmt = toCall===0 ? 0 : Math.min(toCall, me.stack);
+      // 右の縦積み額ボタン（上からPot→3/4→1/2→Min）。タップで即レイズ。
       html += `
-        <div class="bet-controls" style="margin-top:0;">
-          <div class="quick-bets">
-            <button onclick="setBet('min')">ミニマム</button>
-            <button onclick="setBet('2x')">2倍</button>
-            <button onclick="setBet('3x')">3倍</button>
-            <button onclick="setBet('third')">1/3</button>
-            <button onclick="setBet('half')">1/2</button>
-            <button onclick="setBet('pot')">ポット</button>
-            <button onclick="setBet('max')">${allinLabel}</button>
+        <div class="jopt-bet">
+          <div class="jopt-left">
+            <button class="btn btn-fold" onclick="humanAction({type:'fold'})">フォールド</button>
+            ${toCall===0
+              ? `<button class="btn btn-call" onclick="humanAction({type:'check'})">チェック</button>`
+              : `<button class="btn btn-call" onclick="humanAction({type:'call'})">コール<br><span class="jopt-amt">${callAmt}</span></button>`}
+            <div class="jopt-slider-row">
+              <input type="range" id="bet-slider" min="${minR}" max="${limits.maxRaiseTo}" value="${initVal}" step="${h.bbAmount}" oninput="updateBetLabel()">
+              <button class="btn btn-raise jopt-raise" onclick="confirmRaise()">${toCall>0?'レイズ':'ベット'} <span id="raise-btn-amt">${initVal}</span></button>
+            </div>
           </div>
-          <div class="bet-slider-row" style="margin-top:8px;">
-            <input type="range" id="bet-slider" min="${limits.minRaiseTo}" max="${limits.maxRaiseTo}" value="${initVal}" step="${h.bbAmount}" oninput="updateBetLabel()">
-            <span class="bet-amount" id="bet-amount">${initVal}</span>
+          <div class="jopt-right">
+            <button class="jopt-amt-btn" onclick="humanAction({type:'raise', amount:${potRaise}})"><span class="jopt-amt-lbl">Pot</span><span class="jopt-amt-val">${potRaise}</span></button>
+            <button class="jopt-amt-btn" onclick="humanAction({type:'raise', amount:${pot3_4}})"><span class="jopt-amt-lbl">3/4</span><span class="jopt-amt-val">${pot3_4}</span></button>
+            <button class="jopt-amt-btn" onclick="humanAction({type:'raise', amount:${pot1_2}})"><span class="jopt-amt-lbl">1/2</span><span class="jopt-amt-val">${pot1_2}</span></button>
+            <button class="jopt-amt-btn" onclick="humanAction({type:'raise', amount:${minR}})"><span class="jopt-amt-lbl">Min</span><span class="jopt-amt-val">${minR}</span></button>
           </div>
         </div>`;
-    }
-    html += '<div class="action-btns" style="margin-top:10px;">';
-    html += `<button class="btn btn-fold" onclick="humanAction({type:'fold'})">Fold</button>`;
-    if(toCall === 0){
-      html += `<button class="btn btn-call" onclick="humanAction({type:'check'})">Check</button>`;
     } else {
-      const callAmt = Math.min(toCall, me.stack);
-      html += `<button class="btn btn-call" onclick="humanAction({type:'call'})">Call ${callAmt}</button>`;
+      // レイズ不可（コール/フォールドのみ）
+      const callAmt = toCall===0 ? 0 : Math.min(toCall, me.stack);
+      html += '<div class="action-btns">';
+      html += `<button class="btn btn-fold" onclick="humanAction({type:'fold'})">フォールド</button>`;
+      html += toCall===0
+        ? `<button class="btn btn-call" onclick="humanAction({type:'check'})">チェック</button>`
+        : `<button class="btn btn-call" onclick="humanAction({type:'call'})">コール ${callAmt}</button>`;
+      html += '</div>';
     }
-    if(limits.canRaise){
-      const initVal2 = Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, h.highBet + Math.floor(pot*0.5)));
-      html += `<button class="btn btn-raise" id="btn-raise-main" onclick="confirmRaise()">${toCall>0?'Raise':'Bet'} <span id="raise-btn-amt">${initVal2}</span></button>`;
-    }
-    html += '</div>';
   }
   html += '<div id="cpu-hint" class="center muted small" style="display:none; margin-top:8px;"></div>';
   html += '</div>';
@@ -4509,7 +4636,8 @@ function renderActionArea(){
 
 function updateBetLabel(){
   const v = g('bet-slider').value;
-  g('bet-amount').textContent = v;
+  const ba = g('bet-amount');
+  if(ba) ba.textContent = v;
   const rb = g('raise-btn-amt');
   if(rb) rb.textContent = v;
 }
@@ -4951,15 +5079,10 @@ function renderGuest(){
     let cls='opp'; if(oppOrder.length>=7)cls+=' compact xcompact xxcompact'; else if(oppOrder.length>=5)cls+=' compact'; if(isActive)cls+=' active'; if(p.folded)cls+=' folded';
     let cardsH='';
     if(p.hole){ p.hole.forEach(c=> cardsH+=cardHTML(c,{xs:true,muck:p.folded})); }
-    else if(p.upCards){ // スタッド: 表札は見える、伏札は裏
-      if(pos.x < 42){
-        // 左側の席: 表札を左端に置き中央側の隣人に隠れないようにする
-        const ups=[], downs=[];
-        p.upCards.forEach(c=>{ if(c) ups.push(cardHTML(c,{xs:true})); else downs.push('<div class="card xs back"></div>'); });
-        cardsH = ups.join('') + downs.join('');
-      } else {
-        p.upCards.forEach(c=>{ cardsH += c ? cardHTML(c,{xs:true}) : `<div class="card xs back"></div>`; });
-      }
+    else if(p.upCards){ // スタッド: 表札は見える、伏札は裏。裏は先にまとめ、表は重ねず横並び
+      const downs=[], ups=[];
+      p.upCards.forEach(c=>{ if(c) ups.push(cardHTML(c,{xs:true, up:true})); else downs.push('<div class="card xs back"></div>'); });
+      cardsH = downs.join('') + ups.join('');
     }
     else { for(let i=0;i<(p.holeCount||0);i++) cardsH+=`<div class="card xs back"></div>`; }
     let handName='';
@@ -5034,7 +5157,7 @@ function renderGuest(){
       ${myPnlG}
       ${me&&me.roundBet>0?`<div class="my-bet">${me.roundBet}</div>`:''}
     </div>
-    <div class="my-cards">${myCardsH}</div>
+    <div class="my-cards cards-${myHole?myHole.length:0}">${myCardsH}</div>
     ${meActive ? '<div class="act-bar" style="position:absolute; left:14px; right:14px; bottom:-9px;"></div>' : ''}
   </div>`;
   renderGuestActionArea();
@@ -5165,44 +5288,51 @@ function renderGuestActionArea(){
 
   if(limits.betting === 'fl'){
     html += '<div class="action-btns">';
-    html += `<button class="btn btn-fold" onclick="guestAct({type:'fold'})">Fold</button>`;
-    if(toCall===0) html += `<button class="btn btn-call" onclick="guestAct({type:'check'})">Check</button>`;
-    else { const ca=Math.min(toCall,me.stack); html += `<button class="btn btn-call" onclick="guestAct({type:'call'})">Call ${ca}</button>`; }
+    html += `<button class="btn btn-fold" onclick="guestAct({type:'fold'})">フォールド</button>`;
+    if(toCall===0) html += `<button class="btn btn-call" onclick="guestAct({type:'check'})">チェック</button>`;
+    else { const ca=Math.min(toCall,me.stack); html += `<button class="btn btn-call" onclick="guestAct({type:'call'})">コール ${ca}</button>`; }
     if(limits.canRaise){
-      html += `<button class="btn btn-raise" onclick="guestAct({type:'raise', amount:${limits.minRaiseTo}})">${toCall>0?'Raise':'Bet'} ${limits.minRaiseTo}</button>`;
+      html += `<button class="btn btn-raise" onclick="guestAct({type:'raise', amount:${limits.minRaiseTo}})">${toCall>0?'レイズ':'ベット'} ${limits.minRaiseTo}</button>`;
     }
     html += '</div>';
     const cap = (pub.raiseCount||0);
     html += `<div class="center muted small" style="margin-top:6px;">固定: ${limits.flUnit} / ベット${cap}/4${cap>=4?'（キャップ）':''}</div>`;
   } else {
     if(limits.canRaise){
-      const initVal=Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, pub.highBet+Math.floor(pot*0.5)));
-      const allinLabel = limits.betting==='nl' ? 'ALL IN' : '最大';
-      html += `<div class="bet-controls" style="margin-top:0;">
-        <div class="quick-bets">
-          <button onclick="setBetGuest('min')">ミニマム</button>
-          <button onclick="setBetGuest('2x')">2倍</button>
-          <button onclick="setBetGuest('3x')">3倍</button>
-          <button onclick="setBetGuest('third')">1/3</button>
-          <button onclick="setBetGuest('half')">1/2</button>
-          <button onclick="setBetGuest('pot')">ポット</button>
-          <button onclick="setBetGuest('max')">${allinLabel}</button>
-        </div>
-        <div class="bet-slider-row" style="margin-top:8px;">
-          <input type="range" id="bet-slider" min="${limits.minRaiseTo}" max="${limits.maxRaiseTo}" value="${initVal}" step="${pub.bbAmount}" oninput="updateBetLabel()">
-          <span class="bet-amount" id="bet-amount">${initVal}</span>
-        </div>
-      </div>`;
+      const pot3_4 = Math.max(limits.minRaiseTo, Math.min(limits.maxRaiseTo, pub.highBet + Math.floor(pot*0.75)));
+      const pot1_2 = Math.max(limits.minRaiseTo, Math.min(limits.maxRaiseTo, pub.highBet + Math.floor(pot*0.5)));
+      const potRaise = Math.max(limits.minRaiseTo, Math.min(limits.maxRaiseTo, potLimitMaxRaiseTo(pot, toCall, me.roundBet)));
+      const minR = limits.minRaiseTo;
+      const initVal = pot1_2;
+      const callAmt = toCall===0 ? 0 : Math.min(toCall, me.stack);
+      html += `
+        <div class="jopt-bet">
+          <div class="jopt-left">
+            <button class="btn btn-fold" onclick="guestAct({type:'fold'})">フォールド</button>
+            ${toCall===0
+              ? `<button class="btn btn-call" onclick="guestAct({type:'check'})">チェック</button>`
+              : `<button class="btn btn-call" onclick="guestAct({type:'call'})">コール<br><span class="jopt-amt">${callAmt}</span></button>`}
+            <div class="jopt-slider-row">
+              <input type="range" id="bet-slider" min="${minR}" max="${limits.maxRaiseTo}" value="${initVal}" step="${pub.bbAmount}" oninput="updateBetLabel()">
+              <button class="btn btn-raise jopt-raise" onclick="confirmRaiseGuest()">${toCall>0?'レイズ':'ベット'} <span id="raise-btn-amt">${initVal}</span></button>
+            </div>
+          </div>
+          <div class="jopt-right">
+            <button class="jopt-amt-btn" onclick="guestAct({type:'raise', amount:${potRaise}})"><span class="jopt-amt-lbl">Pot</span><span class="jopt-amt-val">${potRaise}</span></button>
+            <button class="jopt-amt-btn" onclick="guestAct({type:'raise', amount:${pot3_4}})"><span class="jopt-amt-lbl">3/4</span><span class="jopt-amt-val">${pot3_4}</span></button>
+            <button class="jopt-amt-btn" onclick="guestAct({type:'raise', amount:${pot1_2}})"><span class="jopt-amt-lbl">1/2</span><span class="jopt-amt-val">${pot1_2}</span></button>
+            <button class="jopt-amt-btn" onclick="guestAct({type:'raise', amount:${minR}})"><span class="jopt-amt-lbl">Min</span><span class="jopt-amt-val">${minR}</span></button>
+          </div>
+        </div>`;
+    } else {
+      const callAmt = toCall===0 ? 0 : Math.min(toCall, me.stack);
+      html += '<div class="action-btns">';
+      html += `<button class="btn btn-fold" onclick="guestAct({type:'fold'})">フォールド</button>`;
+      html += toCall===0
+        ? `<button class="btn btn-call" onclick="guestAct({type:'check'})">チェック</button>`
+        : `<button class="btn btn-call" onclick="guestAct({type:'call'})">コール ${callAmt}</button>`;
+      html += '</div>';
     }
-    html += '<div class="action-btns" style="margin-top:10px;">';
-    html += `<button class="btn btn-fold" onclick="guestAct({type:'fold'})">Fold</button>`;
-    if(toCall===0) html += `<button class="btn btn-call" onclick="guestAct({type:'check'})">Check</button>`;
-    else { const ca=Math.min(toCall,me.stack); html += `<button class="btn btn-call" onclick="guestAct({type:'call'})">Call ${ca}</button>`; }
-    if(limits.canRaise){
-      const initVal2=Math.min(limits.maxRaiseTo, Math.max(limits.minRaiseTo, pub.highBet+Math.floor(pot*0.5)));
-      html += `<button class="btn btn-raise" id="btn-raise-main" onclick="confirmRaiseGuest()">${toCall>0?'Raise':'Bet'} <span id="raise-btn-amt">${initVal2}</span></button>`;
-    }
-    html += '</div>';
   }
   html += '<div id="cpu-hint" class="center muted small" style="display:none; margin-top:8px;"></div>';
   html += '</div>';
