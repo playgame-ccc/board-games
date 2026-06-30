@@ -513,6 +513,10 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   margin: 10px 0 0;
   min-height: 60px; align-items: center;
 }
+/* オーシャン等の6枚ボード: 横幅を確保するため少し小さく */
+.board-area.six { gap: 5px; }
+.board-area.six .card { width: 38px; height: 54px; border-radius: 7px; }
+.board-area.six .card .corner { font-size: 0.74rem; }
 .pot-display {
   display: inline-block;
   text-align: center;
@@ -867,6 +871,8 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <h3 class="center">開始種目</h3>
       <div class="count-selector" id="game-select" style="flex-wrap:wrap; gap:6px;">
         <button class="count-btn selected" data-g="holdem" onclick="setInitGame('holdem')" style="width:auto;padding:0 10px;">ホールデム</button>
+        <button class="count-btn" data-g="superhi" onclick="setInitGame('superhi')" style="width:auto;padding:0 10px;">スーパーHD</button>
+        <button class="count-btn" data-g="ocean" onclick="setInitGame('ocean')" style="width:auto;padding:0 10px;">オーシャン</button>
         <button class="count-btn" data-g="plo" onclick="setInitGame('plo')" style="width:auto;padding:0 10px;">PLO</button>
         <button class="count-btn" data-g="plo8" onclick="setInitGame('plo8')" style="width:auto;padding:0 10px;">PLO8</button>
         <button class="count-btn" data-g="a5" onclick="setInitGame('a5')" style="width:auto;padding:0 10px;">A-5</button>
@@ -994,6 +1000,8 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
         <div class="divider"></div>
         <p style="color:var(--gold);">■ コミュニティ系（場札を共有）</p>
         <p><strong>ホールデム</strong>【ノーリミット】：手札2枚＋場5枚。最強の5枚で勝負。</p>
+        <p><strong>スーパーホールデム</strong>【ノーリミット】：手札3枚＋場5枚。手札を1〜3枚使って最強5枚（ボードのみは不可＝最低1枚使用）。</p>
+        <p><strong>オーシャン</strong>【ノーリミット】：ホールデムの場札が6枚。リバーの後に6枚目「オーシャン」を開いて追加のベット（計5ラウンド）。手札2枚＋場6枚で最強5枚。</p>
         <p><strong>PLO</strong>【ポットリミット】：手札4枚＋場5枚。手札ちょうど2枚＋場3枚で役を作る。</p>
         <p><strong>PLO8</strong>【ポットリミット】：PLOのHi-Lo。ハイとロー(8以下5枚)でポット折半。</p>
         <div class="divider"></div>
@@ -1223,6 +1231,8 @@ function evalPLO(hole, board){
 const MIX_GAMES = {
   // --- コミュニティ系（場札共有） ---
   holdem: { label:"テキサスホールデム", short:'NLH', type:'community', betting:'nl', holeN:2, boardN:5, hi:true, lo:false, plo:false, evalHi:'hi' },
+  superhi:{ label:"スーパーホールデム",   short:'SUP', type:'community', betting:'nl', holeN:3, boardN:5, hi:true, lo:false, plo:false, superHi:true, evalHi:'superhi' },
+  ocean:  { label:"オーシャン",            short:'OCN', type:'community', betting:'nl', holeN:2, boardN:6, hi:true, lo:false, plo:false, evalHi:'hi' },
   plo:    { label:"PLO（オマハ）",        short:'PLO', type:'community', betting:'pl', holeN:4, boardN:5, hi:true, lo:false, plo:true,  evalHi:'hi' },
   plo8:   { label:"PLO Hi-Lo (8b)",       short:'PLO8',type:'community', betting:'pl', holeN:4, boardN:5, hi:true, lo:true,  plo:true,  evalHi:'hi', evalLo:'lo8' },
   // --- ドロー系（場札なし、交換あり） ---
@@ -1236,7 +1246,7 @@ const MIX_GAMES = {
   razz:   { label:"ラズ",                 short:'RAZ', type:'stud', betting:'fl', holeN:7, boardN:0, hi:false, lo:true,  plo:false, evalLo:'razz' },
 };
 // 種目の表示順
-const MIX_ORDER = ['holdem','plo','plo8','a5','sd27','td27','badugi','stud','studhi','razz'];
+const MIX_ORDER = ['holdem','superhi','ocean','plo','plo8','a5','sd27','td27','badugi','stud','studhi','razz'];
 
 
 // ハイ役: ホールデム(任意5枚) or PLO(手札2+場3)
@@ -1254,6 +1264,23 @@ function evalHi(hole, board, isPlo){
     for(const c of combinations(all,5)){ const ev=eval5(c); if(!best||compareEval(ev,best.ev)>0) best={ev,cards:c}; }
     return best ? {rank:best.ev[0], tiebreak:best.ev[1], name:HAND_NAME[best.ev[0]], detail:handDetail(best.ev[0],best.ev[1]), cards:best.cards} : null;
   }
+}
+// スーパーホールデム: 3枚のホールから1〜3枚 + 場札を組み合わせて最強5枚。
+// ボードプレイ不可（最低1枚はホールカードを使う）。
+function evalSuperHi(hole, board){
+  if(board.length < 2) return null; // 5枚を構成できる最低条件（hole3+board2）
+  let best=null;
+  for(let k=1; k<=3; k++){            // 使うホール枚数
+    const need = 5 - k;              // 必要な場札枚数
+    if(hole.length < k || board.length < need) continue;
+    const hs = combinations(hole, k);
+    const bs = combinations(board, need);
+    for(const hc of hs) for(const bc of bs){
+      const ev = eval5([...hc, ...bc]);
+      if(!best || compareEval(ev, best.ev) > 0) best = {ev, cards:[...hc, ...bc]};
+    }
+  }
+  return best ? {rank:best.ev[0], tiebreak:best.ev[1], name:HAND_NAME[best.ev[0]], detail:handDetail(best.ev[0],best.ev[1]), cards:best.cards} : null;
 }
 
 // ロー役(A-5, 8 or better)。役が成立しなければ null
@@ -1425,15 +1452,16 @@ function bestLo8From(cards, gameDef){
 // 種目対応ヘルパー（ホスト/ソロ用: G.currentGame を参照）
 function evalHiCur(hole, board){
   const gd = MIX_GAMES[(typeof G!=='undefined' && G && G.currentGame) || 'holdem'] || MIX_GAMES.holdem;
-  if(gd.type==='community'){ return evalHi(hole, board, gd.plo); }
+  if(gd.type==='community'){ return gd.superHi ? evalSuperHi(hole, board) : evalHi(hole, board, gd.plo); }
   // 場札なし種目はhole7枚等から
   return bestHiFrom(hole);
 }
 // ドロー検出（コミュニティ系のフロップ/ターンで有効）。完成役未満の時に「あと1枚」を教える
 // 返り値: 'フラッシュドロー' / 'ストレートドロー' / 'ガットショット' などの配列
-function detectDraws(hole, board, isPlo){
+function detectDraws(hole, board, isPlo, boardN){
   const draws = [];
-  if(!board || board.length<3 || board.length>=5) return draws; // リバー後はドロー無し
+  const target = boardN || 5;
+  if(!board || board.length<3 || board.length>=target) return draws; // 場が完成したらドロー無し（オーシャンは6枚で完成）
   // PLOは手札ちょうど2枚ルールがあり判定が複雑なので、簡易にホール全体+ボードで見る
   const all = [...hole, ...board];
   // --- フラッシュドロー: 同じスートが4枚 ---
@@ -1469,7 +1497,7 @@ function detectDraws(hole, board, isPlo){
 function evalHiPub(hole, board){
   const gk = (typeof ploPub!=='undefined' && ploPub && ploPub.currentGame) || 'holdem';
   const gd = MIX_GAMES[gk] || MIX_GAMES.holdem;
-  if(gd.type==='community'){ return evalHi(hole, board, gd.plo); }
+  if(gd.type==='community'){ return gd.superHi ? evalSuperHi(hole, board) : evalHi(hole, board, gd.plo); }
   return bestHiFrom(hole);
 }
 
@@ -2489,10 +2517,12 @@ function advancePhase(){
 function advancePhaseCommunity(h){
   // 山札からボードへ1枚（枯渇時はundefinedを積まず警告）。通常プレイでは枯渇しないため挙動は不変
   const dealBoard = ()=>{ const c=h.deck.pop(); if(c) h.board.push(c); else console.warn('advancePhaseCommunity: 山札不足'); };
+  const targetBoard = (MIX_GAMES[G.currentGame]||MIX_GAMES.holdem).boardN || 5;
   if(h.phase==='preflop'){ h.phase='flop'; dealBoard(); dealBoard(); dealBoard(); G.log.unshift('── フロップ ──'); }
   else if(h.phase==='flop'){ h.phase='turn'; dealBoard(); G.log.unshift('── ターン ──'); }
   else if(h.phase==='turn'){ h.phase='river'; dealBoard(); G.log.unshift('── リバー ──'); }
-  else if(h.phase==='river'){ h.phase='showdown'; }
+  else if(h.phase==='river'){ if(targetBoard>=6){ h.phase='ocean'; dealBoard(); G.log.unshift('── オーシャン ──'); } else { h.phase='showdown'; } }
+  else if(h.phase==='ocean'){ h.phase='showdown'; }
 }
 
 // ドロー系: predraw(=preflop) → ベット → ドロー交換 → ベット → ... → showdown
@@ -2586,7 +2616,7 @@ function phaseLabelFor(h, gameKey){
     return 'SHOWDOWN';
   }
   if(gd.type==='community'){
-    const m={preflop:'PREFLOP', flop:'FLOP', turn:'TURN', river:'RIVER'};
+    const m={preflop:'PREFLOP', flop:'FLOP', turn:'TURN', river:'RIVER', ocean:'OCEAN'};
     return m[h.phase] || '';
   }
   if(gd.type==='draw'){
@@ -2606,7 +2636,7 @@ function phaseLabelFor(h, gameKey){
 
 // 最後のベッティングラウンドか判定
 function isLastBettingRound(h, gd){
-  if(gd.type==='community'){ return h.phase==='river'; }
+  if(gd.type==='community'){ return (gd.boardN||5)>=6 ? h.phase==='ocean' : h.phase==='river'; }
   if(gd.type==='draw'){
     return (h.drawDone||0) >= (gd.drawRounds||1);
   }
@@ -3042,7 +3072,7 @@ function standPat(){
 // 種目別: プレイヤーのHi評価を返す（比較可能な形）。なければnull
 function showdownEvalHi(p, h, gd){
   if(!gd.hi) return null;
-  if(gd.type==='community') return evalHi(p.hole, h.board, gd.plo);
+  if(gd.type==='community') return gd.superHi ? evalSuperHi(p.hole, h.board) : evalHi(p.hole, h.board, gd.plo);
   // スタッド: 手札＋共有カード（山札不足時のみboardに入る）から最強5枚
   const pool = (gd.type==='stud' && h.board && h.board.length) ? p.hole.concat(h.board) : p.hole;
   return bestHiFrom(pool);
@@ -3843,7 +3873,7 @@ function calcEquity(h, idx, iterations){
         const floor = oppRangeFloor(h, op, gd.holeN);
         oppHoles.push(sampleFiltered(gd.holeN, floor, cd=>cpuPreflopStrength(cd)));
       });
-      while(simBoard.length<5) simBoard.push(draw1());
+      while(simBoard.length < (gd.boardN||5)) simBoard.push(draw1());
     } else if(gd.type==='draw'){
       // 相手の手: 投資量+交換枚数（公開情報）に応じたレンジで棄却サンプリング
       opps.forEach((op)=>{
@@ -4237,7 +4267,7 @@ function oppMaxTier(h, idx){
 }
 
 function isFinalStreet(h, gd){
-  if(gd.type==='community') return (h.board||[]).length >= 5;
+  if(gd.type==='community') return (h.board||[]).length >= (gd.boardN||5);
   if(gd.type==='draw') return (h.drawDone||0) >= (gd.drawRounds||1);
   return (h.studStreet||3) >= 7;
 }
@@ -4574,7 +4604,7 @@ function render(){
   }
   if(gdCur.type==='community' || h.board.length>0){
     let boardH = '';
-    const slots = gdCur.type==='community' ? 5 : h.board.length;
+    const slots = gdCur.type==='community' ? (gdCur.boardN||5) : h.board.length;
     for(let i=0;i<slots;i++){
       if(h.board[i]){
         const c = h.board[i];
@@ -4583,6 +4613,7 @@ function render(){
         boardH += `<div class="card" style="opacity:0.35;background:transparent;border:1px dashed rgba(232,200,74,0.4);box-shadow:none;"></div>`;
       }
     }
+    g('board-area').classList.toggle('six', slots>=6);
     g('board-area').innerHTML = boardH;
   } else {
     // 場札なし種目: 中央はポット表示のみ（種目名はヘッダにあるため省略）
@@ -4710,7 +4741,7 @@ function render(){
       let txt = ev.detail || ev.name;
       const gdNow = MIX_GAMES[(G&&G.currentGame)||'holdem'];
       if(gdNow && gdNow.type==='community' && ev.rank<=1){ // ハイカード/ワンペアの時だけドロー表示
-        const dr = detectDraws(me.hole, h.board, gdNow.plo);
+        const dr = detectDraws(me.hole, h.board, gdNow.plo, gdNow.boardN);
         if(dr.length) txt += ` <span class="draw-tag">+${dr.join('・')}</span>`;
       }
       myHandName = `<div class="my-hand-name">${txt}</div>`;
@@ -5116,11 +5147,12 @@ function renderGuest(){
   const gdG = MIX_GAMES[pub.currentGame] || MIX_GAMES.holdem;
   if(gdG.type==='community' || pub.board.length>0){
     let boardH='';
-    const slots = gdG.type==='community' ? 5 : pub.board.length;
+    const slots = gdG.type==='community' ? (gdG.boardN||5) : pub.board.length;
     for(let i=0;i<slots;i++){
       if(pub.board[i]){ const c=pub.board[i]; boardH += cardHTML(c,{win:winCards.has(c.r+c.s)}); }
       else boardH += `<div class="card" style="opacity:0.35;background:transparent;border:1px dashed rgba(232,200,74,0.4);box-shadow:none;"></div>`;
     }
+    g('board-area').classList.toggle('six', slots>=6);
     g('board-area').innerHTML = boardH;
   } else {
     g('board-area').innerHTML = `<div style="font-family:'Share Tech Mono',monospace; color:rgba(232,200,74,0.5); font-size:0.7rem; letter-spacing:0.3em; text-transform:uppercase; text-align:center;">${gdG.short}</div>`;
@@ -5196,7 +5228,7 @@ function renderGuest(){
       let txt = ev.detail || ev.name;
       const gdNow = MIX_GAMES[pub.currentGame||'holdem'];
       if(gdNow && gdNow.type==='community' && ev.rank<=1){
-        const dr = detectDraws(myHole, pub.board, gdNow.plo);
+        const dr = detectDraws(myHole, pub.board, gdNow.plo, gdNow.boardN);
         if(dr.length) txt += ` <span class="draw-tag">+${dr.join('・')}</span>`;
       }
       myHandName=`<div class="my-hand-name">${txt}</div>`;
@@ -5570,7 +5602,7 @@ if (typeof window !== 'undefined') {
   window.__pokerInternals = {
     eval5, compareEval, buildPots, distributePot,
     loValue, compareLo, eval5_a5, eval5_27, badugiScore, cmpArr,
-    bestA5Lo, best27Lo, bestLo8From, bestHiFrom, evalLo, evalHi,
+    bestA5Lo, best27Lo, bestLo8From, bestHiFrom, evalLo, evalHi, evalSuperHi,
     HAND_RANK, secureRand, esc, makeDeck, shuffleDeck,
     // ベッティング進行（テスト用）
     __testSetG, HND, applyAction, isRoundComplete, nextActor, nextActorIn,
