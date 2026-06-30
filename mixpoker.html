@@ -576,6 +576,16 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   max-width: 480px;
   margin: 2px auto 0;
 }
+/* テーブルが手番のたびに伸縮しないよう、アクションエリアの高さを常に確保する。
+   空でも手番でも同じ高さになるので、テーブルは種目ごとに一定サイズで安定する。
+   --act-reserve は種目カテゴリ別にJSで設定（ドロー=256 / NLコミュニティ=226 / スタッド=150）。
+   余白はバーの上（テーブルとの間）に来るよう下寄せ。 */
+#screen-game.active #action-area {
+  min-height: calc(var(--act-reserve, 226px) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
 /* ログは1画面確保のため非表示（スクロール禁止優先） */
 #screen-game.active #log { display: none; }
 /* 種目バー・フェーズラベルをコンパクトに（縦長テーブルのスペース確保） */
@@ -620,6 +630,8 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   }
   #screen-game.active .table-center { top: 44%; }
   #screen-game.active #my-seat { bottom: 5%; }
+  /* 横向きはグリッド配置なので縦の高さ確保は無効化 */
+  #screen-game.active #action-area { min-height: 0; justify-content: center; }
   #screen-game.active #action-area:not(:empty) {
     grid-area: action;
     width: 100%; max-width: none;
@@ -4575,6 +4587,19 @@ function buildActionBarHTML(limits, ctx){
   return html;
 }
 
+// アクションエリアの確保高さを種目カテゴリ別に設定する。
+// これによりテーブルが手番のたびに伸縮せず、種目ごとに一定サイズで安定する。
+function setActReserve(gameKey){
+  const gd = MIX_GAMES[gameKey || 'holdem'];
+  let px = 226;                         // NLコミュニティ（ベットUI≈219px）
+  if(gd){
+    if(gd.type==='draw') px = 256;      // 交換UIが高い（≈249px）
+    else if(gd.type==='stud') px = 150; // スタッドはFLベットのみ（≈118px）
+  }
+  const sg = document.getElementById('screen-game');
+  if(sg) sg.style.setProperty('--act-reserve', px + 'px');
+}
+
 function render(){
   const h = HND();
   if(!h) return;
@@ -4584,6 +4609,7 @@ function render(){
 
   // 種目バー更新
   updateGameTypeBar();
+  setActReserve(G && G.currentGame);
 
   // フェーズ（種目タイプで表示を変える）
   g('phase-label').textContent = phaseLabelFor(h, G.currentGame);
@@ -5136,6 +5162,7 @@ function renderGuest(){
   // ゲスト自身の収支をセッション記録（showdown時に1ハンド1回）
   try { maybeRecordGuestHand(pub); } catch(e){ console.warn('maybeRecordGuestHand失敗', e); }
   updateGameTypeBar();
+  setActReserve(pub.currentGame);
   g('phase-label').textContent = phaseLabelFor({phase:pub.phase, drawDone:pub.drawDone, studStreet:pub.studStreet, results:pub.results}, pub.currentGame);
   g('pot-display').textContent = `POT: ${pub.pot + pub.roundBetTotal}`;
   const winCards = new Set();
