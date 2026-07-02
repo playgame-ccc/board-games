@@ -357,6 +357,32 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   margin-top: 3px;
   white-space: nowrap;
 }
+/* ランアウト中の勝率%表示 */
+.eq-pill {
+  display: inline-block;
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 800;
+  font-size: 0.74rem;
+  padding: 1px 10px;
+  border-radius: 12px;
+  margin-top: 3px;
+  color: var(--gold-bright);
+  background: rgba(201,150,47,0.16);
+  border: 1px solid rgba(201,150,47,0.55);
+}
+/* 切断中プレイヤーのバッジ */
+.disc-pill {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 0.66rem;
+  padding: 1px 9px;
+  border-radius: 12px;
+  margin-top: 3px;
+  color: #ffb020;
+  background: rgba(255,176,32,0.12);
+  border: 1px solid rgba(255,176,32,0.5);
+}
+
 .pnl-plus  { background: var(--green); color: #fff; }
 .pnl-minus { background: var(--red); color: #fff; }
 .pnl-zero  { background: var(--surface3); color: var(--muted); }
@@ -544,6 +570,17 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 
 /* ===== アクションバー（JOPT風: 画面最下部） ===== */
+/* 手番外に空きスペースへ流すミニログ */
+.mini-log {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+  padding: 4px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  pointer-events: none;
+}
 #action-area:not(:empty) {
   flex: 0 0 auto;
   width: 100%;
@@ -662,7 +699,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .jopt-left > .btn { margin: 0; padding: 11px 4px; border-radius: 12px; font-size: 0.96rem; line-height: 1.15; }
 .jopt-amt { font-family:'Share Tech Mono',monospace; font-size: 0.82rem; font-weight: 700; opacity: 0.95; }
 .jopt-slider-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
-.jopt-slider-row input[type=range] {
+.jopt-slider-row input[type=range], .jopt2-slider {
   width: calc(100% - 8px);
   margin: 2px auto;
   accent-color: var(--gold);
@@ -688,6 +725,26 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .jopt-amt-btn:active { transform: translateY(1px); }
 .jopt-amt-lbl { font-size: 0.74rem; font-weight: 700; color: var(--muted); }
 .jopt-amt-val { font-family:'Share Tech Mono',monospace; font-size: 0.92rem; font-weight: 800; color: var(--gold-bright); }
+/* ===== コンパクト版アクションバー(jopt2): プリセット行 / スライダー / 3ボタン横並び ===== */
+.jopt2 { display: flex; flex-direction: column; gap: 7px; }
+.jopt2-presets { display: flex; gap: 5px; }
+.jopt2-chip {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; padding: 5px 2px; border-radius: 9px; cursor: pointer;
+  background: linear-gradient(180deg, rgba(46,36,24,0.95), rgba(26,20,13,0.95));
+  border: 1px solid rgba(201,150,47,0.4);
+}
+.jopt2-chip:active { transform: translateY(1px); }
+.jopt2-lbl { font-size: 0.66rem; font-weight: 700; color: var(--muted); line-height: 1; }
+.jopt2-val { font-family:'Share Tech Mono',monospace; font-size: 0.86rem; font-weight: 800; color: var(--gold-bright); line-height: 1.1; }
+.jopt2-slider { width: 100%; margin: 0; }
+.jopt2-actions { display: flex; gap: 6px; align-items: stretch; }
+.jopt2-actions .btn {
+  flex: 1 1 0; min-width: 0; margin: 0; padding: 12px 4px; border-radius: 12px;
+  font-size: 0.98rem; font-weight: 700; line-height: 1.1; white-space: nowrap;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+}
+.jopt2-amt { font-family:'Share Tech Mono',monospace; font-size: 0.8rem; font-weight: 800; opacity: 0.95; }
 
 
 /* ===== ログ ===== */
@@ -958,12 +1015,21 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
     </div>
 
     <div class="panel">
+      <h3 class="center">通知音・バイブ</h3>
+      <div class="count-selector" id="sound-select">
+        <button class="count-btn selected" data-snd="on" onclick="setSound(true)" style="width:auto;padding:0 16px;">🔔 ON</button>
+        <button class="count-btn" data-snd="off" onclick="setSound(false)" style="width:auto;padding:0 16px;">OFF</button>
+      </div>
+      <div class="center muted small" style="margin-top:8px;">自分の手番と勝利時に音とバイブでお知らせ</div>
+    </div>
+
+    <div class="panel">
       <h3 class="center">種目ローテーション</h3>
       <div class="count-selector" id="rotation-select" style="flex-wrap:wrap; gap:6px;">
         <button class="count-btn selected" data-r="manual" onclick="setRotationMode('manual')" style="width:auto;padding:0 12px;">手動</button>
         <button class="count-btn" data-r="horse" onclick="setRotationMode('horse')" style="width:auto;padding:0 12px;">HORSE</button>
         <button class="count-btn" data-r="8game" onclick="setRotationMode('8game')" style="width:auto;padding:0 12px;">8-Game</button>
-        <button class="count-btn" data-r="all" onclick="setRotationMode('all')" style="width:auto;padding:0 12px;">全10種</button>
+        <button class="count-btn" data-r="all" onclick="setRotationMode('all')" style="width:auto;padding:0 12px;">全種目</button>
       </div>
       <div id="rotation-every-row" style="display:none; margin-top:10px;">
         <div class="center muted small">切替間隔（ハンド数）</div>
@@ -1058,6 +1124,8 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <button id="btn-change-game" class="btn-ghost" style="display:none; width:auto; padding:5px 12px; margin:0; font-size:0.76rem; border-radius:8px; background:transparent; border:1px solid var(--surface3); color:var(--muted); cursor:pointer; font-family:inherit;" onclick="openGamePicker()">変更 ▼</button>
     </div>
     <div class="phase-label" id="phase-label">PREFLOP</div>
+    <div id="turn-timer" style="display:none; text-align:center; font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:var(--gold); margin-top:-2px;"></div>
+    <div id="host-stale-banner" style="display:none; text-align:center; font-size:0.72rem; font-weight:700; color:#ffb020; background:rgba(255,176,32,0.1); border:1px solid rgba(255,176,32,0.4); border-radius:10px; padding:3px 10px; margin:2px auto 0; max-width:320px;">📡 ホストの接続が切れています。復帰を待っています…</div>
     <div id="tourney-bar" style="display:none;"></div>
 
     <div class="poker-table" id="poker-table">
@@ -1084,6 +1152,15 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <div class="center muted small" style="margin-bottom:12px;">次のハンドから適用されます</div>
       <div id="game-picker-list"></div>
       <button class="btn btn-ghost" style="margin-top:10px;" onclick="closeGamePicker()">キャンセル</button>
+    </div>
+  </div>
+
+  <!-- ハンド詳細（リプレイ）モーダル -->
+  <div id="hand-detail-modal" style="display:none; position:fixed; inset:0; background:rgba(5,5,8,0.82); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:110; align-items:center; justify-content:center;" onclick="if(event.target===this)closeHandDetail()">
+    <div style="background:linear-gradient(180deg, var(--surface2), var(--surface)); border:1px solid var(--surface3); border-radius:16px; padding:18px; max-width:360px; width:92%; max-height:82vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,162,39,0.15);">
+      <h3 class="center" style="font-style:italic; font-weight:800; letter-spacing:0.06em; color:var(--felt-rim); margin-bottom:8px;">HAND REPLAY</h3>
+      <div id="hand-detail-body"></div>
+      <button class="btn btn-ghost" style="margin-top:12px;" onclick="closeHandDetail()">閉じる</button>
     </div>
   </div>
 
@@ -1114,6 +1191,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <h3 class="center">最近のハンド</h3>
       <div id="stats-history" style="max-height:340px; overflow-y:auto;"></div>
     </div>
+    <button class="btn btn-ghost btn-sm" onclick="exportHistoryCSV()">📄 履歴をCSVで保存</button>
     <button class="btn btn-ghost btn-sm" onclick="clearAllStats()" style="color:var(--red); border-color:var(--red);">通算記録を消去</button>
     <button class="btn btn-felt" onclick="closeStatsScreen()">戻る</button>
   </div>
@@ -1647,6 +1725,9 @@ let hostSelectedGame = 'holdem';  // マルチの現在種目（ホストが切�
 // ===== 新機能の状態 =====
 // CPU難易度（ロビー設定。ゲーム開始時に各CPUへプロファイル割当）
 let cpuLevel = 'normal';   // 'easy' | 'normal' | 'hard'
+// マルチの手番タイマー（ホスト権威で自動チェック/フォールド）
+let turnTimer = null;
+const TURN_TIMEOUT_MS = 30000;
 // 種目ローテーション（ロビー設定）
 let rotationMode = 'manual'; // 'manual' | 'horse' | '8game' | 'all'
 let rotationEvery = 3;       // 何ハンドごとに切替（ローテーション時）
@@ -1795,7 +1876,7 @@ const ROTATION_LABELS = {
   manual:'手動で種目を切り替えます（ゲーム中の変更ボタン）',
   horse: 'H→O8→Razz→Stud→Stud8 を順番に自動切替',
   '8game':'8種目を順番に自動切替',
-  all:   '全10種を順番に自動切替',
+  all:   '全12種を順番に自動切替',
 };
 function setRotationMode(m){
   rotationMode = m;
@@ -1949,6 +2030,8 @@ function initSession(mode){
     net: 0,                 // 自分の通算収支（チップ）
     byGame: {},             // gameKey -> {hands, net, bbSum}
     bb: soloBB || 20,
+    vpipN: 0, pfrN: 0,      // プリフロップ自発参加 / プリフロップレイズ
+    sdN: 0, sdWinN: 0,      // ショーダウン到達 / うち勝利
   };
 }
 // ハンド確定時に自分の収支を記録（logHandPnlからフック）
@@ -1957,10 +2040,19 @@ function recordHandResult(h){
   const me = h.players.find(p=>p.id===myId);
   if(!me) return;
   const delta = (me.stack||0) - (me.startStack||0);
+  if(delta > 0) notifyWin();
   const gk = G.currentGame || 'holdem';
   const bb = h.bbAmount || sessionStats.bb || 20;
   sessionStats.hands++;
   sessionStats.net += delta;
+  // 新指標: VPIP / PFR / ショーダウン
+  if(h._meVPIP) sessionStats.vpipN = (sessionStats.vpipN||0)+1;
+  if(h._mePFR)  sessionStats.pfrN  = (sessionStats.pfrN||0)+1;
+  const wentSD = (h.phase==='showdown' && !me.folded && notFolded().length>=2);
+  if(wentSD){
+    sessionStats.sdN = (sessionStats.sdN||0)+1;
+    if(delta > 0) sessionStats.sdWinN = (sessionStats.sdWinN||0)+1;
+  }
   const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0});
   bg.hands++; bg.net += delta; bg.bbSum += delta / bb;
   // 履歴（リプレイ用・軽量）
@@ -1973,9 +2065,19 @@ function recordHandResult(h){
     bb,
     myCards: (me.hole||[]).map(c=>rankStr(c.r)+SUIT_SYM[c.s]),
     board: (h.board||[]).map(c=>rankStr(c.r)+SUIT_SYM[c.s]),
+    myCardsRaw: (me.hole||[]).map(c=>({r:c.r,s:c.s})),
+    boardRaw: (h.board||[]).map(c=>({r:c.r,s:c.s})),
     myHandName: (h.handNames && h.handNames[me.id]) || '',
     won: delta>0,
     results: (h.results||[]).map(r=>({names:r.winnerNames, amount:r.amount})),
+    // リプレイ: このハンドのアクションログ（時系列順）と、ショーダウンで公開された手
+    log: (function(){
+      const mark = G._handLogMark||0;
+      const added = Math.max(0, G.log.length - mark);
+      return G.log.slice(0, Math.min(added, 90)).slice().reverse();
+    })(),
+    shown: h.players.filter(p=>p.id!==myId && !p.folded && h.phase==='showdown')
+      .map(p=>({name:p.name, cards:(p.hole||[]).map(c=>({r:c.r,s:c.s})), hand:(h.handNames&&h.handNames[p.id])||''})),
   });
   if(handHistory.length>200) handHistory.length=200;
   // localStorageへ通算を加算保存
@@ -2014,6 +2116,12 @@ function renderStatsScreen(){
         <div><div class="muted" style="font-size:0.66rem;">収支</div><div style="font-size:1.1rem; font-weight:700;" class="${sessionStats.net>0?'':''}"><span class="${cls}" style="padding:1px 10px; border-radius:10px;">${fmtSigned(sessionStats.net)}</span></div></div>
         <div><div class="muted" style="font-size:0.66rem;">bb/100</div><div style="font-size:1.1rem; font-weight:700; color:${per100>=0?'var(--green-dim)':'var(--red)'};">${per100>=0?'+':''}${per100.toFixed(1)}</div></div>
         <div><div class="muted" style="font-size:0.66rem;">経過</div><div style="font-size:1.1rem; font-weight:700;">${mins}分</div></div>
+      </div>
+      <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'Share Tech Mono',monospace; margin-top:10px; padding-top:8px; border-top:1px solid var(--surface2);">
+        <div><div class="muted" style="font-size:0.66rem;">VPIP</div><div style="font-size:0.98rem; font-weight:700;">${(100*(sessionStats.vpipN||0)/sessionStats.hands).toFixed(0)}%</div></div>
+        <div><div class="muted" style="font-size:0.66rem;">PFR</div><div style="font-size:0.98rem; font-weight:700;">${(100*(sessionStats.pfrN||0)/sessionStats.hands).toFixed(0)}%</div></div>
+        <div><div class="muted" style="font-size:0.66rem;">SD到達</div><div style="font-size:0.98rem; font-weight:700;">${(100*(sessionStats.sdN||0)/sessionStats.hands).toFixed(0)}%</div></div>
+        <div><div class="muted" style="font-size:0.66rem;">SD勝率</div><div style="font-size:0.98rem; font-weight:700;">${(sessionStats.sdN||0)>0 ? (100*(sessionStats.sdWinN||0)/(sessionStats.sdN)).toFixed(0)+'%' : '—'}</div></div>
       </div>`;
   } else {
     sBody.innerHTML = 'まだプレイしていません';
@@ -2074,12 +2182,68 @@ function renderStatsHistory(){
     const cards = hh.myCards.join(' ');
     const board = hh.board.length ? ` ・ 場 ${hh.board.join(' ')}` : '';
     return `
-      <div style="display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:1px solid var(--surface2);">
+      <div onclick="openHandDetail(${i})" style="display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:1px solid var(--surface2); cursor:pointer;">
         <span style="font-size:0.6rem; background:var(--surface2); color:var(--muted); padding:1px 6px; border-radius:5px; font-weight:700; white-space:nowrap;">${hh.gameLabel.length>6?MIX_GAMES[hh.game].short:hh.gameLabel}</span>
         <span class="mono" style="flex:1; font-size:0.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cards}${board}</span>
         <span class="${cls}" style="font-size:0.7rem; padding:1px 9px; border-radius:10px; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${fmtSigned(hh.delta)}</span>
+        <span class="muted" style="font-size:0.72rem;">›</span>
       </div>`;
   }).join('');
+}
+
+// ハンド詳細（リプレイ）モーダル
+function openHandDetail(i){
+  const hh = handHistory[i];
+  if(!hh) return;
+  const cardRow = (raw, strFallback) => raw && raw.length
+    ? `<div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">${raw.map(c=>cardHTML(c,{sm:true})).join('')}</div>`
+    : (strFallback ? `<div class="center mono">${strFallback}</div>` : '');
+  const resLines = (hh.results||[]).map(r=>`<div class="small">🏆 ${esc((r.names||[]).join('・'))} が ${r.amount} 獲得</div>`).join('');
+  const shownH = (hh.shown||[]).map(s=>`
+    <div style="margin-top:6px;">
+      <div class="small muted">${esc(s.name)}${s.hand?` — ${esc(s.hand)}`:''}</div>
+      <div style="display:flex; gap:3px; margin-top:2px;">${(s.cards||[]).map(c=>cardHTML(c,{xs:true})).join('')}</div>
+    </div>`).join('');
+  const logH = (hh.log||[]).map(l=>`<div style="padding:2px 0; border-bottom:1px dashed rgba(255,255,255,0.06);">${esc(l)}</div>`).join('') || '<div class="muted small">ログなし</div>';
+  const cls = hh.delta>0?'pnl-plus':(hh.delta<0?'pnl-minus':'pnl-zero');
+  const el = g('hand-detail-modal');
+  g('hand-detail-body').innerHTML = `
+    <div class="center" style="margin-bottom:4px;">
+      <span style="font-size:0.7rem; background:var(--surface2); color:var(--muted); padding:2px 8px; border-radius:6px; font-weight:700;">${esc(hh.gameLabel)} ・ #${hh.handNo}</span>
+      <span class="${cls}" style="font-size:0.78rem; padding:2px 10px; border-radius:10px; font-family:'Share Tech Mono',monospace; margin-left:6px;">${fmtSigned(hh.delta)}</span>
+    </div>
+    <div class="small muted center" style="margin:6px 0 3px;">あなたの手札${hh.myHandName?` — ${esc(hh.myHandName)}`:''}</div>
+    ${cardRow(hh.myCardsRaw, hh.myCards.join(' '))}
+    ${hh.boardRaw && hh.boardRaw.length ? `<div class="small muted center" style="margin:8px 0 3px;">ボード</div>${cardRow(hh.boardRaw, hh.board.join(' '))}` : ''}
+    ${shownH ? `<div class="small muted" style="margin-top:8px;">公開された手</div>${shownH}` : ''}
+    <div style="margin-top:8px;">${resLines}</div>
+    <div class="small muted" style="margin:10px 0 4px;">📜 アクションログ</div>
+    <div class="mono" style="font-size:0.7rem; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.25); border-radius:10px; padding:8px;">${logH}</div>`;
+  el.style.display = 'flex';
+}
+function closeHandDetail(){ g('hand-detail-modal').style.display='none'; }
+
+// 履歴CSVエクスポート（このセッションのhandHistory）
+function exportHistoryCSV(){
+  if(!handHistory || !handHistory.length){ alert('このセッションの履歴がまだありません'); return; }
+  const escCsv = v => { const t=String(v==null?'':v); return /[",\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t; };
+  const head = ['日時','種目','ハンド番号','収支','BB','自分の手札','ボード','役','結果'];
+  const rows = handHistory.slice().reverse().map(hh=>{
+    const d = new Date(hh.ts);
+    const dt = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const res = (hh.results||[]).map(r=>`${(r.names||[]).join('・')} +${r.amount}`).join(' / ');
+    return [dt, hh.gameLabel, hh.handNo, hh.delta, hh.bb, hh.myCards.join(' '), hh.board.join(' '), hh.myHandName||'', res].map(escCsv).join(',');
+  });
+  const csv = '\uFEFF' + head.join(',') + '\n' + rows.join('\n'); // BOM付き(Excel対応)
+  try{
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const d = new Date();
+    a.download = `mixpoker_history_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.csv`;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  }catch(e){ alert('CSVの保存に失敗しました: '+e); }
 }
 
 function clearAllStats(){
@@ -2100,10 +2264,19 @@ function maybeRecordGuestHand(pub){
   if(!me || me.startStack==null) return;
   guestLastRecordedHand = handNo;
   const delta = (me.stack||0) - (me.startStack||0);
+  if(delta > 0) notifyWin();
   const gk = pub.currentGame || 'holdem';
   const bb = pub.bbAmount || sessionStats.bb || 20;
   sessionStats.hands++;
   sessionStats.net += delta;
+  // 新指標(ゲスト): VPIP/PFRはguestActで記録したフラグ、SDはpubから判定
+  if(window._gVPIP) sessionStats.vpipN = (sessionStats.vpipN||0)+1;
+  if(window._gPFR)  sessionStats.pfrN  = (sessionStats.pfrN||0)+1;
+  window._gVPIP = false; window._gPFR = false;
+  if(pub.phase==='showdown' && !me.folded && pub.players.filter(p=>!p.folded).length>=2){
+    sessionStats.sdN = (sessionStats.sdN||0)+1;
+    if(delta > 0) sessionStats.sdWinN = (sessionStats.sdWinN||0)+1;
+  }
   const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0});
   bg.hands++; bg.net += delta; bg.bbSum += delta/bb;
   handHistory.unshift({
@@ -2160,6 +2333,8 @@ function startSolo(){
 }
 
 function startNewHand(){
+  // リプレイ用: このハンドで追加されるログの開始位置を記録
+  if(G) G._handLogMark = (G.log||[]).length;
   // 途中参加者を取り込み（次ハンドから = ここ）。トーナメント中は観戦のみ
   if(isMulti && isHost && pendingJoins.length){
     if(G.tourney){
@@ -2354,7 +2529,7 @@ function startNewHand(){
   scheduleNext();
 }
 
-function HND(){ return G.hand; }
+function HND(){ return G ? G.hand : null; }
 function activePlayers(){ return HND().players.filter(p=>!p.folded && !p.allIn); }
 function notFolded(){ return HND().players.filter(p=>!p.folded); }
 function roundBetTotal(){ return HND().players.reduce((s,p)=>s+p.roundBet,0); }
@@ -2390,6 +2565,20 @@ function applyAction(playerIdx, action){
   const p = h.players[playerIdx];
   if(p.folded || p.allIn) return;
   const toCall = h.highBet - p.roundBet;
+
+  // 成績指標: 自分の最初のベットラウンドでの自発参加(VPIP)とレイズ(PFR)を記録
+  {
+    const selfIdStat = isMulti ? myId : 'human';
+    if(p.id === selfIdStat){
+      const gdS = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
+      const firstRound = gdS.type==='stud' ? (h.studStreet||3)===3
+                       : (h.phase==='preflop' && (h.drawDone||0)===0);
+      if(firstRound){
+        if(action.type==='raise') { h._meVPIP = true; h._mePFR = true; }
+        else if(action.type==='call' && toCall > 0) { h._meVPIP = true; }
+      }
+    }
+  }
 
   if(action.type === 'fold'){
     p.folded = true; p.acted = true; p.lastAction = 'フォールド';
@@ -2997,15 +3186,18 @@ function showDrawUI(p, h, gd, callback){
   h._drawCallback = callback;
   h._drawPlayer = p;
   h._drawGd = gd;
+  notifyTurn(); // 交換の手番になったことを通知
   render(); // ボードと手札を表示
   const area = g('action-area');
   area.innerHTML = `
     <div class="action-bar">
-      <div class="center" style="margin-bottom:8px; color:var(--gold); font-weight:700;">🔄 交換するカードを選んでタップ</div>
-      <div id="draw-hand" style="display:flex; gap:6px; justify-content:center; margin-bottom:10px;"></div>
-      <button class="btn btn-gold" onclick="confirmDraw()">交換する</button>
-      <button class="btn btn-ghost btn-sm" onclick="standPat()">交換しない（スタンドパット）</button>
-      <div id="cpu-hint" class="center muted small" style="display:none; margin-top:8px;"></div>
+      <div class="center" style="margin-bottom:5px; color:var(--gold); font-weight:700; font-size:0.9rem;">🔄 交換するカードをタップ</div>
+      <div id="draw-hand" style="display:flex; gap:6px; justify-content:center; margin-bottom:8px;"></div>
+      <div class="jopt2-actions">
+        <button class="btn btn-ghost" onclick="standPat()">スタンドパット</button>
+        <button class="btn btn-gold" onclick="confirmDraw()">交換する</button>
+      </div>
+      <div id="cpu-hint" class="center muted small" style="display:none; margin-top:6px;"></div>
     </div>`;
   renderDrawHand(p);
   updateCpuHint();
@@ -3330,6 +3522,17 @@ function scheduleNext(){
   // ラウンド完了チェック
   if(isRoundComplete()){
     const gd = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
+    if(turnTimer){ clearTimeout(turnTimer); turnTimer = null; }
+    h.turnDeadline = null;
+
+    // オールイン・ランアウト検出: これ以上ベットできる人が1人以下で、2人以上が残っている
+    // → 手札を公開し、残りのカードを開きながら勝率%を表示（TV中継風）
+    if(activePlayers().length <= 1 && notFolded().length >= 2 && !h.runout){
+      h.runout = true;
+    }
+    if(h.runout){
+      h.runoutEq = runoutEquities(h, gd); // ストリートごとに更新（配り切り後はnull）
+    }
 
     if(isLastBettingRound(h, gd)){
       // 最後のベッティング → ショーダウン
@@ -3349,7 +3552,7 @@ function scheduleNext(){
           h.toActIdx = nextActor(G.buttonIdx);
           render();
           if(activePlayers().length <= 1 && notFolded().length >= 2){
-            aiTimer = setTimeout(()=>scheduleNext(), 1000);
+            aiTimer = setTimeout(()=>scheduleNext(), 1400);
           } else {
             aiTimer = setTimeout(()=>scheduleNext(), 600);
           }
@@ -3358,7 +3561,7 @@ function scheduleNext(){
       }
       render();
       if(activePlayers().length <= 1 && notFolded().length >= 2){
-        aiTimer = setTimeout(()=>scheduleNext(), 1000);
+        aiTimer = setTimeout(()=>scheduleNext(), 1400);
         return;
       }
       aiTimer = setTimeout(()=>scheduleNext(), 600);
@@ -3373,6 +3576,23 @@ function scheduleNext(){
 
   if(isMulti){
     // マルチ: CPUはいない。ホスト自身ならローカルUI、人間ゲストならアクション待ち
+    // 手番タイマー: 30秒で自動チェック（コール不要時）/フォールド。ホスト側で一元判定
+    h.turnDeadline = Date.now() + TURN_TIMEOUT_MS;
+    if(turnTimer) clearTimeout(turnTimer);
+    const tSnapshot = { handNo: G.handNo, idx };
+    turnTimer = setTimeout(()=>{
+      if(G.handNo !== tSnapshot.handNo) return;
+      if(h !== HND()) return;
+      if(h.toActIdx !== tSnapshot.idx) return;
+      if(h.phase === 'showdown') return;
+      const tp = h.players[tSnapshot.idx];
+      const lim = calcBetLimits(h, tp);
+      const auto = (lim.toCall===0) ? {type:'check'} : {type:'fold'};
+      G.log.unshift(`⏰ ${tp.name}: 時間切れ → ${auto.type==='check'?'チェック':'フォールド'}`);
+      applyAction(tSnapshot.idx, auto);
+      h.toActIdx = nextActor(tSnapshot.idx);
+      scheduleNext();
+    }, TURN_TIMEOUT_MS);
     render(); // 配信込み
     if(p.id === myId){
       // ホスト自身の番 → ローカルアクションUI（renderActionAreaで表示）
@@ -3986,6 +4206,62 @@ function simShare(players, simH, gd){
   }
 }
 
+// ===== オールイン・ランアウト勝率 =====
+// 全員の手札が既知の状態で、残りのボード（スタッドは各自の残り札）だけをサンプリングして勝率%を出す。
+// ドロー系は交換の意思決定が絡むため対象外（カード公開のみ）。
+function runoutEquities(h, gd){
+  if(gd.type==='draw') return null;
+  const aliveIdx = []; h.players.forEach((p,i)=>{ if(!p.folded) aliveIdx.push(i); });
+  if(aliveIdx.length < 2) return null;
+  // デッドカード: 生存者の全手札 + ボード + 降りた人の表札(スタッド)
+  const used = new Set();
+  aliveIdx.forEach(i=>h.players[i].hole.forEach(c=>used.add(c.r+c.s)));
+  (h.board||[]).forEach(c=>used.add(c.r+c.s));
+  if(gd.type==='stud'){
+    h.players.forEach(p=>{ if(p.folded&&p.faceUp) p.hole.forEach((c,k)=>{ if(p.faceUp[k]) used.add(c.r+c.s); }); });
+  }
+  const deckAll = makeDeck().filter(c=>!used.has(c.r+c.s));
+  const needBoard = gd.type==='community' ? (gd.boardN||5)-(h.board||[]).length : 0;
+  const needPer = gd.type==='stud' ? aliveIdx.map(i=>Math.max(0, 7-h.players[i].hole.length)) : [];
+  const totalNeed = gd.type==='community' ? needBoard : needPer.reduce((a,b)=>a+b,0);
+  if(totalNeed<=0) return null; // 配り切り済み → ショーダウンで確定
+  const shares = {}; aliveIdx.forEach(i=>shares[i]=0);
+  const ITER = 500, t0 = performance.now();
+  let done = 0;
+  const idxs = [...deckAll.keys()];
+  for(let it=0; it<ITER; it++){
+    // 部分Fisher-Yatesで totalNeed 枚引く
+    const drawn = [];
+    for(let k=0;k<totalNeed;k++){
+      const j = k + Math.floor(Math.random()*(idxs.length-k));
+      [idxs[k],idxs[j]]=[idxs[j],idxs[k]];
+      drawn.push(deckAll[idxs[k]]);
+    }
+    let simPlayers, simH;
+    if(gd.type==='community'){
+      simH = { board: [...(h.board||[]), ...drawn.slice(0,needBoard)] };
+      simPlayers = aliveIdx.map(i=>h.players[i]);
+    } else {
+      simH = { board: [] };
+      let di = 0;
+      simPlayers = aliveIdx.map((i,k)=>{
+        const p = h.players[i];
+        const add = drawn.slice(di, di+needPer[k]); di += needPer[k];
+        return { hole: [...p.hole, ...add] };
+      });
+    }
+    aliveIdx.forEach((pi,k)=>{
+      const rot = [simPlayers[k], ...simPlayers.filter((_,q)=>q!==k)];
+      shares[pi] += simShare(rot, simH, gd);
+    });
+    done++;
+    if((it&31)===31 && performance.now()-t0>110) break;
+  }
+  const out = {};
+  aliveIdx.forEach(i=>{ out[h.players[i].id] = Math.round(100*shares[i]/done); });
+  return out;
+}
+
 // GTO風意思決定 v2（MDF・ポジション・ベットサイズミックス・最終ストリートのブラフ均衡）
 // ===== GTOソルバー出力テーブル =====
 // プッシュ/フォールドはfictitious playで計算したナッシュ均衡（169ハンド×スタック4-20BB）
@@ -4470,17 +4746,17 @@ function oppPositions(count){
   // 縦長テーブル(aspect 100/168)。上端(y<8)はヘッダーと重なるため避ける。
   // 中央のボード/ポット帯(y:40-62)も避ける。
   const presets = {
-    1: [{x:50,y:15}],
-    2: [{x:22,y:17},{x:78,y:17}],
-    3: [{x:18,y:20},{x:50,y:14},{x:82,y:20}],
-    4: [{x:16,y:32},{x:30,y:15},{x:70,y:15},{x:84,y:32}],
-    5: [{x:13,y:36},{x:24,y:17},{x:50,y:13},{x:76,y:17},{x:87,y:36}],
-    6: [{x:13,y:40},{x:24,y:19},{x:42,y:14},{x:58,y:14},{x:76,y:19},{x:87,y:40}],
-    7: [{x:12,y:62},{x:13,y:34},{x:28,y:15},{x:50,y:12},{x:72,y:15},{x:87,y:34},{x:88,y:62}],
-    8: [{x:12,y:64},{x:13,y:36},{x:27,y:16},{x:43,y:13},{x:57,y:13},{x:73,y:16},{x:87,y:36},{x:88,y:64}],
+    1: [{x:50,y:14}],
+    2: [{x:20,y:16},{x:80,y:16}],
+    3: [{x:16,y:22},{x:50,y:12},{x:84,y:22}],
+    4: [{x:14,y:34},{x:33,y:13},{x:67,y:13},{x:86,y:34}],
+    5: [{x:13,y:37},{x:27,y:14},{x:50,y:11},{x:73,y:14},{x:87,y:37}],
+    6: [{x:13,y:38},{x:23,y:16},{x:41,y:12},{x:59,y:12},{x:77,y:16},{x:87,y:38}],
+    7: [{x:12,y:56},{x:13,y:32},{x:29,y:14},{x:50,y:11},{x:71,y:14},{x:87,y:32},{x:88,y:56}],
+    8: [{x:12,y:58},{x:13,y:34},{x:28,y:15},{x:43,y:12},{x:57,y:12},{x:72,y:15},{x:87,y:34},{x:88,y:58}],
   };
   // 6人は上中央が重複しないよう個別補正
-  if(count===6) return [{x:13,y:40},{x:24,y:19},{x:42,y:14},{x:58,y:14},{x:76,y:19},{x:87,y:40}];
+  if(count===6) return [{x:13,y:38},{x:23,y:16},{x:41,y:12},{x:59,y:12},{x:77,y:16},{x:87,y:38}];
   return presets[count] || presets[8].slice(0,count);
 }
 
@@ -4504,6 +4780,8 @@ function buildOppSeatHTML(d){
         ${d.foldPill}
         ${d.drawPill}
         ${d.pnlPill}
+        ${d.eqPill||''}
+        ${d.discPill||''}
         ${d.roundBet>0 ? `<div class="opp-bet" style="left:50%; bottom:-18px; transform:translateX(-50%);">${d.roundBet}</div>` : ''}
       </div>`;
 }
@@ -4554,22 +4832,20 @@ function buildActionBarHTML(limits, ctx){
       const initVal = pot1_2;
       const callAmt = toCall===0 ? 0 : Math.min(toCall, limits.stack);
       html += `
-        <div class="jopt-bet">
-          <div class="jopt-left">
+        <div class="jopt2">
+          <div class="jopt2-presets">
+            <button class="jopt2-chip" onclick="${ctx.raiseTo(minR)}"><span class="jopt2-lbl">Min</span><span class="jopt2-val">${minR}</span></button>
+            <button class="jopt2-chip" onclick="${ctx.raiseTo(pot1_2)}"><span class="jopt2-lbl">½</span><span class="jopt2-val">${pot1_2}</span></button>
+            <button class="jopt2-chip" onclick="${ctx.raiseTo(pot3_4)}"><span class="jopt2-lbl">¾</span><span class="jopt2-val">${pot3_4}</span></button>
+            <button class="jopt2-chip" onclick="${ctx.raiseTo(potRaise)}"><span class="jopt2-lbl">Pot</span><span class="jopt2-val">${potRaise}</span></button>
+          </div>
+          <input type="range" id="bet-slider" class="jopt2-slider" min="${minR}" max="${limits.maxRaiseTo}" value="${initVal}" step="${ctx.bbAmount}" oninput="updateBetLabel()">
+          <div class="jopt2-actions">
             <button class="btn btn-fold" onclick="${ctx.fold}">フォールド</button>
             ${toCall===0
               ? `<button class="btn btn-call" onclick="${ctx.check}">チェック</button>`
-              : `<button class="btn btn-call" onclick="${ctx.call}">コール<br><span class="jopt-amt">${callAmt}</span></button>`}
-            <div class="jopt-slider-row">
-              <input type="range" id="bet-slider" min="${minR}" max="${limits.maxRaiseTo}" value="${initVal}" step="${ctx.bbAmount}" oninput="updateBetLabel()">
-              <button class="btn btn-raise jopt-raise" onclick="${ctx.confirm}">${toCall>0?'レイズ':'ベット'} <span id="raise-btn-amt">${initVal}</span></button>
-            </div>
-          </div>
-          <div class="jopt-right">
-            <button class="jopt-amt-btn" onclick="${ctx.raiseTo(potRaise)}"><span class="jopt-amt-lbl">Pot</span><span class="jopt-amt-val">${potRaise}</span></button>
-            <button class="jopt-amt-btn" onclick="${ctx.raiseTo(pot3_4)}"><span class="jopt-amt-lbl">3/4</span><span class="jopt-amt-val">${pot3_4}</span></button>
-            <button class="jopt-amt-btn" onclick="${ctx.raiseTo(pot1_2)}"><span class="jopt-amt-lbl">1/2</span><span class="jopt-amt-val">${pot1_2}</span></button>
-            <button class="jopt-amt-btn" onclick="${ctx.raiseTo(minR)}"><span class="jopt-amt-lbl">Min</span><span class="jopt-amt-val">${minR}</span></button>
+              : `<button class="btn btn-call" onclick="${ctx.call}">コール<span class="jopt2-amt">${callAmt}</span></button>`}
+            <button class="btn btn-raise" onclick="${ctx.confirm}">${toCall>0?'レイズ':'ベット'}<span class="jopt2-amt" id="raise-btn-amt">${initVal}</span></button>
           </div>
         </div>`;
     } else {
@@ -4591,10 +4867,10 @@ function buildActionBarHTML(limits, ctx){
 // これによりテーブルが手番のたびに伸縮せず、種目ごとに一定サイズで安定する。
 function setActReserve(gameKey){
   const gd = MIX_GAMES[gameKey || 'holdem'];
-  let px = 226;                         // NLコミュニティ（ベットUI≈219px）
+  let px = 172;                         // NLコミュニティ（コンパクトベットUI≈164px）
   if(gd){
-    if(gd.type==='draw') px = 256;      // 交換UIが高い（≈249px）
-    else if(gd.type==='stud') px = 150; // スタッドはFLベットのみ（≈118px）
+    if(gd.type==='draw') px = 186;      // 交換UI≈177px
+    else if(gd.type==='stud') px = 128; // スタッドはFLベット≈118px
   }
   const sg = document.getElementById('screen-game');
   if(sg) sg.style.setProperty('--act-reserve', px + 'px');
@@ -4668,7 +4944,7 @@ function render(){
     const pos = positions[slot];
     let cls = 'opp';
     if(oppOrder.length >= 7) cls += ' compact xcompact xxcompact';
-    else if(oppOrder.length >= 5) cls += ' compact';
+    else if(oppOrder.length >= 4) cls += ' compact xcompact';
     if(isActive) cls += ' active';
     if(p.folded) cls += ' folded';
 
@@ -4681,10 +4957,10 @@ function render(){
     // 全員フォールド勝ち(uncontested)かどうか
     const isUncontested = isMulti && h.results && h.results.length && h.results[0].uncontested;
     const showCards = isSolo
-      ? (h.phase==='showdown' || humanFoldedSolo)   // ソロ: ショウダウンで全員公開
+      ? (h.phase==='showdown' || humanFoldedSolo || h.runout)   // ソロ: ショウダウン/ランアウトで全員公開
       : isUncontested
         ? (winTheShow && !p.folded)                 // マルチ全員フォールド: WIN THE SHOWがONの時だけ勝者公開
-        : (h.phase==='showdown' && !p.folded);      // マルチ通常ショウダウン: 降りていない人を公開
+        : ((h.phase==='showdown' || h.runout) && !p.folded);      // マルチ通常ショウダウン/ランアウト: 降りていない人を公開
     const isStud = (MIX_GAMES[G.currentGame]||{}).type === 'stud';
     if(p.hole.length){
       const studHidden = isStud && !showCards && p.faceUp;
@@ -4737,11 +5013,18 @@ function render(){
       const pc = d>0?'pnl-plus':(d<0?'pnl-minus':'pnl-zero');
       pnlPill = `<div class="pnl-pill ${pc}">${d>0?'+'+d:(d<0?d:'±0')}</div>`;
     }
+    // ランアウト中の勝率%（ショーダウン前のみ）
+    let eqPill = '';
+    if(h.runout && h.phase!=='showdown' && !p.folded && h.runoutEq && h.runoutEq[p.id]!=null){
+      eqPill = `<div class="eq-pill">${h.runoutEq[p.id]}%</div>`;
+    }
+    // 切断中バッジ
+    const discPill = (isMulti && discIds.has(p.id)) ? `<div class="disc-pill">📡 切断</div>` : '';
 
     oppH += buildOppSeatHTML({
       cls, pos, cardsH, holeLen: p.hole.length, isDealer,
       name: p.name, allinBadge, posH, stack: p.stack, actBar,
-      showPill, handName, foldPill, drawPill, pnlPill, roundBet: p.roundBet
+      showPill, handName, foldPill, drawPill, pnlPill, eqPill, discPill, roundBet: p.roundBet
     });
   });
   g('opponents').innerHTML = oppH;
@@ -4784,6 +5067,9 @@ function render(){
     const pc = d>0?'pnl-plus':(d<0?'pnl-minus':'pnl-zero');
     myPnl = `<span class="pnl-pill ${pc}" style="margin-top:0;">${d>0?'+'+d:(d<0?d:'±0')}</span>`;
   }
+  if(h.runout && h.phase!=='showdown' && !me.folded && h.runoutEq && h.runoutEq[me.id]!=null){
+    myPnl += `<span class="eq-pill" style="margin-top:0;">${h.runoutEq[me.id]}%</span>`;
+  }
   g('my-seat').innerHTML = buildMySeatHTML({
     myCls, isDealer: meDealer, name: me.name, posH: myPosH,
     allIn: me.allIn, folded: me.folded, stack: me.stack,
@@ -4798,14 +5084,82 @@ function render(){
   g('log').innerHTML = G.log.slice(0,12).map(l=>`<div>${esc(l)}</div>`).join('');
 }
 
+// 手番でない間、アクションエリアの空きスペースに直近のアクションを流すミニログ
+function miniLogHTML(lines){
+  const pick = (lines||[]).slice(0,4);
+  if(!pick.length) return '';
+  // 新しいものが下（読み順）。古い行ほど薄く。
+  const rows = pick.slice().reverse().map((l,i,arr)=>{
+    const op = 0.45 + 0.55*((i+1)/arr.length);
+    return `<div style="opacity:${op.toFixed(2)};">${esc(l)}</div>`;
+  }).join('');
+  return `<div class="mini-log">${rows}</div>`;
+}
+// ===== 手番通知（音・バイブ） =====
+let soundOn = (function(){ try{ return (localStorage.getItem('mixpoker_sound')||'on')==='on'; }catch(e){ return true; } })();
+let _ac = null;
+function _ensureAudio(){
+  if(!_ac){ try{ _ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(_ac && _ac.state==='suspended'){ _ac.resume().catch(()=>{}); }
+  return _ac;
+}
+// iOSの音声解放: 最初のタップでAudioContextを起こす
+document.addEventListener('pointerdown', ()=>{ _ensureAudio(); }, {once:true, capture:true});
+function beep(freq, dur, vol, when){
+  const ac = _ensureAudio(); if(!ac || !soundOn) return;
+  try{
+    const o = ac.createOscillator(), gn = ac.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    const t = ac.currentTime + (when||0);
+    gn.gain.setValueAtTime(0.0001, t);
+    gn.gain.exponentialRampToValueAtTime(vol||0.16, t+0.012);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t+(dur||0.15));
+    o.connect(gn); gn.connect(ac.destination);
+    o.start(t); o.stop(t+(dur||0.15)+0.03);
+  }catch(e){}
+}
+function notifyTurn(){
+  beep(880, 0.12, 0.15);
+  try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
+}
+function notifyWin(){
+  beep(659, 0.11, 0.13); beep(880, 0.11, 0.13, 0.11); beep(1319, 0.22, 0.13, 0.22);
+}
+function setSound(on){
+  soundOn = !!on;
+  try{ localStorage.setItem('mixpoker_sound', soundOn?'on':'off'); }catch(e){}
+  document.querySelectorAll('#sound-select .count-btn').forEach(b=>b.classList.toggle('selected', (b.dataset.snd==='on')===soundOn));
+  if(soundOn) beep(880, 0.1, 0.12); // 動作確認音
+}
+// 保存済み設定をUIに反映（音は鳴らさない）
+document.querySelectorAll('#sound-select .count-btn').forEach(b=>b.classList.toggle('selected', (b.dataset.snd==='on')===soundOn));
+// 手番タイマーのカウントダウン表示（マルチのみ・500ms間隔でテキストだけ更新）
+setInterval(()=>{
+  const el = document.getElementById('turn-timer');
+  if(!el) return;
+  let dl = null;
+  if(isMulti){
+    if(isHost){ const h=(typeof HND==='function')&&HND(); dl = h && h.phase!=='showdown' ? h.turnDeadline : null; }
+    else { dl = (typeof ploPub!=='undefined' && ploPub && ploPub.phase!=='showdown') ? ploPub.turnDeadline : null; }
+  }
+  if(!dl){ el.style.display='none'; return; }
+  const remain = Math.ceil((dl - Date.now())/1000);
+  if(remain <= 0 || remain > 60){ el.style.display='none'; return; }
+  el.style.display = '';
+  el.textContent = `⏱ ${remain}`;
+  el.style.color = remain <= 10 ? 'var(--red)' : 'var(--gold)';
+}, 500);
 function renderActionArea(){
   const h = HND();
   const area = g('action-area');
   const selfId = isMulti ? myId : 'human';
   if(h.phase==='showdown' || h.toActIdx<0 || h.players[h.toActIdx].id!==selfId){
-    area.innerHTML = '';
+    window._wasMyTurn = false;
+    area.innerHTML = miniLogHTML((G&&G.log)||[]);
     return;
   }
+  if(!window._wasMyTurn){ notifyTurn(); }
+  window._wasMyTurn = true;
   const me = h.players[h.toActIdx];
   const limits = calcBetLimits(h, me);
   limits.stack = me.stack; limits.roundBet = me.roundBet;
@@ -4875,8 +5229,23 @@ function fbListen(){
   fbListener = setInterval(fbPoll, 1000);
   fbPoll();
 }
+// ===== 切断検知（ハートビート方式） =====
+// RESTポーリングのためFirebase SDKのonDisconnectは使えない。
+// 代わりに全員が3秒ごとに presence/{自分} へ現在時刻を書き、
+// ホストが10秒以上更新のない人を「切断」と判定する。
+// タブを閉じた時は pagehide で presence に 0 を書いて即時通知（keepalive fetch）。
+let presCounter = 0;
+let discIds = new Set();     // ホストが検知した切断中プレイヤーID
+let hostStale = false;       // ゲストが検知した「ホスト切断」状態
+const PRES_STALE_MS = 10000;
 async function fbPoll(){
   if(!fbRoom) return;
+  // ハートビート: 3秒ごとに自分の生存時刻を書く（ホストは固定キー'host'）
+  presCounter++;
+  if(isMulti && presCounter % 3 === 0){
+    fbPut(`presence/${isHost ? 'host' : myId}`, Date.now());
+    if(isHost) checkPresence(); else checkHostPresence();
+  }
   const b = await fbGet('broadcast') || {};
   Object.entries(b).forEach(([k,v])=>{ if(!v||fbLastSeen[k]) return; fbLastSeen[k]=true; onMsg(v, v.sender); });
   const p = await fbGet(`private/${myId}`) || {};
@@ -4889,7 +5258,67 @@ async function fbPoll(){
 function fbClose(){
   if(fbListener) clearInterval(fbListener);
   fbListener = null; fbRoom = ''; fbLastSeen = {};
+  discIds = new Set(); hostStale = false; presCounter = 0;
 }
+
+// ホスト: 全ゲストのハートビートを確認し、切断/再接続を検知する
+async function checkPresence(){
+  if(!isHost || !isMulti || typeof G==='undefined' || !G || !G.ids) return;
+  const pres = await fbGet('presence') || {};
+  const now = Date.now();
+  let changed = false;
+  G.ids.forEach(id=>{
+    if(id === myId) return;
+    const t = pres[id];
+    let stale;
+    if(t===undefined || t===null) stale = false;      // まだ一度も書いていない（起動直後）→ 誤検知しない
+    else if(t===0) stale = true;                       // 明示的な退出（タブを閉じた）
+    else stale = (now - t) > PRES_STALE_MS;            // 10秒以上更新なし
+    if(stale && !discIds.has(id)){
+      discIds.add(id); changed = true;
+      G.log.unshift(`📡 ${G.names[id]||id} の接続が切れました`);
+      autoActIfDisconnected(id);
+    } else if(!stale && discIds.has(id)){
+      discIds.delete(id); changed = true;
+      G.log.unshift(`📡 ${G.names[id]||id} が再接続しました`);
+    }
+  });
+  if(changed) render();
+}
+// 切断されたプレイヤーの手番なら、待たずに自動チェック/フォールド
+function autoActIfDisconnected(id){
+  const h = HND();
+  if(!h || h.phase==='showdown') return;
+  const idx = h.toActIdx;
+  if(idx==null || idx<0 || !h.players[idx] || h.players[idx].id!==id) return;
+  const p = h.players[idx];
+  const lim = calcBetLimits(h, p);
+  const auto = (lim.toCall===0) ? {type:'check'} : {type:'fold'};
+  G.log.unshift(`📡 切断のため自動${auto.type==='check'?'チェック':'フォールド'}: ${p.name}`);
+  applyAction(idx, auto);
+  h.toActIdx = nextActor(idx);
+  scheduleNext();
+}
+// ゲスト: ホストのハートビートを確認し、途切れたらバナー表示
+async function checkHostPresence(){
+  const t = await fbGet('presence/host');
+  if(t===undefined || t===null) return; // まだ書かれていない
+  const stale = (t===0) || (Date.now() - t) > (PRES_STALE_MS + 5000); // ホスト側は少し余裕を持つ
+  if(stale !== hostStale){
+    hostStale = stale;
+    const el = g('host-stale-banner');
+    if(el) el.style.display = stale ? '' : 'none';
+  }
+}
+// タブを閉じる/離れる時に presence へ 0 を書いて即時通知（ベストエフォート）
+window.addEventListener('pagehide', ()=>{
+  if(fbRoom && isMulti){
+    try {
+      fetch(`${FB_URL}/rooms/${fbRoom}/presence/${isHost ? 'host' : myId}.json`,
+            {method:'PUT', body:'0', keepalive:true});
+    } catch(e){}
+  }
+});
 
 function ploSetErr(m){ const el=g('lobby-error'); if(el) el.textContent=m||''; }
 function ploSetSt(m){ const el=g('lobby-status'); if(el) el.textContent=m||''; }
@@ -4899,6 +5328,7 @@ async function ploCreateRoom(){
   const nm = g('my-name').value.trim();
   if(!nm){ ploSetErr('ニックネームを入力してください'); return; }
   myName = nm;
+  try { localStorage.setItem('ccc_player_name', nm); } catch(e){}
   myId = 'host_' + Math.floor(Math.random()*100000);
   isHost = true; isMulti = true;
   roomCode = String(Math.floor(1000 + Math.random()*9000));
@@ -4924,6 +5354,7 @@ async function ploJoinRoom(){
   const code = g('join-code').value.trim();
   if(code.length !== 4){ ploSetErr('部屋コードは4桁です'); return; }
   myName = nm;
+  try { localStorage.setItem('ccc_player_name', nm); } catch(e){}
   myId = 'guest_' + Math.floor(Math.random()*100000);
   isHost = false; isMulti = true;
   roomCode = code;
@@ -5081,6 +5512,10 @@ function ploPub_build(){
     currentGame: G.currentGame,
     rotation: G.rotation ? { every: G.rotation.every, idx: G.rotation.idx, seq: G.rotation.seq, handNo: G.handNo } : null,
     drawDone: h.drawDone, studStreet: h.studStreet, studVisible: h.studVisible,
+    runout: !!h.runout, runoutEq: h.runoutEq || null,
+    turnDeadline: h.turnDeadline || null,
+    log: (G.log||[]).slice(0,5),
+    disc: Array.from(discIds||[]),
     raiseCount: h.raiseCount || 0, minRaise: h.minRaise,
     sbId: (h.sbIdx>=0 && h.players[h.sbIdx]) ? h.players[h.sbIdx].id : null,
     bbId: (h.bbIdx>=0 && h.players[h.bbIdx]) ? h.players[h.bbIdx].id : null,
@@ -5112,7 +5547,7 @@ function ploPub_build(){
       //  - ソロで人間が降りた → 相手を公開
       const showHole = isUncontested
         ? revealWin
-        : ((h.phase==='showdown' && !p.folded) || (humanFolded && p.id!==myId));
+        : ((h.phase==='showdown' && !p.folded) || (humanFolded && p.id!==myId) || (h.runout && !p.folded));
       return {
         id:p.id, name:p.name, stack:p.stack, roundBet:p.roundBet, totalBet:p.totalBet||0, aggCnt:p.aggCnt||0, folded:p.folded, allIn:p.allIn, lastAction:p.lastAction,
         hole: showHole ? p.hole : null,
@@ -5195,7 +5630,7 @@ function renderGuest(){
     const isActive=(pub.toActId===p.id && pub.phase!=='showdown');
     const isDealer=(pub.buttonId===p.id) && (MIX_GAMES[pub.currentGame]||{}).type!=='stud';
     const pos=positions[slot];
-    let cls='opp'; if(oppOrder.length>=7)cls+=' compact xcompact xxcompact'; else if(oppOrder.length>=5)cls+=' compact'; if(isActive)cls+=' active'; if(p.folded)cls+=' folded';
+    let cls='opp'; if(oppOrder.length>=7)cls+=' compact xcompact xxcompact'; else if(oppOrder.length>=4)cls+=' compact xcompact'; if(isActive)cls+=' active'; if(p.folded)cls+=' folded';
     let cardsH='';
     if(p.hole){ p.hole.forEach(c=> cardsH+=cardHTML(c,{xs:true,muck:p.folded})); }
     else if(p.upCards){ // スタッド: 表札は見える、伏札は裏。裏は先にまとめ、表は重ねず横並び
@@ -5220,11 +5655,16 @@ function renderGuest(){
       pnlPill = `<div class="pnl-pill ${pc}">${d>0?'+'+d:(d<0?d:'±0')}</div>`;
     }
     const showPill = p.revealWin ? `<div class="show-pill">🏆 WIN THE SHOW</div>` : '';
+    let eqPill = '';
+    if(pub.runout && pub.phase!=='showdown' && !p.folded && pub.runoutEq && pub.runoutEq[p.id]!=null){
+      eqPill = `<div class="eq-pill">${pub.runoutEq[p.id]}%</div>`;
+    }
+    const discPill = (pub.disc||[]).includes(p.id) ? `<div class="disc-pill">📡 切断</div>` : '';
     const gHoleLen = ((p.hole&&p.hole.length)||(p.upCards&&p.upCards.length)||p.holeCount||0);
     oppH += buildOppSeatHTML({
       cls, pos, cardsH, holeLen: gHoleLen, isDealer,
       name: p.name, allinBadge: allinB, posH, stack: p.stack, actBar,
-      showPill, handName, foldPill, drawPill, pnlPill, roundBet: p.roundBet
+      showPill, handName, foldPill, drawPill, pnlPill, eqPill, discPill, roundBet: p.roundBet
     });
   });
   g('opponents').innerHTML = oppH;
@@ -5268,6 +5708,9 @@ function renderGuest(){
     const d = me.stack - me.startStack;
     const pc = d>0?'pnl-plus':(d<0?'pnl-minus':'pnl-zero');
     myPnlG = `<span class="pnl-pill ${pc}" style="margin-top:0;">${d>0?'+'+d:(d<0?d:'±0')}</span>`;
+  }
+  if(pub.runout && pub.phase!=='showdown' && me && !me.folded && pub.runoutEq && pub.runoutEq[me.id]!=null){
+    myPnlG += `<span class="eq-pill" style="margin-top:0;">${pub.runoutEq[me.id]}%</span>`;
   }
   g('my-seat').innerHTML = buildMySeatHTML({
     myCls, isDealer: meDealer, name: me?me.name:'', posH: myPosH,
@@ -5393,9 +5836,11 @@ function updateCpuHintGuest(mode){
 function renderGuestActionArea(){
   const pub = ploPub;
   const area = g('action-area');
-  if(pub.phase==='showdown' || pub.toActId !== myId){ area.innerHTML=''; return; }
+  if(pub.phase==='showdown' || pub.toActId !== myId){ window._wasMyTurn=false; area.innerHTML = miniLogHTML(pub.log||[]); return; }
   const me = pub.players.find(p=>p.id===myId);
-  if(!me){ area.innerHTML=''; return; }
+  if(!me){ window._wasMyTurn=false; area.innerHTML = miniLogHTML(pub.log||[]); return; }
+  if(!window._wasMyTurn){ notifyTurn(); }
+  window._wasMyTurn = true;
   const limits = calcBetLimitsGuest(pub, me);
   limits.stack = me.stack; limits.roundBet = me.roundBet;
   const ctx = {
@@ -5411,7 +5856,22 @@ function renderGuestActionArea(){
   updateCpuHintGuest('bet');
 }
 function confirmRaiseGuest(){ guestAct({type:'raise', amount:parseInt(g('bet-slider').value)}); }
-function guestAct(action){ g('action-area').innerHTML=''; fbSendToHost({type:'action', action}); }
+function guestAct(action){
+  // 成績指標: 最初のベットラウンドでの自発参加/レイズを記録
+  try{
+    const pub = ploPub;
+    const gdS = MIX_GAMES[(pub&&pub.currentGame)||'holdem'] || MIX_GAMES.holdem;
+    const firstRound = gdS.type==='stud' ? (pub.studStreet||3)===3
+                     : (pub.phase==='preflop' && (pub.drawDone||0)===0);
+    if(firstRound){
+      const me = pub.players.find(p=>p.id===myId);
+      const toCall = me ? (pub.highBet - (me.roundBet||0)) : 0;
+      if(action.type==='raise'){ window._gVPIP=true; window._gPFR=true; }
+      else if(action.type==='call' && toCall>0){ window._gVPIP=true; }
+    }
+  }catch(e){}
+  g('action-area').innerHTML=''; fbSendToHost({type:'action', action});
+}
 function showGuestRebuyPrompt(){
   const area=g('action-area');
   if(area.querySelector('.rebuy-prompt')) return;
@@ -5470,14 +5930,15 @@ function guestStandPat(){
 }
 
 // ===== セッション（再接続） =====
+// localStorageに保存: タブを閉じてもブラウザを終了しても3時間は復帰できる
 const PG_SESSION_KEY_plo = 'pgSession_plo';
 function ploSaveSession(){
-  try { sessionStorage.setItem(PG_SESSION_KEY_plo, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); } catch(e){}
+  try { localStorage.setItem(PG_SESSION_KEY_plo, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); } catch(e){}
 }
-function ploClearSession(){ try { sessionStorage.removeItem(PG_SESSION_KEY_plo); } catch(e){} }
+function ploClearSession(){ try { localStorage.removeItem(PG_SESSION_KEY_plo); } catch(e){} }
 function ploLoadSession(){
   try {
-    const raw = sessionStorage.getItem(PG_SESSION_KEY_plo);
+    const raw = localStorage.getItem(PG_SESSION_KEY_plo) || sessionStorage.getItem(PG_SESSION_KEY_plo);
     if(!raw) return null;
     const s = JSON.parse(raw);
     if(Date.now()-s.ts > 3*60*60*1000){ ploClearSession(); return null; }
@@ -5621,6 +6082,12 @@ window.addEventListener('DOMContentLoaded', ()=>{
   setPlayerCount(3);
   setStack(1000);
   try { ploShowReconnectOption(); } catch(e){ console.warn('ploShowReconnectOption失敗', e); }
+  // 名前の自動入力（CCC共通キー。他のCCCゲームで入力した名前も引き継ぐ）
+  try {
+    const nm = localStorage.getItem('ccc_player_name');
+    const inp = document.getElementById('my-name');
+    if(nm && inp && !inp.value) inp.value = nm;
+  } catch(e){}
 });
 
 // テスト用に主要な純粋関数を公開（本番のゲーム動作には一切影響しない）
