@@ -2731,12 +2731,12 @@ function ttDismissRejoin(){
 // ============================================================
 const PG_SESSION_KEY_tt = 'pgSession_skullking';
 function ttSaveSession() {
-  try { sessionStorage.setItem(PG_SESSION_KEY_tt, JSON.stringify({ myId, myName, roomCode, fbRoom, isHost, ts: Date.now() })); } catch(e){}
+  try { localStorage.setItem(PG_SESSION_KEY_tt, JSON.stringify({ myId, myName, roomCode, fbRoom, isHost, ts: Date.now() })); } catch(e){}
 }
-function ttClearSession() { try { sessionStorage.removeItem(PG_SESSION_KEY_tt); } catch(e){} }
+function ttClearSession() { try { localStorage.removeItem(PG_SESSION_KEY_tt); } catch(e){} }
 function ttLoadSession() {
   try {
-    const raw = sessionStorage.getItem(PG_SESSION_KEY_tt);
+    const raw = localStorage.getItem(PG_SESSION_KEY_tt);
     if(!raw) return null;
     const s = JSON.parse(raw);
     if(Date.now() - s.ts > 3*60*60*1000) { ttClearSession(); return null; }
@@ -2815,6 +2815,543 @@ async function ttReconnectToRoom() {
   }
 }
 window.addEventListener('DOMContentLoaded', () => { try { ttShowReconnectOption(); } catch(e){} });
+
+</script>
+
+<script>
+/* ================================================================
+   PG共通アドオン v1（2026-07 追加）
+   ゲーム本体のコードには手を入れず、後付けで動く独立モジュール。
+   ① 切断検知: 15秒ごとに presence へ生存報告、40秒途絶で画面上部に表示
+   ② 名前保存: 全ゲーム共通キー pgPlayerName で名前を自動入力
+   ③ ルーム掃除: 24時間更新のないルームを削除（端末ごと6時間に1回）
+   ④ 遊び方: ルール未搭載ゲームにモーダルを追加
+   ================================================================ */
+(function(){
+'use strict';
+var HB_MS=15000, WATCH_MS=10000, STALE_MS=40000;
+var ROOM_TTL=24*60*60*1000, CLEAN_EVERY=6*60*60*1000;
+var NAME_KEY='pgPlayerName';
+
+function db(){
+  try{ if(typeof FB_URL==='string' && FB_URL.indexOf('https://')===0) return FB_URL; }catch(e){}
+  try{ if(typeof fbUrl==='string' && fbUrl.indexOf('https://')===0) return fbUrl; }catch(e){}
+  return 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+}
+function room(){ try{ return (typeof fbRoom==='string') ? fbRoom : ''; }catch(e){ return ''; } }
+function me(){ var id='',nm='';
+  try{ if(typeof myId==='string') id=myId; }catch(e){}
+  try{ if(typeof myName==='string') nm=myName; }catch(e){}
+  return {id:id, name:nm};
+}
+function put(url,body){ try{ return fetch(url,{method:'PUT',body:JSON.stringify(body),keepalive:true}); }catch(e){ return null; } }
+
+/* ========== 名前の共通保存・自動入力 ========== */
+function initName(){
+  var saved='';
+  try{ saved = localStorage.getItem(NAME_KEY) || localStorage.getItem('spName') || ''; }catch(e){}
+  ['in-name','my-name'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    if(saved && !el.value) el.value=saved;
+    function save(){ var v=(el.value||'').trim(); if(v){ try{ localStorage.setItem(NAME_KEY,v); }catch(e){} } }
+    el.addEventListener('change',save);
+    el.addEventListener('blur',save);
+  });
+}
+
+/* ========== 切断検知（ハートビート） ========== */
+var lastRoom='';
+function syncRoom(){
+  var r=room(), m=me();
+  if(r!==lastRoom){
+    if(lastRoom && m.id){
+      try{ fetch(db()+'/rooms/'+lastRoom+'/presence/'+m.id+'.json',{method:'DELETE',keepalive:true}); }catch(e){}
+    }
+    lastRoom=r;
+  }
+}
+function beat(){
+  syncRoom();
+  var r=room(), m=me(); if(!r||!m.id) return;
+  put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?'});
+}
+function markLeft(){
+  syncRoom();
+  var r=room(), m=me(); if(!r||!m.id) return;
+  put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?',left:1});
+}
+var hideUntil=0;
+function banner(txt){
+  var b=document.getElementById('pga-banner');
+  if(!txt || Date.now()<hideUntil){ if(b) b.style.display='none'; return; }
+  if(!b){
+    b=document.createElement('div'); b.id='pga-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99990;background:rgba(178,34,34,.93);color:#fff;font-size:12px;line-height:1.4;padding:5px 30px 5px 10px;text-align:center;font-family:sans-serif;';
+    var t=document.createElement('span'); t.id='pga-banner-text'; b.appendChild(t);
+    var x=document.createElement('span'); x.textContent='\u2715';
+    x.style.cssText='position:absolute;right:8px;top:4px;cursor:pointer;padding:0 4px;';
+    x.onclick=function(){ hideUntil=Date.now()+60000; b.style.display='none'; };
+    b.appendChild(x);
+    document.body.appendChild(b);
+  }
+  document.getElementById('pga-banner-text').textContent=txt;
+  b.style.display='block';
+}
+function watch(){
+  syncRoom();
+  var r=room(), m=me();
+  if(!r){ banner(''); return; }
+  fetch(db()+'/rooms/'+r+'/presence.json').then(function(res){ return res.json(); }).then(function(d){
+    if(room()!==r) return;
+    if(!d){ banner(''); return; }
+    var now=Date.now(), gone=[];
+    Object.keys(d).forEach(function(pid){
+      if(pid===m.id) return;
+      var p=d[pid]||{};
+      if(p.left || (p.t && now-p.t>STALE_MS)) gone.push(p.n||'?');
+    });
+    banner(gone.length ? ('\u26A0\uFE0F \u901A\u4FE1\u304C\u9014\u5207\u308C\u3066\u3044\u307E\u3059: '+gone.join('\u3001')) : '');
+  }).catch(function(){});
+}
+setInterval(beat,HB_MS); setTimeout(beat,1500);
+setInterval(watch,WATCH_MS); setTimeout(watch,4000);
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'){ beat(); watch(); }
+});
+window.addEventListener('pagehide',markLeft);
+
+/* ========== 古いルームの自動削除 ========== */
+function tsOf(k,sub){
+  return fetch(db()+'/rooms/'+k+'/'+sub+'.json').then(function(r){ return r.json(); }).catch(function(){ return null; });
+}
+async function cleanup(){
+  try{
+    var last=0; try{ last=+(localStorage.getItem('pgLastCleanup')||0); }catch(e){}
+    if(Date.now()-last < CLEAN_EVERY) return;
+    try{ localStorage.setItem('pgLastCleanup', String(Date.now())); }catch(e){}
+    var res=await fetch(db()+'/rooms.json?shallow=true');
+    var keys=await res.json(); if(!keys) return;
+    var list=Object.keys(keys).filter(function(k){ return /^[A-Za-z0-9_]{1,6}-/.test(k) && k!==room(); });
+    list.sort(function(){ return Math.random()-0.5; });
+    var checked=0, deleted=0;
+    for(var i=0;i<list.length;i++){
+      if(checked>=80 || deleted>=25) break;
+      var k=list[i]; checked++;
+      var ts=0, v;
+      v=await tsOf(k,'meta/ts');      if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'broadcast/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'hostState/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'presence');
+      if(v){ Object.keys(v).forEach(function(pid){ var t=v[pid]&&v[pid].t; if(typeof t==='number') ts=Math.max(ts,t); }); }
+      if(!ts) continue; /* 時刻が取れないルームには触らない */
+      if(Date.now()-ts > ROOM_TTL){
+        try{ await fetch(db()+'/rooms/'+k+'.json',{method:'DELETE'}); deleted++; }catch(e){}
+      }
+    }
+  }catch(e){}
+}
+setTimeout(cleanup,5000);
+
+/* ========== 遊び方モーダル ========== */
+var RULES="<h3 style=\"margin:0 0 8px;font-size:16px;\">🏴‍☠️ スカルキング（3〜6人）<\/h3>\n<p style=\"margin:6px 0;\">「自分が何トリック取るか」を先に宣言（ビッド）して、ピタリ当てるトリックテイキング。ラウンドごとに配られる枚数＝そのラウンドのトリック数。<\/p>\n<ul style=\"margin:6px 0;padding-left:18px;\">\n<li>最初に出された色に合わせて出す（マストフォロー）。無ければ何を出してもよい<\/li>\n<li>強さ：数字カード ＜ <b>海賊<\/b> ＜ <b>スカルキング<\/b>。ただし<b>マーメイドはスカルキングに勝つ<\/b>。白旗（エスケープ）は常に負け<\/li>\n<li>得点：宣言ピタリなら「宣言数×20点」（0宣言成功はラウンド数×10点）＋ボーナス。外れたら差分×10点のマイナス<\/li>\n<li>全ラウンドの合計点で勝負（ラウンド数はホストが選択可能）<\/li>\n<\/ul>";
+function openRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='flex'; }
+function closeRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='none'; }
+function initRules(){
+  if(!RULES) return;
+  var m=document.createElement('div'); m.id='pga-rules';
+  m.style.cssText='display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:14px;';
+  m.innerHTML='<div style="background:#1d222b;color:#e8e8e8;max-width:520px;width:100%;max-height:82vh;overflow-y:auto;border-radius:12px;padding:18px 16px;font-size:13.5px;line-height:1.75;font-family:sans-serif;-webkit-overflow-scrolling:touch;">'+RULES+'<button id="pga-rules-close" style="display:block;width:100%;margin-top:14px;padding:11px;border:none;border-radius:8px;background:#3a4557;color:#fff;font-size:14px;cursor:pointer;">\u9589\u3058\u308B</button></div>';
+  m.addEventListener('click',function(ev){ if(ev.target===m) closeRulesPga(); });
+  document.body.appendChild(m);
+  document.getElementById('pga-rules-close').onclick=closeRulesPga;
+  ['screen-lobby','screen-waiting'].forEach(function(id){
+    var sc=document.getElementById(id); if(!sc) return;
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent='\uD83D\uDCD6 \u904A\u3073\u65B9';
+    btn.style.cssText='display:block;width:100%;margin:10px 0 0;padding:11px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.06);color:inherit;font-size:14px;cursor:pointer;';
+    btn.onclick=openRulesPga;
+    sc.appendChild(btn);
+  });
+}
+
+initName();
+initRules();
+})();
+</script>
+
+<script id="ccc-enhance">
+/* ============================================================
+   CCC ENHANCE v1（自動注入ブロック）
+   機能: 1)効果音+ミュート 2)画面スリープ防止 3)手番通知(音+バイブ+タブ点滅)
+         4)URL招待(?room=XXXX 自動入力 / 🔗共有ボタン) 5)プレイ回数記録
+   既存コードには一切手を入れない追加専用レイヤー。
+   削除したい場合はこの <script id="ccc-enhance"> ブロックごと消せばOK。
+   ============================================================ */
+(function(){
+"use strict";
+var CFG = {"game": "skullking", "title": "スカルキング", "turnTexts": ["あなたの手番", "カードを出してください"]};
+function LS(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+
+/* ---------- 1) 効果音（Web Audio 合成・音源ファイル不要） ---------- */
+var AC=null, muted=(LS('ccc_mute')==='1');
+function actx(){
+  try{
+    if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)();
+    if(AC && AC.state==='suspended') AC.resume();
+    return AC;
+  }catch(e){ return null; }
+}
+function tone(freq,dur,delay,type,vol){
+  var a=actx(); if(!a||muted) return;
+  try{
+    var o=a.createOscillator(), gn=a.createGain(), t=a.currentTime+(delay||0);
+    o.type=type||'sine'; o.frequency.value=freq;
+    gn.gain.setValueAtTime(0.0001,t);
+    gn.gain.exponentialRampToValueAtTime(vol||0.12,t+0.012);
+    gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(gn); gn.connect(a.destination);
+    o.start(t); o.stop(t+dur+0.05);
+  }catch(e){}
+}
+function sndClick(){ tone(720,0.045,0,'triangle',0.045); }
+function sndTurn(){ tone(660,0.12,0,'sine',0.15); tone(990,0.18,0.14,'sine',0.15); }
+function sndEnd(){ tone(523,0.12,0,'triangle',0.12); tone(659,0.12,0.12,'triangle',0.12); tone(784,0.12,0.24,'triangle',0.12); tone(1047,0.32,0.36,'triangle',0.13); }
+/* 最初のタップで音声を有効化（モバイルの自動再生制限対策） */
+document.addEventListener('pointerdown',function(){ actx(); },{once:true,capture:true});
+/* ボタン操作音（ごく小音量。ミュート可） */
+document.addEventListener('click',function(e){
+  try{
+    if(!e.target||!e.target.closest) return;
+    if(e.target.closest('#ccc-fab')) return;
+    if(e.target.closest('button,.btn,[onclick]')) sndClick();
+  }catch(err){}
+},true);
+
+/* ---------- 2) 画面スリープ防止（Wake Lock API） ---------- */
+var wl=null;
+function wlock(){
+  try{
+    if(navigator.wakeLock && !wl && !document.hidden){
+      navigator.wakeLock.request('screen').then(function(l){
+        wl=l; l.addEventListener('release',function(){ wl=null; });
+      }).catch(function(){});
+    }
+  }catch(e){}
+}
+document.addEventListener('pointerdown',wlock,{capture:true});
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) wlock(); });
+
+/* ---------- 3) 手番通知（音＋バイブ＋タブタイトル点滅） ---------- */
+var titleOrig=document.title, blinkTimer=null;
+function blinkStart(){
+  if(blinkTimer) return;
+  var f=0;
+  blinkTimer=setInterval(function(){ document.title=(f++%2)?titleOrig:'🔔 あなたの番！'; },900);
+}
+function blinkStop(){
+  if(blinkTimer){ clearInterval(blinkTimer); blinkTimer=null; document.title=titleOrig; }
+}
+window.addEventListener('focus',blinkStop);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) blinkStop(); });
+
+function isVisible(el){ return !!(el && el.getClientRects && el.getClientRects().length); }
+function textNeedles(){
+  var arr=(CFG.turnTexts||[]).slice();
+  if(CFG.turnMyName){
+    try{ if(typeof myName!=='undefined' && myName) arr.push(String(myName)+' のターン'); }catch(e){}
+  }
+  return arr;
+}
+function myTurnNow(){
+  try{
+    if(CFG.turnExpr){
+      try{ return !!(new Function('return ('+CFG.turnExpr+')'))(); }catch(e){ return false; }
+    }
+    if(CFG.turnSel){
+      var el=document.querySelector(CFG.turnSel);
+      if(!isVisible(el)) return false;
+      if(CFG.turnBtn && !el.querySelector('button:not([disabled])')) return false;
+      var nd=textNeedles();
+      if(nd.length){
+        var tx=el.innerText||'';
+        return nd.some(function(s){ return tx.indexOf(s)>=0; });
+      }
+      return true;
+    }
+    var needles=textNeedles();
+    if(!needles.length) return false;
+    var tx2=document.body.innerText||'';
+    var hit=needles.some(function(s){ return tx2.indexOf(s)>=0; });
+    if(hit && CFG.turnNotTexts && CFG.turnNotTexts.length){
+      if(CFG.turnNotTexts.some(function(s){ return tx2.indexOf(s)>=0; })) return false;
+    }
+    return hit;
+  }catch(e){ return false; }
+}
+var wasMyTurn=false;
+setInterval(function(){
+  var m=myTurnNow();
+  if(m && !wasMyTurn){
+    sndTurn();
+    try{ if(navigator.vibrate) navigator.vibrate([120,60,160]); }catch(e){}
+    if(document.hidden) blinkStart();
+  }
+  wasMyTurn=m;
+},1100);
+
+/* ---------- 4) URL招待（?room=XXXX 自動入力 ＋ 🔗共有ボタン） ---------- */
+function byId(id){ return document.getElementById(id); }
+try{
+  var pr=new URLSearchParams(location.search).get('room');
+  if(pr){
+    pr=pr.toUpperCase();
+    var tries=0;
+    var fillTimer=setInterval(function(){
+      var done=false;
+      ['in-code','join-code','av-in-code'].forEach(function(id){
+        var el=byId(id);
+        if(el){ el.value=pr; done=true; }
+      });
+      if(done || ++tries>15) clearInterval(fillTimer);
+    },400);
+  }
+}catch(e){}
+var lastCode='';
+function currentRoomCode(){
+  var ids=['disp-code','room-code','av-disp-code','old-disp-code'];
+  for(var i=0;i<ids.length;i++){
+    var el=byId(ids[i]);
+    if(isVisible(el)){
+      var t=(el.textContent||'').trim();
+      if(/^[A-Z0-9]{4,8}$/.test(t)) return t;
+    }
+  }
+  try{
+    if(typeof roomCode!=='undefined' && roomCode && /^[A-Za-z0-9]{4,8}$/.test(String(roomCode)))
+      return String(roomCode).toUpperCase();
+  }catch(e){}
+  return '';
+}
+
+/* ---------- 5) プレイ回数記録（screen-result 表示検知） ---------- */
+function confetti(){
+  try{
+    var cv=document.createElement('canvas');
+    cv.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:99997;';
+    cv.width=innerWidth; cv.height=innerHeight;
+    document.body.appendChild(cv);
+    var x=cv.getContext('2d'), cols=['#ffd54f','#ff8a65','#4fc3f7','#81c784','#f06292','#ba68c8'];
+    var ps=[]; for(var i=0;i<90;i++){ps.push({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*0.5,w:6+Math.random()*6,h:8+Math.random()*8,vy:2+Math.random()*3.2,vx:-1.4+Math.random()*2.8,rot:Math.random()*6.28,vr:-0.18+Math.random()*0.36,c:cols[i%cols.length]});}
+    var t0=Date.now();
+    (function frame(){
+      var el=Date.now()-t0;
+      x.clearRect(0,0,cv.width,cv.height);
+      ps.forEach(function(p){p.y+=p.vy;p.x+=p.vx;p.rot+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.rot);x.fillStyle=p.c;x.fillRect(-p.w/2,-p.h/2,p.w,p.h);x.restore();});
+      if(el<2600) requestAnimationFrame(frame); else cv.remove();
+    })();
+  }catch(e){}
+}
+var statsKey='ccc_stats_'+CFG.game, resultWas=false;
+function readStats(){ try{ return JSON.parse(LS(statsKey)||'{"plays":0}'); }catch(e){ return {plays:0}; } }
+setInterval(function(){
+  var el=byId(CFG.resultId||'screen-result');
+  var v=isVisible(el);
+  if(v && !resultWas){
+    sndEnd(); confetti();
+    var s=readStats();
+    s.plays=(s.plays||0)+1; s.last=Date.now();
+    LS(statsKey,JSON.stringify(s));
+  }
+  resultWas=v;
+},1000);
+
+/* ---------- 常駐ミニボタン（🔊ミュート / 🔗招待） ---------- */
+function buildFab(){
+  if(!document.body) return;
+  var fab=document.createElement('div');
+  fab.id='ccc-fab';
+  fab.style.cssText='position:fixed;'+(CFG.fabPos||'left:8px;bottom:12px;')+'z-index:99998;display:flex;flex-direction:column;gap:6px;font-family:sans-serif;';
+  function styl(b){
+    b.type='button';
+    b.style.cssText='width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(15,15,25,0.62);color:#fff;font-size:16px;opacity:0.6;cursor:pointer;padding:0;line-height:1;-webkit-tap-highlight-color:transparent;';
+  }
+  var bMute=document.createElement('button'); styl(bMute);
+  var bInv=document.createElement('button');  styl(bInv);
+  function mIcon(){ bMute.textContent = muted ? '🔇' : '🔊'; }
+  mIcon();
+  bMute.title='効果音ON/OFF（長押しでプレイ回数）';
+  bMute.addEventListener('click',function(){
+    muted=!muted; LS('ccc_mute',muted?'1':'0'); mIcon();
+    if(!muted) sndClick();
+  });
+  bMute.addEventListener('contextmenu',function(e){
+    e.preventDefault();
+    var s=readStats();
+    alert('📊 '+(CFG.title||CFG.game)+'\nプレイ回数: '+(s.plays||0)+'回');
+  });
+  bInv.textContent='🔗'; bInv.title='招待リンクを共有'; bInv.style.display='none';
+  bInv.addEventListener('click',function(){
+    var c=lastCode||currentRoomCode(); if(!c) return;
+    var base=(location.origin&&location.origin!=='null')?(location.origin+location.pathname):location.href.split('?')[0].split('#')[0];
+    var url=base+'?room='+c;
+    var msg='【'+(CFG.title||CFG.game)+'】部屋コード: '+c+'\n'+url;
+    if(navigator.share){
+      navigator.share({title:CFG.title||CFG.game,text:msg}).catch(function(){});
+    }else if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(msg).then(function(){ alert('招待メッセージをコピーしました'); }).catch(function(){});
+    }else{
+      window.prompt('コピーしてください',msg);
+    }
+  });
+  fab.appendChild(bMute); fab.appendChild(bInv);
+  document.body.appendChild(fab);
+  setInterval(function(){
+    var c=currentRoomCode();
+    if(c) lastCode=c;
+    bInv.style.display=lastCode?'block':'none';
+  },1200);
+}
+if(document.body) buildFab(); else document.addEventListener('DOMContentLoaded',buildFab);
+window.CCC={sndTurn:sndTurn,sndEnd:sndEnd,sndClick:sndClick,confetti:confetti,stats:readStats};
+window.__CCC_ENHANCE__='v1.1';
+})();
+</script>
+
+
+<script id="ccc-x4-sk_status">
+/* v4 個別機能（追加専用レイヤー） */
+
+(function(){
+"use strict";
+var chip=null;
+function st(){ try{ return (typeof ttGs!=='undefined')?ttGs:null; }catch(e){ return null; } }
+setInterval(function(){
+  if(!chip){
+    chip=document.createElement('div');
+    chip.style.cssText='position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:9000;max-width:96vw;'
+      +'background:rgba(13,17,23,0.88);border:1px solid rgba(255,255,255,0.18);border-radius:12px;'
+      +'padding:3px 10px;font-size:0.66rem;color:#e8ecf2;font-family:sans-serif;display:none;pointer-events:none;white-space:nowrap;overflow-x:auto;';
+    document.body.appendChild(chip);
+  }
+  var s=st();
+  var show=!!(s && s.players && s.players.length && s.players.some(function(p){return p.bidConfirmed;}));
+  if(show){
+    chip.innerHTML=s.players.map(function(p){
+      if(!p.bidConfirmed || p.bid==null) return '';
+      var t=p.tricks||0, b=p.bid;
+      var c = t===b ? '#81c784' : (t>b ? '#ef5350' : '#ffd54f');
+      return '<span style="margin:0 5px;color:'+c+'">'+String(p.name||'').slice(0,5)+' 予'+b+'/現'+t+'</span>';
+    }).join('');
+  }
+  chip.style.display=show?'block':'none';
+},1000);
+window.__cccSk='v1';
+})();
+
+</script>
+
+
+
+
+<script id="ccc-rt">
+/* リアルタイム化: SSEミラー（失敗時は従来ポーリングへ自動フォールバック） */
+
+(function(){
+"use strict";
+if(!window.EventSource) return;
+if(typeof fbGet!=='function' || typeof fbPoll!=='function') return;  /* この構成のゲームのみ対象 */
+var RT={mode:'poll', es:null, mirror:null, room:'', url:'', lastEvt:0};
+window.__cccRT=RT;
+function baseUrl(){
+  try{ if(typeof fbUrl!=='undefined'&&fbUrl) return String(fbUrl); }catch(e){}
+  try{ if(typeof FB_URL!=='undefined'&&FB_URL) return String(FB_URL); }catch(e){}
+  try{ if(typeof db==='function'){ var d=db(); if(d) return String(d); } }catch(e){}
+  return '';
+}
+function curRoom(){ try{ return (typeof fbRoom!=='undefined'&&fbRoom)?String(fbRoom):''; }catch(e){ return ''; } }
+function segs(p){ return String(p||'').split('/').filter(function(x){return x!=='';}); }
+function setPath(rel,data){
+  var ss=segs(rel);
+  if(ss.length===0){ RT.mirror=data; return; }
+  if(RT.mirror==null||typeof RT.mirror!=='object') RT.mirror={};
+  var n=RT.mirror;
+  for(var i=0;i<ss.length-1;i++){ if(typeof n[ss[i]]!=='object'||n[ss[i]]==null) n[ss[i]]={}; n=n[ss[i]]; }
+  if(data===null) delete n[ss[ss.length-1]]; else n[ss[ss.length-1]]=data;
+}
+function patchPath(rel,data){
+  var ss=segs(rel);
+  if(RT.mirror==null||typeof RT.mirror!=='object') RT.mirror={};
+  var n=RT.mirror;
+  for(var i=0;i<ss.length;i++){ if(typeof n[ss[i]]!=='object'||n[ss[i]]==null) n[ss[i]]={}; n=n[ss[i]]; }
+  for(var k in data){ if(data[k]===null) delete n[k]; else n[k]=data[k]; }
+}
+function readPath(sub){
+  var ss=segs(sub), n=RT.mirror;
+  for(var i=0;i<ss.length;i++){ if(n==null||typeof n!=='object') return null; n=n[ss[i]]; if(n===undefined) return null; }
+  if(n===undefined||n===null) return null;
+  try{ return JSON.parse(JSON.stringify(n)); }catch(e){ return null; }
+}
+var origGet=fbGet;
+var pollScheduled=false;
+function schedulePoll(){
+  if(pollScheduled) return;
+  pollScheduled=true;
+  setTimeout(function(){ pollScheduled=false; try{ fbPoll(); }catch(e){} },30);
+}
+fbGet=async function(sub){
+  if(RT.mode==='sse' && RT.mirror!==null && curRoom()===RT.room) return readPath(sub);
+  return origGet(sub);
+};
+function stopES(){ if(RT.es){ try{RT.es.close();}catch(e){} RT.es=null; } RT.mode='poll'; RT.mirror=null; RT.room=''; RT.url=''; }
+function startES(room){
+  var b=baseUrl();
+  if(!/^https?:/.test(b)) return;
+  stopES();
+  RT.room=room;
+  RT.url=b.replace(/\/+$/,'')+'/rooms/'+room+'.json';
+  var es;
+  try{ es=new EventSource(RT.url); }catch(e){ RT.room=''; RT.url=''; RT.nextTry=Date.now()+5000; return; }
+  RT.es=es;
+  var opened=false;
+  es.addEventListener('put',function(ev){
+    try{
+      var d=JSON.parse(ev.data);
+      if(d.path==='/'||d.path==='') RT.mirror=d.data; else setPath(d.path,d.data);
+      if(!opened){ opened=true; RT.mode='sse'; }
+      RT.lastEvt=Date.now();
+      schedulePoll();
+    }catch(e){}
+  });
+  es.addEventListener('patch',function(ev){
+    try{ var d=JSON.parse(ev.data); patchPath(d.path,d.data); RT.lastEvt=Date.now(); schedulePoll(); }catch(e){}
+  });
+  es.addEventListener('cancel',function(){ stopES(); RT.nextTry=Date.now()+5000; });
+  es.addEventListener('auth_revoked',function(){ stopES(); RT.nextTry=Date.now()+5000; });
+  es.onerror=function(){
+    if(!opened){ stopES(); RT.nextTry=Date.now()+5000; }  /* 繋がらない環境: 5秒後に再試行、それまで従来ポーリング */
+    /* 確立後の一時切断はEventSourceが自動再接続。次のputで復帰 */
+  };
+}
+/* 部屋コードの変化を監視してSSEを開始/停止（fbListenが無いゲームにも対応） */
+setInterval(function(){
+  var r=curRoom();
+  if(r && r!==RT.room){ if(!RT.nextTry||Date.now()>=RT.nextTry) startES(r); }
+  else if(!r && RT.room) stopES();
+},700);
+/* 安全網: SSE中に8秒イベントが無ければ全体を取り直してミラー再同期 */
+setInterval(function(){
+  if(RT.mode!=='sse'||!RT.url||curRoom()!==RT.room) return;
+  var silent=Date.now()-RT.lastEvt;
+  var alive=(RT.es&&RT.es.readyState===1);
+  /* 接続が生きている間は45秒まで静観（書き込みが無いだけ）。切断中は8秒で再同期 */
+  if(alive ? silent<=45000 : silent<=8000) return;
+  fetch(RT.url).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(d){
+    RT.mirror=d; RT.lastEvt=Date.now(); schedulePoll();
+  }).catch(function(){});
+},5000);
+window.__CCC_RT__='v2';
+})();
 
 </script>
 </body>
