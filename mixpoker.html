@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🃏 MIX ポーカー</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;0,700;0,800;1,600;1,700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=M+PLUS+1+Code:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
   /* JOPT風: 茶色木目×濃緑フェルト×金アクセント */
@@ -46,7 +46,7 @@ body {
     repeating-linear-gradient(92deg, rgba(0,0,0,0.10) 0 2px, transparent 2px 7px),
     linear-gradient(180deg, #3a2417 0%, #2a1810 45%, #1f120b 100%);
   color: var(--text);
-  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100vh;
   line-height: 1.5;
 }
@@ -54,7 +54,7 @@ body {
 .wrap { max-width: 520px; margin: 0 auto; padding: 16px 14px 40px; }
 /* ゲーム画面表示中はwrapの余白を消し、1画面に固定 */
 .wrap:has(#screen-game.active) { padding: 0; max-width: none; height: 100dvh; overflow: hidden; }
-.mono { font-family: 'Share Tech Mono', monospace; }
+.mono { font-family: 'M PLUS 1 Code', monospace; }
 .center { text-align: center; }
 .small { font-size: 0.85rem; }
 .muted { color: var(--muted); }
@@ -266,7 +266,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   box-shadow: 0 1px 4px rgba(212,98,26,0.5);
 }
 .opp-stack {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'M PLUS 1 Code', monospace;
   color: #eef2f8; font-size: 0.82rem; font-weight: 700;
   background: rgba(0,0,0,0.35);
   padding: 1px 7px;
@@ -314,7 +314,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 /* ベットピル（グレー） */
 .opp-bet {
   position: absolute;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'M PLUS 1 Code', monospace;
   background: var(--pill);
   color: #1a2334;
   font-weight: 700;
@@ -349,7 +349,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 /* ハンド収支ピル */
 .pnl-pill {
   display: inline-block;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'M PLUS 1 Code', monospace;
   font-weight: 700;
   font-size: 0.72rem;
   padding: 1px 10px;
@@ -360,7 +360,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 /* ランアウト中の勝率%表示 */
 .eq-pill {
   display: inline-block;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'M PLUS 1 Code', monospace;
   font-weight: 800;
   font-size: 0.74rem;
   padding: 1px 10px;
@@ -448,7 +448,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   white-space: nowrap;
 }
 .my-stack {
-  font-family:'Share Tech Mono',monospace;
+  font-family:'M PLUS 1 Code',monospace;
   color: #6fd6ff; font-size: 0.86rem; font-weight: 700; white-space: nowrap;
 }
 .my-seat.active .my-stack { color: #8fe0ff; }
@@ -462,7 +462,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .my-cards { display: flex; gap: 4px; justify-content: center; flex-wrap: nowrap; }
 .my-bet {
-  font-family:'Share Tech Mono',monospace;
+  font-family:'M PLUS 1 Code',monospace;
   background: var(--pill);
   color: #1a2334;
   font-weight: 700;
@@ -572,7 +572,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 /* ===== アクションバー（JOPT風: 画面最下部） ===== */
 /* 手番外に空きスペースへ流すミニログ */
 .mini-log {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'M PLUS 1 Code', monospace;
   font-size: 0.66rem;
   line-height: 1.5;
   color: var(--muted);
@@ -697,7 +697,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .jopt-bet { display: flex; gap: 8px; align-items: stretch; }
 .jopt-left { flex: 1 1 auto; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .jopt-left > .btn { margin: 0; padding: 11px 4px; border-radius: 12px; font-size: 0.96rem; line-height: 1.15; }
-.jopt-amt { font-family:'Share Tech Mono',monospace; font-size: 0.82rem; font-weight: 700; opacity: 0.95; }
+.jopt-amt { font-family:'M PLUS 1 Code',monospace; font-size: 0.82rem; font-weight: 700; opacity: 0.95; }
 .jopt-slider-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
 .jopt-slider-row input[type=range], .jopt2-slider {
   width: calc(100% - 8px);
@@ -724,7 +724,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .jopt-amt-btn:hover { background: linear-gradient(180deg, rgba(54,43,29,0.98), rgba(30,23,15,0.98)); border-color: var(--gold-bright); }
 .jopt-amt-btn:active { transform: translateY(1px); }
 .jopt-amt-lbl { font-size: 0.74rem; font-weight: 700; color: var(--muted); }
-.jopt-amt-val { font-family:'Share Tech Mono',monospace; font-size: 0.92rem; font-weight: 800; color: var(--gold-bright); }
+.jopt-amt-val { font-family:'M PLUS 1 Code',monospace; font-size: 0.92rem; font-weight: 800; color: var(--gold-bright); }
 /* ===== コンパクト版アクションバー(jopt2): プリセット行 / スライダー / 3ボタン横並び ===== */
 .jopt2 { display: flex; flex-direction: column; gap: 7px; }
 .jopt2-presets { display: flex; gap: 5px; }
@@ -736,7 +736,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .jopt2-chip:active { transform: translateY(1px); }
 .jopt2-lbl { font-size: 0.66rem; font-weight: 700; color: var(--muted); line-height: 1; }
-.jopt2-val { font-family:'Share Tech Mono',monospace; font-size: 0.86rem; font-weight: 800; color: var(--gold-bright); line-height: 1.1; }
+.jopt2-val { font-family:'M PLUS 1 Code',monospace; font-size: 0.86rem; font-weight: 800; color: var(--gold-bright); line-height: 1.1; }
 .jopt2-slider { width: 100%; margin: 0; }
 .jopt2-actions { display: flex; gap: 6px; align-items: stretch; }
 .jopt2-actions .btn {
@@ -744,7 +744,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   font-size: 0.98rem; font-weight: 700; line-height: 1.1; white-space: nowrap;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
 }
-.jopt2-amt { font-family:'Share Tech Mono',monospace; font-size: 0.8rem; font-weight: 800; opacity: 0.95; }
+.jopt2-amt { font-family:'M PLUS 1 Code',monospace; font-size: 0.8rem; font-weight: 800; opacity: 0.95; }
 
 
 /* ===== ログ ===== */
@@ -805,13 +805,13 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .tbar-row {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; font-family: 'Share Tech Mono', monospace;
+  gap: 8px; font-family: 'M PLUS 1 Code', monospace;
 }
 .tbar-lv { font-weight: 800; color: var(--gold-bright); font-size: 0.78rem; letter-spacing: 0.03em; }
 .tbar-blinds { color: var(--text); font-size: 0.78rem; }
 .tbar-meta { display: flex; gap: 10px; margin-top: 3px; font-size: 0.64rem; color: var(--muted); align-items: center; }
 .tbar-meta b { color: var(--text); font-weight: 700; }
-.tbar-meta .tbar-next-inline { margin-left: auto; color: var(--felt-rim); font-family: 'Share Tech Mono', monospace; }
+.tbar-meta .tbar-next-inline { margin-left: auto; color: var(--felt-rim); font-family: 'M PLUS 1 Code', monospace; }
 .tbar-clock { font-size: 0.78rem; font-weight: 700; color: var(--text); }
 .tbar-clock.warn { color: var(--gold-bright); }
 .tbar-clock.urgent { color: var(--red); animation: tclock-blink 1s steps(2) infinite; }
@@ -828,7 +828,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .tbar-progress.urgent > span { background: var(--red); }
 .tbar-next {
   text-align: center; font-size: 0.66rem; color: var(--felt-rim);
-  margin-top: 6px; font-family: 'Share Tech Mono', monospace;
+  margin-top: 6px; font-family: 'M PLUS 1 Code', monospace;
 }
 @media (prefers-reduced-motion: reduce){
   .tbar-clock.urgent { animation: none; }
@@ -1124,7 +1124,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <button id="btn-change-game" class="btn-ghost" style="display:none; width:auto; padding:5px 12px; margin:0; font-size:0.76rem; border-radius:8px; background:transparent; border:1px solid var(--surface3); color:var(--muted); cursor:pointer; font-family:inherit;" onclick="openGamePicker()">変更 ▼</button>
     </div>
     <div class="phase-label" id="phase-label">PREFLOP</div>
-    <div id="turn-timer" style="display:none; text-align:center; font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:var(--gold); margin-top:-2px;"></div>
+    <div id="turn-timer" style="display:none; text-align:center; font-family:'M PLUS 1 Code',monospace; font-size:0.72rem; color:var(--gold); margin-top:-2px;"></div>
     <div id="host-stale-banner" style="display:none; text-align:center; font-size:0.72rem; font-weight:700; color:#ffb020; background:rgba(255,176,32,0.1); border:1px solid rgba(255,176,32,0.4); border-radius:10px; padding:3px 10px; margin:2px auto 0; max-width:320px;">📡 ホストの接続が切れています。復帰を待っています…</div>
     <div id="tourney-bar" style="display:none;"></div>
 
@@ -1178,9 +1178,15 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   <!-- ===== 成績・ハンド履歴 ===== -->
   <div id="screen-stats" class="screen">
     <h2>📊 成績</h2>
+    <div id="stats-filter" class="count-selector" style="flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
     <div id="stats-session-panel" class="panel">
       <h3 class="center">今回のセッション</h3>
       <div id="stats-session-body" class="center muted small">まだプレイしていません</div>
+    </div>
+    <div class="panel">
+      <h3 class="center">通算スタッツ（NLH指標）</h3>
+      <div class="center muted small" style="margin-bottom:8px;">このブラウザに自動保存されます</div>
+      <div id="stats-lifetime-nlh" class="center muted small">まだ記録がありません</div>
     </div>
     <div class="panel">
       <h3 class="center">ゲーム別 収支（bb/100）</h3>
@@ -2032,6 +2038,10 @@ function initSession(mode){
     bb: soloBB || 20,
     vpipN: 0, pfrN: 0,      // プリフロップ自発参加 / プリフロップレイズ
     sdN: 0, sdWinN: 0,      // ショーダウン到達 / うち勝利
+    tbN: 0, tbOppN: 0,      // 3ベット / その機会
+    afAggN: 0, afCallN: 0,  // AF素材: ベット・レイズ / コール
+    cbN: 0, cbOppN: 0,      // CBet / その機会
+    wwsfN: 0, wwsfWinN: 0,  // フロップを見た / うち勝利
   };
 }
 // ハンド確定時に自分の収支を記録（logHandPnlからフック）
@@ -2045,16 +2055,23 @@ function recordHandResult(h){
   const bb = h.bbAmount || sessionStats.bb || 20;
   sessionStats.hands++;
   sessionStats.net += delta;
-  // 新指標: VPIP / PFR / ショーダウン
-  if(h._meVPIP) sessionStats.vpipN = (sessionStats.vpipN||0)+1;
-  if(h._mePFR)  sessionStats.pfrN  = (sessionStats.pfrN||0)+1;
   const wentSD = (h.phase==='showdown' && !me.folded && notFolded().length>=2);
-  if(wentSD){
-    sessionStats.sdN = (sessionStats.sdN||0)+1;
-    if(delta > 0) sessionStats.sdWinN = (sessionStats.sdWinN||0)+1;
-  }
+  // All-in EV精算: 期待獲得(勝率×最終ポット) と 実獲得(収支+自分の投入額) の差
+  const aiPot = (h.results||[]).reduce((a,r)=>a+(r.amount||0),0);
+  const aiOn = (h._aiEq!=null && !me.folded && aiPot>0) ? 1 : 0;
+  const aiEv = aiOn ? Math.round((delta + (me.totalBet||0)) - (h._aiEq/100)*aiPot) : 0;
+  // このハンドの指標フラグ(セッション/種目別/通算/履歴で共用)
+  const fl = { v:h._meVPIP?1:0, p:h._mePFR?1:0, tbo:h._me3bOpp?1:0, tb:h._me3b?1:0,
+    cbo:h._meCbOpp?1:0, cb:h._meCb?1:0, agg:h._meAgg||0, call:h._meCall||0,
+    fcbo:h._meFcbOpp?1:0, fcb:h._meFcb?1:0, cro:h._meCrOpp?1:0, cr:h._meCr?1:0,
+    dko:h._meDkOpp?1:0, dk:h._meDk?1:0,
+    sf:h._meSawFlop?1:0, wwsfw:(h._meSawFlop&&delta>0)?1:0,
+    sd:wentSD?1:0, sdw:(wentSD&&delta>0)?1:0, sdf:(wentSD&&h._meSawFlop)?1:0,
+    ai:aiOn, aiev:aiEv };
+  accumStatCounters(sessionStats, fl);
   const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0});
   bg.hands++; bg.net += delta; bg.bbSum += delta / bb;
+  accumStatCounters(bg, fl);
   // 履歴（リプレイ用・軽量）
   handHistory.unshift({
     ts: Date.now(),
@@ -2078,14 +2095,19 @@ function recordHandResult(h){
     })(),
     shown: h.players.filter(p=>p.id!==myId && !p.folded && h.phase==='showdown')
       .map(p=>({name:p.name, cards:(p.hole||[]).map(c=>({r:c.r,s:c.s})), hand:(h.handNames&&h.handNames[p.id])||''})),
+    st: fl,
   });
   if(handHistory.length>200) handHistory.length=200;
   // localStorageへ通算を加算保存
   const persist = loadPersistStats() || {lifetimeHands:0, lifetimeNet:0, byGame:{}};
   persist.lifetimeHands = (persist.lifetimeHands||0) + 1;
   persist.lifetimeNet = (persist.lifetimeNet||0) + delta;
+  // NLH定番スタッツを通算保存(全体＋種目別)
+  accumStatCounters(persist, fl);
+  persist.bbSum = (persist.bbSum||0) + delta/bb;
   const pg = persist.byGame[gk] || (persist.byGame[gk] = {hands:0, net:0, bbSum:0});
   pg.hands++; pg.net += delta; pg.bbSum += delta / bb;
+  accumStatCounters(pg, fl);
   savePersistStats(persist);
 }
 
@@ -2102,29 +2124,128 @@ function closeStatsScreen(){ show(statsReturnScreen); }
 
 function fmtSigned(n){ return n>0?'+'+n.toLocaleString():(n<0?n.toLocaleString():'±0'); }
 
+// 指標カウンタの共通加算(記録対象ハンド数 statHands も数える)
+function accumStatCounters(o, fl){
+  const inc=(k,n)=>{ o[k]=(o[k]||0)+(n||0); };
+  inc('statHands',1);
+  inc('vpipN',fl.v); inc('pfrN',fl.p);
+  inc('tbOppN',fl.tbo); inc('tbN',fl.tb);
+  inc('afAggN',fl.agg); inc('afCallN',fl.call);
+  inc('cbOppN',fl.cbo); inc('cbN',fl.cb);
+  inc('wwsfN',fl.sf); inc('wwsfWinN',fl.wwsfw);
+  inc('sdN',fl.sd); inc('sdWinN',fl.sdw);
+  inc('fcbOppN',fl.fcbo); inc('fcbN',fl.fcb);
+  inc('crOppN',fl.cro); inc('crN',fl.cr);
+  inc('donkOppN',fl.dko); inc('donkN',fl.dk);
+  inc('sdFlopN',fl.sdf);
+  inc('aiN',fl.ai); inc('aiEvDiff',fl.aiev);
+}
+
+// 成績画面の種目フィルタ('all' or ゲームキー)
+let statsFilter = 'all';
+function setStatsFilter(k){ statsFilter = k; renderStatsScreen(); }
+function renderStatsFilter(){
+  const el = g('stats-filter'); if(!el) return;
+  const mk = (k,label)=>`<button class="count-btn ${statsFilter===k?'selected':''}" style="width:auto;padding:0 10px;height:30px;font-size:0.74rem;" onclick="setStatsFilter('${k}')">${label}</button>`;
+  el.innerHTML = mk('all','全種目') + MIX_ORDER.map(k=>mk(k, MIX_GAMES[k].short)).join('');
+}
+
+// NLH定番スタッツの行HTML(セッション/通算 共用)
+function nlhStatRowHTML(src, opts){
+  opts = opts || {};
+  const H = (src.statHands!=null ? src.statHands : src.hands)||0;
+  if(H<=0) return '';
+  const pct = (n,d)=> d>0 ? (100*(n||0)/d).toFixed(0)+'%' : '—';
+  const agg=src.afAggN||0, call=src.afCallN||0;
+  const af = call>0 ? (agg/call).toFixed(1) : (agg>0 ? '∞' : '—');
+  const cell = (lbl,val)=>`<div><div class="muted" style="font-size:0.62rem;">${lbl}</div><div style="font-size:0.94rem; font-weight:700;">${val}</div></div>`;
+  const row = (title,cells)=>`<div style="margin-top:9px;"><div class="muted" style="font-size:0.6rem; letter-spacing:0.1em; margin-bottom:3px;">${title}</div><div style="display:flex; gap:10px 16px; flex-wrap:wrap;">${cells}</div></div>`;
+  const aiN = src.aiN||0, aiEv = src.aiEvDiff||0;
+  const aiCell = cell('運(AI-EV差)', aiN>0 ? `${fmtSigned(aiEv)}<span class="muted" style="font-size:0.58rem;"> /${aiN}回</span>` : '—');
+  let html = `<div style="font-family:'M PLUS 1 Code',monospace; text-align:left;">`;
+  html += row('プリフロップ',
+    cell('VPIP',pct(src.vpipN,H)) + cell('PFR',pct(src.pfrN,H)) + cell('3Bet',pct(src.tbN,src.tbOppN)));
+  html += row('ポストフロップ',
+    cell('CB',pct(src.cbN,src.cbOppN)) + cell('vs CB降り',pct(src.fcbN,src.fcbOppN)) +
+    cell('Cレイズ',pct(src.crN,src.crOppN)) + cell('ドンク',pct(src.donkN,src.donkOppN)) + cell('AF',af));
+  html += row('ショーダウン',
+    cell('WTSD',pct(src.sdFlopN,src.wwsfN)) + cell('W$SD',pct(src.sdWinN,src.sdN)) + cell('WWSF',pct(src.wwsfWinN,src.wwsfN)));
+  if(opts.money === 'ai'){
+    html += row('収支', aiCell);
+  } else if(opts.money !== false){
+    const mh = src.hands||0;
+    const bb100 = (mh>0 && src.bbSum!=null) ? (src.bbSum/mh*100) : null;
+    html += row('収支',
+      (src.net!=null ? cell('Net', fmtSigned(src.net)) : '') +
+      (bb100!=null ? cell('bb/100', (bb100>=0?'+':'')+bb100.toFixed(1)) : '') +
+      aiCell);
+  }
+  html += `</div>`;
+  return html;
+}
 function renderStatsScreen(){
+  renderStatsFilter();
+  const fk = statsFilter; // 'all' or ゲームキー
+  const fLabel = fk==='all' ? '' : `（${MIX_GAMES[fk]?MIX_GAMES[fk].label:fk}）`;
   // --- セッション ---
   const sBody = g('stats-session-body');
-  if(sessionStats && sessionStats.hands>0){
+  if(fk!=='all'){
+    const bg = sessionStats && sessionStats.byGame ? sessionStats.byGame[fk] : null;
+    if(bg && bg.hands>0){
+      const bb100 = bg.hands>0 ? (bg.bbSum/bg.hands*100) : 0;
+      const cls2 = bg.net>0?'pnl-plus':(bg.net<0?'pnl-minus':'pnl-zero');
+      sBody.innerHTML = `
+        <div class="muted small" style="margin-bottom:6px;">${fLabel}</div>
+        <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'M PLUS 1 Code',monospace;">
+          <div><div class="muted" style="font-size:0.66rem;">ハンド数</div><div style="font-size:1.1rem; font-weight:700;">${bg.hands}</div></div>
+          <div><div class="muted" style="font-size:0.66rem;">収支</div><div style="font-size:1.1rem; font-weight:700;"><span class="${cls2}" style="padding:1px 10px; border-radius:10px;">${fmtSigned(bg.net)}</span></div></div>
+          <div><div class="muted" style="font-size:0.66rem;">bb/100</div><div style="font-size:1.1rem; font-weight:700; color:${bb100>=0?'var(--green-dim)':'var(--red)'};">${bb100>=0?'+':''}${bb100.toFixed(1)}</div></div>
+        </div>
+        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--surface2);">${nlhStatRowHTML(bg)}</div>`;
+    } else {
+      sBody.innerHTML = `この種目のセッション記録はまだありません${fLabel}`;
+    }
+  } else if(sessionStats && sessionStats.hands>0){
     const mins = Math.max(1, Math.round((Date.now()-sessionStats.startTs)/60000));
     const bbTotal = (sessionStats.net / (sessionStats.bb||20));
     const per100 = sessionStats.hands>0 ? (bbTotal/sessionStats.hands*100) : 0;
     const cls = sessionStats.net>0?'pnl-plus':(sessionStats.net<0?'pnl-minus':'pnl-zero');
     sBody.innerHTML = `
-      <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'Share Tech Mono',monospace;">
+      <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'M PLUS 1 Code',monospace;">
         <div><div class="muted" style="font-size:0.66rem;">ハンド数</div><div style="font-size:1.1rem; font-weight:700;">${sessionStats.hands}</div></div>
         <div><div class="muted" style="font-size:0.66rem;">収支</div><div style="font-size:1.1rem; font-weight:700;" class="${sessionStats.net>0?'':''}"><span class="${cls}" style="padding:1px 10px; border-radius:10px;">${fmtSigned(sessionStats.net)}</span></div></div>
         <div><div class="muted" style="font-size:0.66rem;">bb/100</div><div style="font-size:1.1rem; font-weight:700; color:${per100>=0?'var(--green-dim)':'var(--red)'};">${per100>=0?'+':''}${per100.toFixed(1)}</div></div>
         <div><div class="muted" style="font-size:0.66rem;">経過</div><div style="font-size:1.1rem; font-weight:700;">${mins}分</div></div>
       </div>
-      <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'Share Tech Mono',monospace; margin-top:10px; padding-top:8px; border-top:1px solid var(--surface2);">
-        <div><div class="muted" style="font-size:0.66rem;">VPIP</div><div style="font-size:0.98rem; font-weight:700;">${(100*(sessionStats.vpipN||0)/sessionStats.hands).toFixed(0)}%</div></div>
-        <div><div class="muted" style="font-size:0.66rem;">PFR</div><div style="font-size:0.98rem; font-weight:700;">${(100*(sessionStats.pfrN||0)/sessionStats.hands).toFixed(0)}%</div></div>
-        <div><div class="muted" style="font-size:0.66rem;">SD到達</div><div style="font-size:0.98rem; font-weight:700;">${(100*(sessionStats.sdN||0)/sessionStats.hands).toFixed(0)}%</div></div>
-        <div><div class="muted" style="font-size:0.66rem;">SD勝率</div><div style="font-size:0.98rem; font-weight:700;">${(sessionStats.sdN||0)>0 ? (100*(sessionStats.sdWinN||0)/(sessionStats.sdN)).toFixed(0)+'%' : '—'}</div></div>
+      <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--surface2);">
+        ${nlhStatRowHTML(sessionStats, {money:'ai'})}
       </div>`;
   } else {
     sBody.innerHTML = 'まだプレイしていません';
+  }
+
+  // --- 通算スタッツ(NLH指標) ---
+  const ltEl = g('stats-lifetime-nlh');
+  if(ltEl){
+    const lt = loadPersistStats();
+    if(fk!=='all'){
+      const pg = lt && lt.byGame ? lt.byGame[fk] : null;
+      const denom = pg ? (pg.statHands||0) : 0;
+      if(pg && denom>0){
+        ltEl.innerHTML = `<div class="muted small" style="margin-bottom:6px;">${fLabel} 記録対象 ${denom}ハンド分</div>` + nlhStatRowHTML(pg);
+      } else if(pg && pg.hands>0){
+        ltEl.innerHTML = `<div class="muted small">${fLabel} 過去 ${pg.hands}ハンド分の収支はありますが、指標の記録はこれからのプレイ分から始まります</div>`;
+      } else {
+        ltEl.innerHTML = `この種目の記録はまだありません${fLabel}`;
+      }
+    } else if(lt && (lt.lifetimeHands||0) > 0){
+      const denom = lt.statHands!=null ? lt.statHands : (lt.lifetimeHands||0);
+      const bbSumAll = lt.bbSum!=null ? lt.bbSum : Object.values(lt.byGame||{}).reduce((a,g2)=>a+(g2.bbSum||0),0);
+      const src = Object.assign({}, lt, {hands: lt.lifetimeHands||0, statHands: denom, net: lt.lifetimeNet||0, bbSum: bbSumAll});
+      ltEl.innerHTML = `<div class="muted small" style="margin-bottom:6px;">記録対象 ${denom}ハンド分（全種目）</div>` + nlhStatRowHTML(src);
+    } else {
+      ltEl.textContent = 'まだ記録がありません';
+    }
   }
 
   // --- ゲーム別 bb/100（通算）---
@@ -2163,7 +2284,7 @@ function renderStatsChart(){
         <div style="position:relative; height:18px; background:var(--bg); border-radius:5px; overflow:hidden;">
           <div style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--surface3);"></div>
           <div style="position:absolute; top:0; bottom:0; ${isPos?'left:50%':'right:50%'}; width:${w}%; background:${barColor}; border-radius:3px;"></div>
-          <div style="position:absolute; ${isPos?'left:calc(50% + '+w+'% + 4px)':'right:calc(50% + '+w+'% + 4px)'}; top:0; bottom:0; display:flex; align-items:center; font-size:0.66rem; font-weight:700; font-family:'Share Tech Mono',monospace; color:${isPos?'var(--green-dim)':'var(--red)'}; white-space:nowrap;">
+          <div style="position:absolute; ${isPos?'left:calc(50% + '+w+'% + 4px)':'right:calc(50% + '+w+'% + 4px)'}; top:0; bottom:0; display:flex; align-items:center; font-size:0.66rem; font-weight:700; font-family:'M PLUS 1 Code',monospace; color:${isPos?'var(--green-dim)':'var(--red)'}; white-space:nowrap;">
             ${isPos?'+':''}${r.per100.toFixed(0)}
           </div>
         </div>
@@ -2177,7 +2298,14 @@ function renderStatsHistory(){
     cont.innerHTML = '<div class="center muted small">このセッションの履歴はまだありません</div>';
     return;
   }
-  cont.innerHTML = handHistory.slice(0,60).map((hh,i)=>{
+  const items = handHistory.map((hh,i)=>({hh,i}))
+    .filter(x=> statsFilter==='all' || x.hh.game===statsFilter)
+    .slice(0,60);
+  if(items.length===0){
+    cont.innerHTML = '<div class="center muted small">この種目のセッション履歴はまだありません</div>';
+    return;
+  }
+  cont.innerHTML = items.map(({hh,i})=>{
     const cls = hh.delta>0?'pnl-plus':(hh.delta<0?'pnl-minus':'pnl-zero');
     const cards = hh.myCards.join(' ');
     const board = hh.board.length ? ` ・ 場 ${hh.board.join(' ')}` : '';
@@ -2185,7 +2313,7 @@ function renderStatsHistory(){
       <div onclick="openHandDetail(${i})" style="display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:1px solid var(--surface2); cursor:pointer;">
         <span style="font-size:0.6rem; background:var(--surface2); color:var(--muted); padding:1px 6px; border-radius:5px; font-weight:700; white-space:nowrap;">${hh.gameLabel.length>6?MIX_GAMES[hh.game].short:hh.gameLabel}</span>
         <span class="mono" style="flex:1; font-size:0.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cards}${board}</span>
-        <span class="${cls}" style="font-size:0.7rem; padding:1px 9px; border-radius:10px; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${fmtSigned(hh.delta)}</span>
+        <span class="${cls}" style="font-size:0.7rem; padding:1px 9px; border-radius:10px; font-family:'M PLUS 1 Code',monospace; white-space:nowrap;">${fmtSigned(hh.delta)}</span>
         <span class="muted" style="font-size:0.72rem;">›</span>
       </div>`;
   }).join('');
@@ -2210,7 +2338,7 @@ function openHandDetail(i){
   g('hand-detail-body').innerHTML = `
     <div class="center" style="margin-bottom:4px;">
       <span style="font-size:0.7rem; background:var(--surface2); color:var(--muted); padding:2px 8px; border-radius:6px; font-weight:700;">${esc(hh.gameLabel)} ・ #${hh.handNo}</span>
-      <span class="${cls}" style="font-size:0.78rem; padding:2px 10px; border-radius:10px; font-family:'Share Tech Mono',monospace; margin-left:6px;">${fmtSigned(hh.delta)}</span>
+      <span class="${cls}" style="font-size:0.78rem; padding:2px 10px; border-radius:10px; font-family:'M PLUS 1 Code',monospace; margin-left:6px;">${fmtSigned(hh.delta)}</span>
     </div>
     <div class="small muted center" style="margin:6px 0 3px;">あなたの手札${hh.myHandName?` — ${esc(hh.myHandName)}`:''}</div>
     ${cardRow(hh.myCardsRaw, hh.myCards.join(' '))}
@@ -2227,12 +2355,16 @@ function closeHandDetail(){ g('hand-detail-modal').style.display='none'; }
 function exportHistoryCSV(){
   if(!handHistory || !handHistory.length){ alert('このセッションの履歴がまだありません'); return; }
   const escCsv = v => { const t=String(v==null?'':v); return /[",\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t; };
-  const head = ['日時','種目','ハンド番号','収支','BB','自分の手札','ボード','役','結果'];
+  const head = ['日時','種目','ハンド番号','収支','BB','自分の手札','ボード','役','結果','VPIP','PFR','3Bet機会','3Bet','CB機会','CB','vsCB機会','vsCB降り','CR機会','CR','ドンク機会','ドンク','ベット/レイズ数','コール数','フロップ見た','SD到達','SD勝ち','SDフロップ経由','AI回数','AI-EV差'];
   const rows = handHistory.slice().reverse().map(hh=>{
     const d = new Date(hh.ts);
     const dt = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     const res = (hh.results||[]).map(r=>`${(r.names||[]).join('・')} +${r.amount}`).join(' / ');
-    return [dt, hh.gameLabel, hh.handNo, hh.delta, hh.bb, hh.myCards.join(' '), hh.board.join(' '), hh.myHandName||'', res].map(escCsv).join(',');
+    const st = hh.st||{};
+    return [dt, hh.gameLabel, hh.handNo, hh.delta, hh.bb, hh.myCards.join(' '), hh.board.join(' '), hh.myHandName||'', res,
+            st.v||0, st.p||0, st.tbo||0, st.tb||0, st.cbo||0, st.cb||0,
+            st.fcbo||0, st.fcb||0, st.cro||0, st.cr||0, st.dko||0, st.dk||0,
+            st.agg||0, st.call||0, st.sf||0, st.sd||0, st.sdw||0, st.sdf||0, st.ai||0, st.aiev||0].map(escCsv).join(',');
   });
   const csv = '\uFEFF' + head.join(',') + '\n' + rows.join('\n'); // BOM付き(Excel対応)
   try{
@@ -2272,13 +2404,34 @@ function maybeRecordGuestHand(pub){
   // 新指標(ゲスト): VPIP/PFRはguestActで記録したフラグ、SDはpubから判定
   if(window._gVPIP) sessionStats.vpipN = (sessionStats.vpipN||0)+1;
   if(window._gPFR)  sessionStats.pfrN  = (sessionStats.pfrN||0)+1;
-  window._gVPIP = false; window._gPFR = false;
-  if(pub.phase==='showdown' && !me.folded && pub.players.filter(p=>!p.folded).length>=2){
+  const gWentSD = (pub.phase==='showdown' && !me.folded && pub.players.filter(p=>!p.folded).length>=2);
+  if(gWentSD){
     sessionStats.sdN = (sessionStats.sdN||0)+1;
     if(delta > 0) sessionStats.sdWinN = (sessionStats.sdWinN||0)+1;
   }
-  const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0});
+  if(window._g3bOpp){ sessionStats.tbOppN=(sessionStats.tbOppN||0)+1; if(window._g3b) sessionStats.tbN=(sessionStats.tbN||0)+1; }
+  sessionStats.afAggN=(sessionStats.afAggN||0)+(window._gAgg||0);
+  sessionStats.afCallN=(sessionStats.afCallN||0)+(window._gCall||0);
+  if(window._gCbOpp){ sessionStats.cbOppN=(sessionStats.cbOppN||0)+1; if(window._gCb) sessionStats.cbN=(sessionStats.cbN||0)+1; }
+  if(window._gSawFlop){ sessionStats.wwsfN=(sessionStats.wwsfN||0)+1; if(delta>0) sessionStats.wwsfWinN=(sessionStats.wwsfWinN||0)+1; }
+  const gPot = (pub.results||[]).reduce((a,r)=>a+(r.amount||0),0);
+  const gAiOn = (window._gAiEq!=null && !me.folded && gPot>0) ? 1 : 0;
+  const gAiEv = gAiOn ? Math.round((delta + (me.totalBet||0)) - (window._gAiEq/100)*gPot) : 0;
+  const gFlags = { v:window._gVPIP?1:0, p:window._gPFR?1:0, tbo:window._g3bOpp?1:0, tb:window._g3b?1:0,
+    cbo:window._gCbOpp?1:0, cb:window._gCb?1:0, agg:window._gAgg||0, call:window._gCall||0,
+    fcbo:window._gFcbOpp?1:0, fcb:window._gFcb?1:0, cro:window._gCrOpp?1:0, cr:window._gCr?1:0,
+    dko:window._gDkOpp?1:0, dk:window._gDk?1:0,
+    sf:window._gSawFlop?1:0, wwsfw:(window._gSawFlop&&delta>0)?1:0,
+    sd:gWentSD?1:0, sdw:(gWentSD&&delta>0)?1:0, sdf:(gWentSD&&window._gSawFlop)?1:0,
+    ai:gAiOn, aiev:gAiEv };
+  window._gVPIP=false; window._gPFR=false; window._g3bOpp=false; window._g3b=false;
+  window._gAgg=0; window._gCall=0; window._gCbOpp=false; window._gCb=false; window._gSawFlop=false;
+  window._gFcbOpp=false; window._gFcb=false; window._gCrOpp=false; window._gCr=false;
+  window._gDkOpp=false; window._gDk=false; window._gAiEq=null;
+  window._gChkKey=null; window._gCrDoneKey=null; window._gDkDoneKey=null;
+  const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0, vpipN:0,pfrN:0,tbN:0,tbOppN:0,afAggN:0,afCallN:0,cbN:0,cbOppN:0,wwsfN:0,wwsfWinN:0,sdN:0,sdWinN:0,statHands:0});
   bg.hands++; bg.net += delta; bg.bbSum += delta/bb;
+  accumStatCounters(bg, gFlags);
   handHistory.unshift({
     ts: Date.now(), game: gk, gameLabel: MIX_GAMES[gk]?.label||gk, handNo,
     delta, bb,
@@ -2287,13 +2440,17 @@ function maybeRecordGuestHand(pub){
     myHandName: (pub.handNames && pub.handNames[me.id])||'',
     won: delta>0,
     results: (pub.results||[]).map(r=>({names:r.winnerNames, amount:r.amount})),
+    st: gFlags,
   });
   if(handHistory.length>200) handHistory.length=200;
   const persist = loadPersistStats() || {lifetimeHands:0, lifetimeNet:0, byGame:{}};
   persist.lifetimeHands=(persist.lifetimeHands||0)+1;
   persist.lifetimeNet=(persist.lifetimeNet||0)+delta;
+  accumStatCounters(persist, gFlags);
+  persist.bbSum = (persist.bbSum||0) + delta/bb;
   const pg = persist.byGame[gk] || (persist.byGame[gk]={hands:0,net:0,bbSum:0});
   pg.hands++; pg.net+=delta; pg.bbSum+=delta/bb;
+  accumStatCounters(pg, gFlags);
   savePersistStats(persist);
 }
 
@@ -2566,17 +2723,67 @@ function applyAction(playerIdx, action){
   if(p.folded || p.allIn) return;
   const toCall = h.highBet - p.roundBet;
 
-  // 成績指標: 自分の最初のベットラウンドでの自発参加(VPIP)とレイズ(PFR)を記録
+  // 成績指標: NLH定番スタッツの素材を記録
   {
     const selfIdStat = isMulti ? myId : 'human';
+    const gdS = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
+    const firstRound = gdS.type==='stud' ? (h.studStreet||3)===3
+                     : (h.phase==='preflop' && (h.drawDone||0)===0);
+    const stKey = `${h.phase}|${h.studStreet||0}|${h.drawDone||0}`;
     if(p.id === selfIdStat){
-      const gdS = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
-      const firstRound = gdS.type==='stud' ? (h.studStreet||3)===3
-                       : (h.phase==='preflop' && (h.drawDone||0)===0);
       if(firstRound){
+        // VPIP / PFR
         if(action.type==='raise') { h._meVPIP = true; h._mePFR = true; }
         else if(action.type==='call' && toCall > 0) { h._meVPIP = true; }
+        // 3Bet: BB/ブリングインでraiseCount=1のため、オープンレイズに直面=2で判定
+        if(toCall > 0 && (h.raiseCount||0) === 2){
+          h._me3bOpp = true;
+          if(action.type==='raise') h._me3b = true;
+        }
+      } else {
+        // AF(アグレッションファクター)素材: ポストフロップ相当のベット・レイズ/コール
+        if(action.type==='raise') h._meAgg = (h._meAgg||0)+1;
+        else if(action.type==='call') h._meCall = (h._meCall||0)+1;
+        // CBet: プリフロップ最終アグレッサーとして迎えたフロップの最初の行動で、
+        // まだ誰もベットしていなければ機会。そこでベットすればCB成立
+        if(gdS.type==='community' && h.phase==='flop' && h._pfAggr===p.id && !h._meCbDone){
+          h._meCbDone = true;
+          if(toCall === 0){
+            h._meCbOpp = true;
+            if(action.type==='raise') h._meCb = true;
+          }
+        }
+        // Fold to CBet: フロップでPFアグレッサーの最初のベット(raiseCount=1)に直面
+        if(gdS.type==='community' && h.phase==='flop' && !h._meFcbDone
+           && toCall > 0 && (h.raiseCount||0)===1
+           && h._pfAggr && h._stAggr===h._pfAggr && h._pfAggr!==p.id){
+          h._meFcbDone = true;
+          h._meFcbOpp = true;
+          if(action.type==='fold') h._meFcb = true;
+        }
+        // Check-Raise: 同じストリートで自分がチェック→後にベットに直面
+        if(action.type==='check'){ h._meChkKey = stKey; }
+        else if(toCall > 0 && h._meChkKey === stKey && h._meCrKeyDone !== stKey){
+          h._meCrKeyDone = stKey;
+          h._meCrOpp = true;
+          if(action.type==='raise') h._meCr = true;
+        }
+        // Donk Bet: 前ストリートのアグレッサー(未行動)より先に打つ機会
+        if(gdS.type==='community' && toCall===0 && h._prevStAggr && h._prevStAggr!==p.id
+           && h._meDkKeyDone !== stKey){
+          const pa = h.players.find(x=>x.id===h._prevStAggr);
+          if(pa && !pa.folded && !pa.acted){
+            h._meDkKeyDone = stKey;
+            h._meDkOpp = true;
+            if(action.type==='raise') h._meDk = true;
+          }
+        }
       }
+    }
+    // 全員分: アグレッサー記録(プリフロップ=CBet用 / ストリート=FoldToCB・Donk用)
+    if(action.type==='raise'){
+      if(firstRound) h._pfAggr = p.id;
+      h._stAggr = p.id;
     }
   }
 
@@ -2690,6 +2897,7 @@ function advancePhase(){
   h.players.forEach(p=>{ p.roundBet=0; p.acted=false; p.lastAction=''; });
   h.highBet = 0; h.minRaise = h.bbAmount;
   h.raiseCount = 0; // FLのレイズ回数をリセット
+  h._prevStAggr = h._stAggr || null; h._stAggr = null; // ドンク/FoldToCB判定用
 
   const gd = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
 
@@ -2719,7 +2927,11 @@ function advancePhaseCommunity(h){
   // 山札からボードへ1枚（枯渇時はundefinedを積まず警告）。通常プレイでは枯渇しないため挙動は不変
   const dealBoard = ()=>{ const c=h.deck.pop(); if(c) h.board.push(c); else console.warn('advancePhaseCommunity: 山札不足'); };
   const targetBoard = (MIX_GAMES[G.currentGame]||MIX_GAMES.holdem).boardN || 5;
-  if(h.phase==='preflop'){ h.phase='flop'; dealBoard(); dealBoard(); dealBoard(); G.log.unshift('── フロップ ──'); }
+  if(h.phase==='preflop'){ h.phase='flop'; dealBoard(); dealBoard(); dealBoard(); G.log.unshift('── フロップ ──');
+    const selfIdF = isMulti ? myId : 'human';
+    const meF = h.players.find(pp=>pp.id===selfIdF);
+    if(meF && !meF.folded) h._meSawFlop = true; // WWSF用: フロップを見た
+  }
   else if(h.phase==='flop'){ h.phase='turn'; dealBoard(); G.log.unshift('── ターン ──'); }
   else if(h.phase==='turn'){ h.phase='river'; dealBoard(); G.log.unshift('── リバー ──'); }
   else if(h.phase==='river'){ if(targetBoard>=6){ h.phase='ocean'; dealBoard(); G.log.unshift('── オーシャン ──'); } else { h.phase='showdown'; } }
@@ -3532,6 +3744,12 @@ function scheduleNext(){
     }
     if(h.runout){
       h.runoutEq = runoutEquities(h, gd); // ストリートごとに更新（配り切り後はnull）
+      // All-in EV: 最初のオールイン確定時点の自分の勝率を保存
+      const sidAi = isMulti ? myId : 'human';
+      if(h._aiEq==null && h.runoutEq && h.runoutEq[sidAi]!=null){
+        const meAi = h.players.find(pp=>pp.id===sidAi);
+        if(meAi && !meAi.folded){ h._aiEq = h.runoutEq[sidAi]; }
+      }
     }
 
     if(isLastBettingRound(h, gd)){
@@ -5516,6 +5734,8 @@ function ploPub_build(){
     turnDeadline: h.turnDeadline || null,
     log: (G.log||[]).slice(0,5),
     disc: Array.from(discIds||[]),
+    raiseCount: h.raiseCount||0, pfAggr: h._pfAggr||null,
+    stAggr: h._stAggr||null, prevStAggr: h._prevStAggr||null,
     raiseCount: h.raiseCount || 0, minRaise: h.minRaise,
     sbId: (h.sbIdx>=0 && h.players[h.sbIdx]) ? h.players[h.sbIdx].id : null,
     bbId: (h.bbIdx>=0 && h.players[h.bbIdx]) ? h.players[h.bbIdx].id : null,
@@ -5549,7 +5769,7 @@ function ploPub_build(){
         ? revealWin
         : ((h.phase==='showdown' && !p.folded) || (humanFolded && p.id!==myId) || (h.runout && !p.folded));
       return {
-        id:p.id, name:p.name, stack:p.stack, roundBet:p.roundBet, totalBet:p.totalBet||0, aggCnt:p.aggCnt||0, folded:p.folded, allIn:p.allIn, lastAction:p.lastAction,
+        id:p.id, name:p.name, stack:p.stack, roundBet:p.roundBet, totalBet:p.totalBet||0, aggCnt:p.aggCnt||0, folded:p.folded, allIn:p.allIn, acted:!!p.acted, lastAction:p.lastAction,
         hole: showHole ? p.hole : null,
         holeCount: p.hole.length,
         upCards, // スタッドの表札（nullの要素は伏札）
@@ -5591,6 +5811,18 @@ function onGuestStateUpdate(){
 function renderGuest(){
   const pub = ploPub;
   if(!pub || !pub.players) return;
+  // WWSF用: フロップを見たか(ハンドごとに1回)
+  try{
+    if(pub.phase==='flop' && window._gSfHand!==pub.handNo){
+      const meSf = pub.players.find(p=>p.id===myId);
+      if(meSf && !meSf.folded){ window._gSfHand = pub.handNo; window._gSawFlop = true; }
+    }
+    // All-in EV: ランアウト開始時の自分の勝率を保存
+    if(pub.runout && pub.runoutEq && pub.runoutEq[myId]!=null && window._gAiHand!==pub.handNo){
+      const meAi = pub.players.find(p=>p.id===myId);
+      if(meAi && !meAi.folded){ window._gAiHand = pub.handNo; window._gAiEq = pub.runoutEq[myId]; }
+    }
+  }catch(e){}
   // Firebaseは空配列を削除するため、boardがundefinedの場合は空配列に正規化
   if(!Array.isArray(pub.board)) pub.board = [];
   pub.players.forEach(p=>{ if(p.hole && !Array.isArray(p.hole)) p.hole=null; });
@@ -5617,7 +5849,7 @@ function renderGuest(){
     g('board-area').classList.toggle('six', slots>=6);
     g('board-area').innerHTML = boardH;
   } else {
-    g('board-area').innerHTML = `<div style="font-family:'Share Tech Mono',monospace; color:rgba(232,200,74,0.5); font-size:0.7rem; letter-spacing:0.3em; text-transform:uppercase; text-align:center;">${gdG.short}</div>`;
+    g('board-area').innerHTML = `<div style="font-family:'M PLUS 1 Code',monospace; color:rgba(232,200,74,0.5); font-size:0.7rem; letter-spacing:0.3em; text-transform:uppercase; text-align:center;">${gdG.short}</div>`;
   }
   const meIdx = pub.players.findIndex(p=>p.id===myId);
   const n = pub.players.length;
@@ -5863,11 +6095,48 @@ function guestAct(action){
     const gdS = MIX_GAMES[(pub&&pub.currentGame)||'holdem'] || MIX_GAMES.holdem;
     const firstRound = gdS.type==='stud' ? (pub.studStreet||3)===3
                      : (pub.phase==='preflop' && (pub.drawDone||0)===0);
+    const me = pub.players.find(p=>p.id===myId);
+    const toCall = me ? (pub.highBet - (me.roundBet||0)) : 0;
+    const stKey = `${pub.handNo}|${pub.phase}|${pub.studStreet||0}|${pub.drawDone||0}`;
     if(firstRound){
-      const me = pub.players.find(p=>p.id===myId);
-      const toCall = me ? (pub.highBet - (me.roundBet||0)) : 0;
       if(action.type==='raise'){ window._gVPIP=true; window._gPFR=true; }
       else if(action.type==='call' && toCall>0){ window._gVPIP=true; }
+      if(toCall>0 && (pub.raiseCount||0)===2){
+        window._g3bOpp=true;
+        if(action.type==='raise') window._g3b=true;
+      }
+    } else {
+      if(action.type==='raise') window._gAgg=(window._gAgg||0)+1;
+      else if(action.type==='call') window._gCall=(window._gCall||0)+1;
+      if(gdS.type==='community' && pub.phase==='flop' && pub.pfAggr===myId && window._gCbHand!==pub.handNo){
+        window._gCbHand = pub.handNo;
+        if(toCall===0){ window._gCbOpp=true; if(action.type==='raise') window._gCb=true; }
+      }
+      // Fold to CBet
+      if(gdS.type==='community' && pub.phase==='flop' && window._gFcbHand!==pub.handNo
+         && toCall>0 && (pub.raiseCount||0)===1
+         && pub.pfAggr && pub.stAggr===pub.pfAggr && pub.pfAggr!==myId){
+        window._gFcbHand = pub.handNo;
+        window._gFcbOpp = true;
+        if(action.type==='fold') window._gFcb = true;
+      }
+      // Check-Raise
+      if(action.type==='check'){ window._gChkKey = stKey; }
+      else if(toCall>0 && window._gChkKey===stKey && window._gCrDoneKey!==stKey){
+        window._gCrDoneKey = stKey;
+        window._gCrOpp = true;
+        if(action.type==='raise') window._gCr = true;
+      }
+      // Donk Bet
+      if(gdS.type==='community' && toCall===0 && pub.prevStAggr && pub.prevStAggr!==myId
+         && window._gDkDoneKey!==stKey){
+        const pa = pub.players.find(x=>x.id===pub.prevStAggr);
+        if(pa && !pa.folded && !pa.acted){
+          window._gDkDoneKey = stKey;
+          window._gDkOpp = true;
+          if(action.type==='raise') window._gDk = true;
+        }
+      }
     }
   }catch(e){}
   g('action-area').innerHTML=''; fbSendToHost({type:'action', action});
@@ -6108,5 +6377,22 @@ if (typeof window !== 'undefined') {
 
 </script>
 
+<script>
+// Capacitorアプリ内でのAndroid戻るボタン対応（Webブラウザでは何もしない）
+document.addEventListener('DOMContentLoaded', ()=>{
+  try{
+    const C = window.Capacitor;
+    if(C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.App){
+      C.Plugins.App.addListener('backButton', ()=>{
+        const inGame = document.getElementById('screen-game') && document.getElementById('screen-game').classList.contains('active');
+        if(!inGame){
+          try{ C.Plugins.App.minimizeApp(); }catch(e){}
+        }
+        // ゲーム画面中は誤タップでアプリが閉じないよう何もしない
+      });
+    }
+  }catch(e){}
+});
+</script>
 </body>
 </html>
