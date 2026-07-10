@@ -940,6 +940,10 @@ h3 { font-size: 1rem; font-weight: 600; }
         <span class="game-tab-icon">🏃</span>
         <span class="game-tab-name">アッシュランナー</span>
       </button>
+      <button class="game-tab" id="tab-ns" data-game="nosetelo" onclick="selectLobbyGame('nosetelo')">
+        <span class="game-tab-icon">🎬</span>
+        <span class="game-tab-name">ノセテロ</span>
+      </button>
     </div>
 
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
@@ -1259,6 +1263,25 @@ h3 { font-size: 1rem; font-weight: 600; }
         </a>
         <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
           ※ MIXポーカーは専用のページで動作します<br>2〜8人で遊べます（ソロはCPU対戦・マルチは途中参加OK）
+        </div>
+      </div>
+    </div>
+
+    <!-- NOSETELO section（別ページ誘導） -->
+    <div id="lobby-ns" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(242,194,28,0.05); border:1px solid rgba(242,194,28,0.3); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">🎬</div>
+          <div style="font-family:var(--mono); color:#f2c21c; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">ノセテロ</div>
+          <div style="color:var(--muted); font-size:0.72rem;">NOSETELO · VIDEO EDITOR</div>
+        </div>
+        <a href="nosetelo.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(242,194,28,0.12); color:#f2c21c; border:1px solid rgba(242,194,28,0.5);">
+            🎬 ノセテロのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
+          ※ ノセテロは専用のページで動作します<br>動画のカット・テロップ・自動字幕・アフレコ・SNS向け書き出し（動画は端末内処理・外部送信なし）
         </div>
       </div>
     </div>
@@ -3881,13 +3904,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
