@@ -1745,8 +1745,10 @@ let handHistory = [];        // 直近ハンドの詳細（リプレイ用、最
 
 function g(id){ return document.getElementById(id); }
 function show(name){
+  const el = g('screen-'+name);
+  if(!el){ console.warn('show: 画面が見つかりません:', name); return; }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  g('screen-'+name).classList.add('active');
+  el.classList.add('active');
 }
 
 // ===== ロビー設定 =====
@@ -2114,13 +2116,28 @@ function recordHandResult(h){
 // ===== 成績画面 =====
 let statsReturnScreen = 'lobby'; // 戻る先（ゲーム中に開いた場合はgame）
 function openStatsScreen(){
-  // 現在アクティブな画面を記録（ロビー or ゲーム）
+  // 現在アクティブな画面を記録。成績画面上で再タップしても戻り先を壊さない
   const active = document.querySelector('.screen.active');
-  statsReturnScreen = (active && active.id==='screen-game') ? 'game' : 'lobby';
+  const cur = active ? active.id.replace('screen-','') : 'lobby';
+  if(cur !== 'stats') statsReturnScreen = cur;
   renderStatsScreen();
   show('stats');
 }
-function closeStatsScreen(){ show(statsReturnScreen); }
+function closeStatsScreen(){
+  let dest = statsReturnScreen || 'lobby';
+  // 安全網: ロビーに戻ろうとしているのにゲーム/待機が進行中なら、そちらへ戻す
+  try{
+    const inHand = (typeof G!=='undefined' && G && G.hand)
+      || (typeof isMulti!=='undefined' && isMulti && !isHost && typeof ploPub!=='undefined' && ploPub && ploPub.players);
+    if(dest==='lobby' && inHand) dest = 'game';
+    else if(dest==='lobby' && typeof fbRoom!=='undefined' && fbRoom) dest = 'waiting';
+  }catch(e){}
+  show(dest);
+  if(dest==='game'){
+    // 表示を最新化（成績を見ている間に進んだ分を反映）
+    try{ if(typeof isMulti!=='undefined' && isMulti && !isHost){ renderGuest(); } else { render(); } }catch(e){}
+  }
+}
 
 function fmtSigned(n){ return n>0?'+'+n.toLocaleString():(n<0?n.toLocaleString():'±0'); }
 
@@ -2610,7 +2627,9 @@ function startNewHand(){
     const suitOrder = {c:0,d:1,h:2,s:3};
     aliveIdxs.forEach(i=>{
       const up = players[i].hole[2];
-      const val = up.r * 4 + suitOrder[up.s];
+      // ラズはAが最小(=1)。Aが見えていてもブリングインにはならない
+      const rr = (isRazz && up.r === 14) ? 1 : up.r;
+      const val = rr * 4 + suitOrder[up.s];
       if(biBest===null){ biBest=val; biIdx=i; }
       else if(isRazz ? val>biBest : val<biBest){ biBest=val; biIdx=i; }
     });
