@@ -1,0 +1,1297 @@
+<!-- NANA v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🎴 ナナ NANA</title>
+<style>
+:root {
+  --bg: #0d0a14;
+  --surface: #1c1626;
+  --surface2: #262033;
+  --surface3: #3a3149;
+  --text: #f2eff6;
+  --muted: #9a90ab;
+  --red: #ff4d5e;
+  --green: #35e08c;
+  --blue: #4db8ff;
+  --gold: #ffd54f;
+  --nana: #ff5a75;
+  --nana-dim: rgba(255,90,117,0.16);
+  --card-face: #f8f4ea;
+  --card-ink: #2a2233;
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  --mono: "SF Mono", Menlo, Monaco, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 16px; line-height: 1.5;
+  overscroll-behavior: none; padding-bottom: env(safe-area-inset-bottom);
+}
+.app { max-width: 480px; margin: 0 auto; padding: 12px; min-height: 100dvh; display: flex; flex-direction: column; gap: 10px; }
+body.ingame { overflow: hidden; height: 100dvh; }
+body.ingame .app { height: 100dvh; min-height: 0; }
+.screen { display: none; flex-direction: column; gap: 10px; }
+.screen.active { display: flex; }
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
+h1 { font-size: 1.8rem; text-align: center; }
+h2 { font-size: 1.3rem; text-align: center; }
+h3 { font-size: 0.85rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 18px; border-radius: 10px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
+  transition: all 0.15s; user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-nana { background: var(--nana); border-color: var(--nana); color: #fff; }
+.btn-blue { background: rgba(77,184,255,0.15); border-color: rgba(77,184,255,0.5); color: var(--blue); }
+.btn-ghost { background: transparent; }
+.btn-sm { padding: 6px 10px; font-size: 0.78rem; border-radius: 8px; }
+.input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--surface3); background: var(--surface2); color: var(--text);
+  font-size: 1rem; font-family: var(--sans); outline: none;
+}
+.input:focus { border-color: var(--nana); }
+.code-input { font-family: var(--mono); font-size: 1.3rem; text-align: center; letter-spacing: 6px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.divider { height: 1px; background: var(--surface3); margin: 4px 0; }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 12px; }
+.status-txt { text-align: center; font-size: 0.85rem; color: var(--blue); min-height: 1.2em; }
+.error { text-align: center; font-size: 0.85rem; color: var(--red); min-height: 1.2em; }
+.code-box { text-align: center; background: var(--surface); border: 1px dashed var(--surface3); border-radius: 12px; padding: 10px; }
+.code-box .label { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); letter-spacing: 2px; }
+.code-box .code { font-size: 2rem; font-family: var(--mono); letter-spacing: 8px; color: var(--gold); font-weight: 700; }
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-chip { display: flex; align-items: center; gap: 8px; background: var(--surface2); border-radius: 10px; padding: 9px 12px; font-size: 0.92rem; }
+.log { font-size: 0.72rem; color: var(--muted); overflow-y: auto; line-height: 1.6; font-family: var(--mono); }
+.log div { border-bottom: 1px solid rgba(255,255,255,0.04); padding: 2px 0; }
+
+/* ===== game screen ===== */
+.turnbar {
+  text-align: center; padding: 9px; border-radius: 10px; font-weight: 700; font-size: 0.95rem;
+  background: var(--surface); border: 1px solid var(--surface3);
+}
+.turnbar.me { background: var(--nana-dim); border-color: var(--nana); color: var(--nana); animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(255,90,117,0.35);} 50%{ box-shadow: 0 0 0 7px rgba(255,90,117,0);} }
+
+.chal { display: flex; gap: 8px; justify-content: center; align-items: stretch; height: clamp(52px, 8.5dvh, 68px); }
+.chal-slot {
+  width: 62px; border-radius: 9px; border: 2px dashed var(--surface3);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--surface3); font-size: 1.2rem; font-weight: 700;
+}
+.chal-card {
+  width: 62px; border-radius: 9px; border: 2px solid var(--surface3);
+  background: var(--card-face); color: var(--card-ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  animation: flipin 0.25s ease-out;
+}
+@keyframes flipin { from { transform: scale(0.6) rotateY(90deg); opacity: 0; } to { transform: scale(1) rotateY(0); opacity: 1; } }
+.chal-card .num { font-size: 1.5rem; font-weight: 800; line-height: 1.05; }
+.chal-card .src { font-size: 0.54rem; color: #6d6480; text-align: center; line-height: 1.2; padding: 0 3px 2px; word-break: keep-all; }
+.chal-card.seven { background: linear-gradient(135deg,#ffe9a8,#ffd54f 55%,#ffc93c); border-color: var(--gold); box-shadow: 0 0 12px rgba(255,213,79,0.5); }
+.chal-card.ng { border-color: var(--red); box-shadow: 0 0 12px rgba(255,77,94,0.55); animation: shake 0.4s; }
+.chal-card.ok { border-color: var(--green); box-shadow: 0 0 12px rgba(53,224,140,0.55); }
+@keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+.chal-msg { text-align: center; font-size: 0.74rem; font-weight: 700; min-height: 1.15em; line-height: 1.15; }
+.chal-msg.ok { color: var(--green); }
+.chal-msg.ng { color: var(--red); }
+
+.field-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.fcard {
+  height: clamp(36px, 6.5dvh, 52px); border-radius: 8px; border: 1.5px solid var(--surface3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem; font-weight: 800; user-select: none;
+}
+.fcard.back {
+  background: repeating-linear-gradient(135deg, #2c2440 0 7px, #241d35 7px 14px);
+  color: rgba(255,255,255,0.28); cursor: pointer; font-size: 0.85rem;
+}
+.fcard.back.can { border-color: var(--nana); box-shadow: 0 0 0 1px var(--nana) inset; }
+.fcard.back:active { transform: scale(0.94); }
+.fcard.up { background: var(--card-face); color: var(--card-ink); }
+.fcard.up.seven { background: linear-gradient(135deg,#ffe9a8,#ffd54f 55%,#ffc93c); }
+.fcard.taken { border-style: dashed; background: transparent; color: var(--surface3); font-size: 0.8rem; }
+
+.prow { display: flex; align-items: center; gap: 6px; background: var(--surface2); border-radius: 9px; padding: 4px 7px; border: 1px solid transparent; }
+.prow.turn { border-color: var(--nana); background: var(--nana-dim); }
+.prow .pname { min-width: 0; font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow .pinfo { font-size: 0.66rem; color: var(--muted); font-family: var(--mono); white-space: nowrap; }
+.setbadge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 19px; height: 19px; border-radius: 5px; padding: 0 3px;
+  background: var(--card-face); color: var(--card-ink);
+  font-size: 0.72rem; font-weight: 800; font-family: var(--mono);
+}
+.setbadge.seven { background: linear-gradient(135deg,#ffe9a8,#ffc93c); box-shadow: 0 0 6px rgba(255,213,79,0.6); }
+
+.myhand { display: flex; flex-wrap: nowrap; gap: 4px; justify-content: center; }
+.hcard {
+  flex: 0 1 32px; min-width: 24px; height: clamp(36px, 5.8dvh, 46px);
+  border-radius: 6px; border: 1.5px solid var(--surface3);
+  background: var(--card-face); color: var(--card-ink);
+  display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800;
+}
+.hcard.seven { background: linear-gradient(135deg,#ffe9a8,#ffd54f 55%,#ffc93c); }
+.hcard.edge { border-color: var(--nana); box-shadow: 0 0 0 1.5px var(--nana); }
+.tag { font-size: 0.62rem; color: var(--muted); font-family: var(--mono); text-align: center; }
+
+.result-hero { text-align: center; padding: 22px 10px; }
+.result-emoji { font-size: 3.2rem; }
+.result-title { font-size: 1.5rem; font-weight: 800; margin-top: 6px; }
+.result-sub { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 500; align-items: center; justify-content: center; padding: 16px; }
+.modal { background: var(--surface); border: 1px solid var(--surface3); border-radius: 14px; padding: 16px; width: 100%; max-width: 420px; }
+.seg { display: flex; gap: 6px; }
+.seg .btn { flex: 1; padding: 9px 4px; font-size: 0.85rem; }
+.seg .btn.on { background: var(--nana-dim); border-color: var(--nana); color: var(--nana); }
+
+/* ===== ゲーム画面: 1画面固定（ページスクロールなし） ===== */
+#screen-game { height: 100%; gap: 6px; overflow: hidden; }
+#screen-game > * { flex-shrink: 0; }
+#screen-game > #panel-log { flex-shrink: 1; }
+#screen-game .panel { padding: 7px 9px; }
+#screen-game h3 { margin-bottom: 5px !important; font-size: 0.68rem; }
+#screen-game .turnbar { padding: 6px; font-size: 0.86rem; }
+#panel-log { flex: 1 1 0; min-height: 42px; display: flex; flex-direction: column; overflow: hidden; }
+#panel-log .log { flex: 1 1 0; min-height: 0; }
+.btn-exit { padding: 3px 9px; font-size: 0.7rem; border-radius: 7px; }
+
+/* 低い画面（SE等）ではさらに詰める */
+@media (max-height: 700px) {
+  body.ingame .app { padding: 8px 10px; }
+  #screen-game { gap: 4px; }
+  #screen-game .panel { padding: 5px 8px; }
+  #screen-game .turnbar { padding: 4px; font-size: 0.8rem; }
+  .chal { height: 46px; gap: 6px; }
+  .chal-card .num { font-size: 1.25rem; }
+  .fcard { height: 32px; font-size: 1rem; border-radius: 6px; }
+  .field-grid { gap: 4px; }
+  .prow { padding: 2px 6px; gap: 5px; }
+  .hcard { height: 32px; font-size: 0.9rem; }
+  .player-list { gap: 4px; }
+  #panel-log { min-height: 34px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ LOBBY ============ -->
+  <div id="screen-lobby" class="screen active">
+    <h1>🎴 ナナ</h1>
+    <p style="text-align:center; font-family:var(--mono); font-size:0.78rem; color:var(--muted); letter-spacing:2px;">同じ数字3枚を当てる 記憶と読み合い（2〜5人）</p>
+
+    <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" id="btn-reconnect" style="display:none; background:rgba(45,189,110,0.15); color:#2dbd6e; border:1px solid rgba(45,189,110,0.5);" onclick="pgReconnect()"></button>
+      <button class="btn btn-nana" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+      <div class="divider"></div>
+      <div class="panel">
+        <h3 style="margin-bottom:8px;">🤖 練習モード（BOT対戦）</h3>
+        <div class="seg" id="bot-seg">
+          <button class="btn" data-b="1" onclick="setBots(1)">BOT×1</button>
+          <button class="btn on" data-b="2" onclick="setBots(2)">BOT×2</button>
+          <button class="btn" data-b="3" onclick="setBots(3)">BOT×3</button>
+          <button class="btn" data-b="4" onclick="setBots(4)">BOT×4</button>
+        </div>
+        <button class="btn" style="width:100%; margin-top:8px;" onclick="startSolo()">▶ ひとりで練習する</button>
+      </div>
+    </div>
+
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+
+    <p style="text-align:center; font-size:0.74rem; color:var(--muted); line-height:1.6;">同じ数字を続けて3枚公開できたら獲得。<br>勝ち方：①3セット ②足し引きで7 ③「7」のセット（即勝利）</p>
+
+    <a href="index.html" style="text-decoration:none; margin-top:6px;">
+      <button class="btn btn-ghost" style="width:100%;">← ホームに戻る</button>
+    </a>
+  </div>
+
+  <!-- ============ WAITING ============ -->
+  <div id="screen-waiting" class="screen">
+    <h2>待機ロビー</h2>
+    <div class="code-box">
+      <div class="label">ルームコード</div>
+      <div class="code" id="disp-code">----</div>
+      <button class="btn btn-ghost btn-sm" onclick="copyCode()" style="margin-top:4px;">📋 コードをコピー</button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:8px;">プレイヤー（2〜5人）</h3>
+      <div class="player-list" id="wait-players"></div>
+    </div>
+    <div class="panel" style="font-size:0.78rem; color:var(--muted); line-height:1.7;" id="wait-setup"></div>
+    <button class="btn btn-nana" id="btn-start" onclick="startGame()">▶ ゲーム開始</button>
+    <div id="wait-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- ============ GAME ============ -->
+  <div id="screen-game" class="screen">
+    <div class="row" style="justify-content:space-between;">
+      <span class="tag" id="game-code"></span>
+      <span class="tag" id="game-range"></span>
+      <button class="btn btn-ghost btn-exit" onclick="leaveRoom()">退出</button>
+    </div>
+    <div class="turnbar" id="turnbar"></div>
+
+    <div>
+      <div class="chal" id="chal"></div>
+      <div class="chal-msg" id="chal-msg"></div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-bottom:7px;">場札 <span id="field-left" style="text-transform:none; letter-spacing:0;"></span></h3>
+      <div class="field-grid" id="field"></div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-bottom:7px;">プレイヤー</h3>
+      <div class="player-list" id="players"></div>
+    </div>
+
+    <div class="panel" id="myhand-panel">
+      <h3 style="margin-bottom:7px;">あなたの手札 <span style="text-transform:none; letter-spacing:0;">（枠＝公開される最小・最大）</span></h3>
+      <div class="myhand" id="myhand"></div>
+    </div>
+
+    <div class="panel" id="panel-log">
+      <h3 style="margin-bottom:6px;">ログ</h3>
+      <div class="log" id="game-log"></div>
+    </div>
+  </div>
+
+  <!-- ============ RESULT ============ -->
+  <div id="screen-result" class="screen">
+    <div class="result-hero">
+      <div class="result-emoji" id="result-emoji">🏆</div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:8px;">獲得セット</h3>
+      <div class="player-list" id="result-players"></div>
+    </div>
+    <button class="btn btn-nana" id="btn-rematch" onclick="rematch()" style="display:none;">🔄 もう一度</button>
+    <div id="result-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ</button>
+    <a href="index.html" style="text-decoration:none;"><button class="btn btn-ghost" style="width:100%;">🏠 ハブに戻る</button></a>
+  </div>
+
+</div>
+
+<!-- FB CONFIG MODAL -->
+<div class="modal-bg" id="fb-modal">
+  <div class="modal">
+    <h3 style="margin-bottom:10px;">Firebase 設定</h3>
+    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">Realtime Database の URL を入力してください。</p>
+    <input class="input" id="fb-url" type="url" placeholder="https://xxxx.firebaseio.com">
+    <button class="btn btn-nana" style="width:100%; margin-top:10px;" onclick="saveFbConfig()">保存</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// NANA — 同じ数字3枚を当てるカードゲーム（2〜5人）
+// 既存CCCゲーム集と同じ構成: Firebase REST + ポーリング / ホスト権限方式
+// ============================================================
+
+// 人数別セットアップ（公式ルール）
+// 2人: 1〜10使用 手札10 場札10 / 3人: 1〜11 手札8 場札9
+// 4人: 1〜12 手札7 場札8 / 5人: 1〜12 手札6 場札6
+const SETUP = {
+  2: { max: 10, hand: 10, field: 10 },
+  3: { max: 11, hand: 8,  field: 9  },
+  4: { max: 12, hand: 7,  field: 8  },
+  5: { max: 12, hand: 6,  field: 6  }
+};
+const BOT_NAMES = ['🤖アカ', '🤖アオ', '🤖キイロ', '🤖ミドリ'];
+let RESOLVE_MS = 2200, BOT_WAIT = 900, BOT_WAIT_R = 700;   // 成功/失敗の演出表示時間
+
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+function saveFbConfig() {
+  const url = g('fb-url').value.trim().replace(/\/$/,'');
+  if(!url) return;
+  fbUrl = url; localStorage.setItem(FB_KEY, url); g('fb-modal').style.display='none';
+}
+async function checkFbConfig() {
+  if(!fbUrl) { showFbModal(); return false; }
+  try {
+    const r = await fetch(`${fbUrl}/.json?shallow=true`, {method:'GET'});
+    if(!r.ok && r.status !== 404) { setErr('Firebase接続エラー'); return false; }
+  } catch(e) { setErr('Firebase接続失敗'); return false; }
+  return true;
+}
+function showFbModal() { g('fb-modal').style.display='flex'; }
+
+// FB primitives（REST + ポーリング）
+let fbRoom = '', fbPollTimer = null, fbLastBcastTs = 0, fbLastPrvTs = 0, fbLastActTs = {};
+async function fbPut(sub, data) { if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)}); } catch(e){} }
+async function fbGet(sub) { if(!fbRoom) return null; try { const r = await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`); if(!r.ok) return null; return await r.json(); } catch(e) { return null; } }
+async function fbDel(sub) { if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){} }
+function fbListen() {
+  if(fbPollTimer) clearInterval(fbPollTimer);
+  fbLastBcastTs = 0; fbLastPrvTs = 0; fbLastActTs = {};
+  fbPollTimer = setInterval(fbPoll, 500);
+}
+function fbClose() { if(fbPollTimer) clearInterval(fbPollTimer); fbPollTimer = null; fbRoom = ''; }
+async function fbPoll() {
+  if(!fbRoom) return;
+  const bc = await fbGet('broadcast');
+  if(bc && bc.ts > fbLastBcastTs) {
+    fbLastBcastTs = bc.ts;
+    if(!isHost && bc.msg) handleBroadcast(bc.msg);
+  }
+  const prv = await fbGet(`private/${myId}`);
+  if(prv && prv.ts > fbLastPrvTs) {
+    fbLastPrvTs = prv.ts;
+    if(prv.msg) handlePrivate(prv.msg);
+  }
+  if(isHost) {
+    const acts = await fbGet('action');
+    if(acts) {
+      for(const pid in acts) {
+        const a = acts[pid];
+        if(a && a.ts > (fbLastActTs[pid]||0)) {
+          fbLastActTs[pid] = a.ts;
+          if(a.msg) onMsg(a.msg, pid);
+        }
+      }
+    }
+  }
+}
+function fbBroadcast(msg) { fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg) { fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg) { if(isSolo){ onMsg(msg, myId); return; } fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '';
+let isHost = false, isSolo = false, roomCode = '';
+let fs = null;        // ホストのみ保持する完全状態
+let gs = null;        // 全員が受け取る公開状態
+let myHand = [];      // 自分の手札（プライベート受信）
+let soloBots = 2;
+let botTimer = null;
+let prevTurnPid = null;
+
+// ============================================================
+// UTILS
+// ============================================================
+function g(id) { return document.getElementById(id); }
+function mk(tag, cls) { const e = document.createElement(tag); if(cls) e.className = cls; return e; }
+function show(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-'+name); if(el) el.classList.add('active');
+  document.body.classList.toggle('ingame', name==='game');
+}
+function setErr(msg) { const e = g('lobby-error'); if(e) e.textContent = msg || ''; }
+function setSt(msg) { const s = g('lobby-status'); if(s) s.textContent = msg || ''; }
+function genId() { return 'p_' + Math.random().toString(36).slice(2,10); }
+function shuffle(a) { const x=a.slice(); for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];} return x; }
+function copyCode() { navigator.clipboard?.writeText(g('disp-code').textContent); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// 手番通知（振動＋短いビープ）
+let audioCtx = null;
+document.addEventListener('pointerdown', ()=>{ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } }, {once:true});
+function notifyTurn(){
+  try{ if(navigator.vibrate) navigator.vibrate(120); }catch(e){}
+  try{
+    if(!audioCtx) return;
+    const o = audioCtx.createOscillator(), gn = audioCtx.createGain();
+    o.frequency.value = 880; gn.gain.value = 0.06;
+    o.connect(gn); gn.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.09);
+  }catch(e){}
+}
+
+// ============================================================
+// ROOM
+// ============================================================
+function setBots(n){
+  soloBots = n;
+  document.querySelectorAll('#bot-seg .btn').forEach(b=>b.classList.toggle('on', +b.dataset.b===n));
+}
+
+async function createRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  myName = name; isHost = true; isSolo = false;
+  const code = Array.from({length:4}, () => Math.floor(Math.random()*10)).join('');
+  roomCode = code; fbRoom = 'NN-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'nana', ts:Date.now()});
+    fs = initFs([{id:myId, name:myName, bot:false}]);
+    fbListen();
+    pgSaveSession();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    show('waiting'); bcast();
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); isHost=false; }
+}
+
+async function joinRoom() {
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name) { setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)) { setErr('4桁の数字'); return; }
+  myName = name; isHost = false; isSolo = false; roomCode = code;
+  fbRoom = 'NN-' + code;
+  setSt('接続中...');
+  try {
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta) { setErr('ルームが見つかりません'); setSt(''); fbRoom=''; return; }
+    if(meta.game !== 'nana') { setErr('ゲーム種別が違います'); setSt(''); fbRoom=''; return; }
+    fbListen();
+    pgSaveSession();
+    fbSendToHost({type:'join', name:myName, id:myId});
+    setSt('接続しました...');
+    show('waiting');
+    g('disp-code').textContent = code;
+    g('btn-start').style.display = 'none';
+    let retries = 0;
+    const rj = setInterval(()=>{
+      if(!fbRoom || retries >= 5) { clearInterval(rj); return; }
+      if(gs?.players?.find(p=>p.id===myId)) { clearInterval(rj); return; }
+      fbSendToHost({type:'join', name:myName, id:myId});
+      retries++;
+    }, 2000);
+  } catch(e) { setErr(e.message||'エラー'); setSt(''); }
+}
+
+function startSolo() {
+  const name = g('in-name').value.trim() || 'あなた';
+  myName = name; isHost = true; isSolo = true; roomCode = ''; fbRoom = '';
+  myId = genId();
+  const players = [{id:myId, name:myName, bot:false}];
+  for(let i=0;i<soloBots;i++) players.push({id:'bot_'+i, name:BOT_NAMES[i], bot:true});
+  fs = initFs(players);
+  setErr(''); setSt('');
+  hostStart();
+}
+
+function leaveRoom() {
+  if(botTimer) clearTimeout(botTimer);
+  pgClearSession();
+  fbClose(); fs=null; gs=null; isHost=false; isSolo=false;
+  myHand = []; prevTurnPid = null;
+  show('lobby'); pgShowReconnect();
+}
+
+// ============================================================
+// HOST: STATE
+// ============================================================
+function initFs(players) {
+  return {
+    phase: 'waiting',
+    players: players.map(p=>({id:p.id, name:p.name, bot:!!p.bot, hand:[], sets:[]})),
+    field: [],
+    turnIdx: 0,
+    startIdx: 0,
+    revealed: [],
+    lock: false,
+    lastEvent: null,
+    winner: null,
+    cfgMax: 12,
+    log: []
+  };
+}
+
+function deal() {
+  const n = fs.players.length;
+  const cfg = SETUP[n];
+  fs.cfgMax = cfg.max;
+  let deck = [];
+  for(let v=1; v<=cfg.max; v++) for(let k=0;k<3;k++) deck.push(v);
+  deck = shuffle(deck);
+  fs.players.forEach(p=>{ p.hand = deck.splice(0, cfg.hand).sort((a,b)=>a-b); p.sets = []; });
+  fs.field = deck.splice(0, cfg.field).map(v=>({n:v, up:false, taken:false}));
+  fs.revealed = []; fs.lock = false; fs.lastEvent = null; fs.winner = null;
+}
+
+function hostStart() {
+  const n = fs.players.length;
+  if(n < 2 || n > 5) { if(!isSolo) setErr('2〜5人で開始できます'); return; }
+  deal();
+  fs.startIdx = Math.floor(Math.random()*n);
+  fs.turnIdx = fs.startIdx;
+  fs.phase = 'playing';
+  botResetMemory();
+  addLog(`ゲーム開始（${n}人 / カード1〜${fs.cfgMax}）`);
+  addLog(`${fs.players[fs.turnIdx].name} の手番から`);
+  sendHands();
+  bcast();
+}
+
+function startGame() { if(isHost) hostStart(); }
+
+function hostRematch() {
+  deal();
+  fs.startIdx = (fs.startIdx + 1) % fs.players.length;
+  fs.turnIdx = fs.startIdx;
+  fs.phase = 'playing';
+  botResetMemory();
+  addLog('── もう一度 ──');
+  addLog(`${fs.players[fs.turnIdx].name} の手番から`);
+  sendHands();
+  bcast();
+}
+function rematch() {
+  if(isHost) hostRematch();
+  else g('result-status').textContent = 'ホストの「もう一度」を待っています';
+}
+
+function addLog(t) { fs.log.push(t); if(fs.log.length > 60) fs.log = fs.log.slice(-60); }
+
+// 現在のチャレンジで既に公開された分を除いた手札
+function availableHand(p) {
+  const rest = p.hand.slice();
+  for(const r of fs.revealed) {
+    if(r.src==='hand' && r.pid===p.id) {
+      const i = rest.indexOf(r.n);
+      if(i>=0) rest.splice(i,1);
+    }
+  }
+  return rest;
+}
+
+// ============================================================
+// HOST: MESSAGE HANDLER
+// ============================================================
+function onMsg(d, senderPid) {
+  if(!d || !fs) return;
+  switch(d.type) {
+    case 'join': {
+      const ex = fs.players.find(p=>p.id===d.id);
+      if(ex) { bcast(); sendHand(ex); return; }   // 再接続 → 状態再送
+      if(fs.phase !== 'waiting') { fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
+      if(fs.players.length >= 5) { fbSendTo(d.id, {type:'error', msg:'満員（最大5人）'}); return; }
+      fs.players.push({id:d.id, name:d.name, bot:false, hand:[], sets:[]});
+      bcast(); break;
+    }
+    case 'revealHand': {
+      if(!canAct(senderPid)) return;
+      const target = fs.players.find(p=>p.id===d.target);
+      if(!target) return;
+      const avail = availableHand(target);
+      if(avail.length === 0) return;
+      const which = d.which === 'max' ? 'max' : 'min';
+      const n = which === 'min' ? avail[0] : avail[avail.length-1];
+      fs.revealed.push({src:'hand', pid:target.id, pname:target.name, which, n});
+      botObserve(fs.revealed[fs.revealed.length-1]);
+      afterReveal();
+      break;
+    }
+    case 'revealField': {
+      if(!canAct(senderPid)) return;
+      const c = fs.field[d.idx];
+      if(!c || c.up || c.taken) return;
+      c.up = true;
+      fs.revealed.push({src:'field', fieldIdx:d.idx, n:c.n});
+      botObserve(fs.revealed[fs.revealed.length-1]);
+      afterReveal();
+      break;
+    }
+    case 'rematch': {
+      if(senderPid === fs.players[0]?.id || senderPid === myId) hostRematch();
+      break;
+    }
+  }
+}
+
+function canAct(pid) {
+  return fs.phase==='playing' && !fs.lock && fs.players[fs.turnIdx] && fs.players[fs.turnIdx].id === pid;
+}
+
+// ============================================================
+// HOST: CHALLENGE RESOLUTION
+// ============================================================
+function afterReveal() {
+  const rv = fs.revealed;
+  const cur = fs.players[fs.turnIdx];
+  const last = rv[rv.length-1];
+  const srcTxt = last.src==='field' ? '場札をめくった' : `${last.pname} の${last.which==='min'?'最小':'最大'}を公開`;
+
+  if(rv.length >= 2 && last.n !== rv[0].n) {
+    // 失敗
+    fs.lock = true;
+    fs.lastEvent = {type:'fail'};
+    addLog(`${cur.name}：${srcTxt} → ❌ ハズレ（チャレンジ失敗）`);
+    bcast();
+    setTimeout(()=>{ resolveFail(); }, RESOLVE_MS);
+    return;
+  }
+  if(rv.length === 3) {
+    // 成功
+    fs.lock = true;
+    fs.lastEvent = {type:'success', n:rv[0].n};
+    addLog(`${cur.name}：${srcTxt} → ✅ 「${rv[0].n}」のセット獲得！`);
+    bcast();
+    setTimeout(()=>{ resolveSuccess(); }, RESOLVE_MS);
+    return;
+  }
+  addLog(`${cur.name}：${srcTxt} → 一致（${rv.length}/3）`);
+  bcast();
+}
+
+function resolveFail() {
+  if(!fs) return;
+  for(const r of fs.revealed) if(r.src==='field') fs.field[r.fieldIdx].up = false;
+  fs.revealed = [];
+  fs.lastEvent = null;
+  nextTurn();
+  fs.lock = false;
+  bcast();
+}
+
+function resolveSuccess() {
+  if(!fs) return;
+  const cur = fs.players[fs.turnIdx];
+  const val = fs.revealed[0].n;
+  const changedPids = new Set();
+  for(const r of fs.revealed) {
+    if(r.src==='field') {
+      fs.field[r.fieldIdx].taken = true;
+      fs.field[r.fieldIdx].up = false;
+      botForgetField(r.fieldIdx);
+    } else {
+      const owner = fs.players.find(p=>p.id===r.pid);
+      const i = owner.hand.indexOf(r.n);
+      if(i>=0) owner.hand.splice(i,1);
+      changedPids.add(owner.id);
+      botForgetHand(owner.id);
+    }
+  }
+  cur.sets.push(val);
+  fs.revealed = [];
+  fs.lastEvent = null;
+
+  // 勝利判定
+  let winReason = null;
+  if(val === 7) winReason = '「7」のセットを完成（即勝利）';
+  else if(cur.sets.length >= 3) winReason = 'チャレンジ3回成功';
+  else if(cur.sets.length === 2) {
+    const [a,b] = cur.sets;
+    if(a+b === 7) winReason = `${a} ＋ ${b} ＝ 7`;
+    else if(Math.abs(a-b) === 7) winReason = `${Math.max(a,b)} − ${Math.min(a,b)} ＝ 7`;
+  }
+  changedPids.forEach(pid=>{ const p=fs.players.find(x=>x.id===pid); if(p) sendHand(p); });
+
+  if(winReason) {
+    fs.phase = 'result';
+    fs.winner = {pid:cur.id, name:cur.name, reason:winReason};
+    addLog(`🏆 ${cur.name} の勝利！（${winReason}）`);
+    fs.lock = false;
+    bcast();
+    if(!isSolo) fbPut('meta', {host:myId, game:'nana', ts:Date.now()});
+    return;
+  }
+  nextTurn();
+  fs.lock = false;
+  bcast();
+}
+
+function nextTurn() {
+  fs.turnIdx = (fs.turnIdx + 1) % fs.players.length;
+  addLog(`▶ ${fs.players[fs.turnIdx].name} の手番`);
+}
+
+// ============================================================
+// HOST: BROADCAST / PRIVATE
+// ============================================================
+function pubFs(f) {
+  return {
+    phase: f.phase,
+    turnIdx: f.turnIdx,
+    lock: f.lock,
+    winner: f.winner,
+    cfgMax: f.cfgMax,
+    lastEvent: f.lastEvent,
+    players: f.players.map(p=>({id:p.id, name:p.name, bot:p.bot, handCount:p.hand.length, sets:p.sets.slice()})),
+    field: f.field.map(c=>({up:c.up, taken:c.taken, n:(c.up && !c.taken) ? c.n : null})),
+    revealed: f.revealed.map(r=>Object.assign({}, r)),
+    log: f.log.slice(-40)
+  };
+}
+function bcast() {
+  if(!fs) return;
+  gs = pubFs(fs);
+  const msg = {type:'state', s:gs};
+  if(isSolo) { handleBroadcast(msg); }
+  else { fbBroadcast(msg); if(!fs.lock) pgSaveHostState(); handleBroadcast(msg); }
+  maybeBot();
+}
+function sendHand(p) {
+  if(p.bot) return;
+  const msg = {type:'hand', hand:p.hand.slice()};
+  if(p.id === myId) handlePrivate(msg);
+  else if(!isSolo) fbSendTo(p.id, msg);
+}
+function sendHands() { fs.players.forEach(p=>sendHand(p)); }
+
+// ============================================================
+// CLIENT: HANDLERS
+// ============================================================
+function handleBroadcast(msg) {
+  if(!msg) return;
+  if(msg.type === 'state') {
+    gs = msg.s;
+    routeScreen();
+    const curPid = gs.players[gs.turnIdx]?.id;
+    if(gs.phase==='playing' && curPid===myId && prevTurnPid!==myId && !gs.lock) notifyTurn();
+    prevTurnPid = curPid;
+  }
+}
+function handlePrivate(msg) {
+  if(!msg) return;
+  if(msg.type === 'hand') { myHand = msg.hand.slice().sort((a,b)=>a-b); if(gs?.phase==='playing') renderGame(); }
+  if(msg.type === 'error') { setErr(msg.msg||'エラー'); show('lobby'); fbClose(); pgClearSession(); }
+}
+
+function routeScreen() {
+  if(!gs) return;
+  if(gs.phase === 'waiting') { show('waiting'); renderWaiting(); }
+  else if(gs.phase === 'playing') { show('game'); renderGame(); }
+  else if(gs.phase === 'result') { show('result'); renderResult(); }
+}
+
+// ============================================================
+// CLIENT: ACTIONS
+// ============================================================
+function myTurn() { return gs && gs.phase==='playing' && !gs.lock && gs.players[gs.turnIdx]?.id === myId; }
+function uiRevealHand(pid, which) {
+  if(!myTurn()) return;
+  const msg = {type:'revealHand', target:pid, which};
+  if(isHost || isSolo) onMsg(msg, myId); else fbSendToHost(msg);
+}
+function uiRevealField(idx) {
+  if(!myTurn()) return;
+  const c = gs.field[idx];
+  if(!c || c.up || c.taken) return;
+  const msg = {type:'revealField', idx};
+  if(isHost || isSolo) onMsg(msg, myId); else fbSendToHost(msg);
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function renderWaiting() {
+  const box = g('wait-players'); box.innerHTML = '';
+  gs.players.forEach((p,i)=>{
+    const c = mk('div','player-chip');
+    c.innerHTML = `<span>${i===0?'👑':'🎴'}</span><span style="flex:1;">${esc(p.name)}${p.id===myId?' <span class="tag">(あなた)</span>':''}</span>`;
+    box.appendChild(c);
+  });
+  const n = gs.players.length;
+  const cfg = SETUP[Math.min(5, Math.max(2, n))];
+  g('wait-setup').innerHTML = n>=2
+    ? `いまの人数（${n}人）で開始した場合：カード <b>1〜${cfg.max}</b> ／ 手札 <b>${cfg.hand}枚</b> ／ 場札 <b>${cfg.field}枚</b>`
+    : 'あと1人以上そろえば開始できます（2〜5人）';
+  if(isHost) {
+    g('btn-start').style.display = '';
+    g('btn-start').disabled = n < 2;
+    g('wait-status').textContent = n < 2 ? '2人以上で開始できます' : '';
+  } else {
+    g('btn-start').style.display = 'none';
+    g('wait-status').textContent = 'ホストの開始を待っています...';
+  }
+}
+
+function srcLabel(r) {
+  if(r.src === 'field') return '場札';
+  return `${esc(r.pname)}の${r.which==='min'?'最小':'最大'}`;
+}
+
+function renderGame() {
+  if(!gs) return;
+  g('game-code').textContent = isSolo ? '練習モード' : (roomCode ? `ルーム ${roomCode}` : '');
+  g('game-range').textContent = `カード 1〜${gs.cfgMax} ×各3枚`;
+
+  // 手番バー
+  const cur = gs.players[gs.turnIdx];
+  const tb = g('turnbar');
+  if(cur.id === myId) {
+    tb.className = 'turnbar me';
+    tb.textContent = gs.lock ? '判定中...' : '▶ あなたの手番！手札か場札を公開';
+  } else {
+    tb.className = 'turnbar';
+    tb.textContent = gs.lock ? '判定中...' : `▶ ${cur.name} の手番`;
+  }
+
+  // チャレンジ表示
+  const ch = g('chal'); ch.innerHTML = '';
+  for(let i=0;i<3;i++) {
+    const r = gs.revealed[i];
+    if(r) {
+      const c = mk('div','chal-card' + (r.n===7?' seven':''));
+      if(gs.lastEvent?.type==='fail' && i===gs.revealed.length-1) c.classList.add('ng');
+      if(gs.lastEvent?.type==='success') c.classList.add('ok');
+      c.innerHTML = `<div class="num">${r.n}</div><div class="src">${srcLabel(r)}</div>`;
+      ch.appendChild(c);
+    } else {
+      const s = mk('div','chal-slot'); s.textContent = '?';
+      ch.appendChild(s);
+    }
+  }
+  const cm = g('chal-msg');
+  if(gs.lastEvent?.type==='fail') { cm.className='chal-msg ng'; cm.textContent='❌ チャレンジ失敗！カードを元に戻します'; }
+  else if(gs.lastEvent?.type==='success') { cm.className='chal-msg ok'; cm.textContent=`✅ チャレンジ成功！「${gs.lastEvent.n}」のセット獲得`; }
+  else if(gs.revealed.length>0) { cm.className='chal-msg'; cm.textContent=`「${gs.revealed[0].n}」を続けて公開できれば成功`; }
+  else { cm.className='chal-msg'; cm.textContent = ''; }
+
+  // 場札
+  const fd = g('field'); fd.innerHTML = '';
+  let left = 0;
+  gs.field.forEach((c,idx)=>{
+    let el;
+    if(c.taken) { el = mk('div','fcard taken'); el.textContent='✓'; }
+    else if(c.up) { el = mk('div','fcard up'+(c.n===7?' seven':'')); el.textContent=c.n; }
+    else {
+      left++;
+      el = mk('div','fcard back'+(myTurn()?' can':''));
+      el.textContent='🎴';
+      el.onclick = ()=>uiRevealField(idx);
+    }
+    fd.appendChild(el);
+  });
+  g('field-left').textContent = `（残り${left}枚）`;
+
+  // プレイヤー一覧
+  const pl = g('players'); pl.innerHTML = '';
+  gs.players.forEach((p,i)=>{
+    const row = mk('div','prow'+(i===gs.turnIdx?' turn':''));
+    const revealedFromP = gs.revealed.filter(r=>r.src==='hand'&&r.pid===p.id).length;
+    const canAsk = myTurn() && (p.handCount - revealedFromP) > 0;
+    const sets = p.sets.map(v=>`<span class="setbadge${v===7?' seven':''}">${v}</span>`).join(' ');
+    row.innerHTML =
+      `<span style="font-size:0.7rem;">${i===gs.turnIdx?'▶':'・'}</span>` +
+      `<span class="pname">${esc(p.name)}${p.id===myId?'★':''}</span>` +
+      `<span style="display:inline-flex; gap:3px;">${sets}</span>` +
+      `<span class="pinfo" style="flex:1; text-align:right;">手札${p.handCount}</span>`;
+    const bmin = mk('button','btn btn-sm'); bmin.textContent='最小';
+    const bmax = mk('button','btn btn-sm'); bmax.textContent='最大';
+    bmin.disabled = !canAsk; bmax.disabled = !canAsk;
+    bmin.onclick = ()=>uiRevealHand(p.id,'min');
+    bmax.onclick = ()=>uiRevealHand(p.id,'max');
+    row.appendChild(bmin); row.appendChild(bmax);
+    pl.appendChild(row);
+  });
+
+  // 自分の手札
+  const mh = g('myhand'); mh.innerHTML = '';
+  const revealedMineVals = gs.revealed.filter(r=>r.src==='hand'&&r.pid===myId).map(r=>r.n);
+  const avail = myHand.slice();
+  for(const v of revealedMineVals) { const i=avail.indexOf(v); if(i>=0) avail.splice(i,1); }
+  const aMin = avail[0], aMax = avail[avail.length-1];
+  let minMarked=false, maxMarkIdx=-1;
+  const availCopy = avail.slice();
+  myHand.forEach((v)=>{
+    const c = mk('div','hcard'+(v===7?' seven':''));
+    c.textContent = v;
+    const ai = availCopy.indexOf(v);
+    if(ai>=0) {
+      if(!minMarked && v===aMin) { c.classList.add('edge'); minMarked=true; }
+      availCopy.splice(ai,1);
+    } else {
+      c.style.opacity = '0.35'; // 公開中
+    }
+    mh.appendChild(c);
+  });
+  // 最大マーク（右端の該当カード）
+  if(avail.length>1 && aMax!==aMin) {
+    const cards = Array.from(mh.children);
+    for(let i=cards.length-1;i>=0;i--) {
+      if(+cards[i].textContent===aMax && cards[i].style.opacity!=='0.35') { cards[i].classList.add('edge'); break; }
+    }
+  }
+  g('myhand-panel').style.display = myHand.length ? '' : 'none';
+
+  // ログ
+  const lg = g('game-log'); lg.innerHTML = '';
+  (gs.log||[]).slice().reverse().forEach(t=>{ const d=mk('div'); d.textContent=t; lg.appendChild(d); });
+}
+
+function renderResult() {
+  const w = gs.winner || {};
+  g('result-emoji').textContent = w.pid===myId ? '🏆' : '🎴';
+  g('result-title').textContent = w.pid===myId ? 'あなたの勝ち！' : `${w.name} の勝ち！`;
+  g('result-sub').textContent = w.reason || '';
+  const box = g('result-players'); box.innerHTML = '';
+  gs.players.forEach(p=>{
+    const c = mk('div','player-chip');
+    const sets = p.sets.map(v=>`<span class="setbadge${v===7?' seven':''}">${v}</span>`).join(' ');
+    c.innerHTML = `<span>${p.id===w.pid?'🏆':'🎴'}</span><span style="flex:1;">${esc(p.name)}</span><span>${sets||'<span class="tag">なし</span>'}</span>`;
+    box.appendChild(c);
+  });
+  g('btn-rematch').style.display = isHost ? '' : 'none';
+  g('result-status').textContent = isHost ? '' : 'ホストが「もう一度」を押すと再戦できます';
+}
+
+// ============================================================
+// BOT（練習モード / ホスト側で動作）
+// ============================================================
+let botMem = { field:{}, hands:{} };
+function botResetMemory(){ botMem = { field:{}, hands:{} }; }
+function botObserve(r){
+  if(r.src==='field') { botMem.field[r.fieldIdx] = r.n; }
+  else {
+    const h = botMem.hands[r.pid] = botMem.hands[r.pid] || {};
+    if(r.which==='min' && h.min==null) h.min = r.n;
+    if(r.which==='max' && h.max==null) h.max = r.n;
+  }
+}
+function botForgetField(idx){ delete botMem.field[idx]; }
+function botForgetHand(pid){ delete botMem.hands[pid]; }
+
+function maybeBot(){
+  if(botTimer) { clearTimeout(botTimer); botTimer=null; }
+  if(!fs || !(isHost||isSolo)) return;
+  if(fs.phase!=='playing' || fs.lock) return;
+  const cp = fs.players[fs.turnIdx];
+  if(!cp || !cp.bot) return;
+  botTimer = setTimeout(()=>botAct(cp.id), BOT_WAIT + Math.random()*BOT_WAIT_R);
+}
+
+function botSources(bot){
+  const list = [];
+  // 自分の手札（完全情報）
+  const avail = availableHand(bot);
+  if(avail.length){
+    list.push({kind:'hand', pid:bot.id, which:'min', n:avail[0], sure:true});
+    if(avail.length>1) list.push({kind:'hand', pid:bot.id, which:'max', n:avail[avail.length-1], sure:true});
+  }
+  // 他プレイヤー（記憶）
+  for(const p of fs.players){
+    if(p.id===bot.id) continue;
+    const mem = botMem.hands[p.id]; if(!mem) continue;
+    const usedMin = fs.revealed.some(r=>r.src==='hand'&&r.pid===p.id&&r.which==='min');
+    const usedMax = fs.revealed.some(r=>r.src==='hand'&&r.pid===p.id&&r.which==='max');
+    const pa = availableHand(p);
+    if(!pa.length) continue;
+    if(mem.min!=null && !usedMin) list.push({kind:'hand', pid:p.id, which:'min', n:mem.min});
+    if(mem.max!=null && !usedMax) list.push({kind:'hand', pid:p.id, which:'max', n:mem.max});
+  }
+  // 場札（記憶・たまに忘れる）
+  for(const k in botMem.field){
+    const idx = +k;
+    const c = fs.field[idx];
+    if(!c || c.up || c.taken) continue;
+    if(Math.random() < 0.12) continue; // 物忘れ
+    list.push({kind:'field', idx, n:botMem.field[k]});
+  }
+  return list;
+}
+function botUnknownFields(){
+  const out = [];
+  fs.field.forEach((c,idx)=>{ if(!c.up && !c.taken && botMem.field[idx]==null) out.push(idx); });
+  return out;
+}
+function botDo(s, botId){
+  if(s.kind==='field') onMsg({type:'revealField', idx:s.idx}, botId);
+  else onMsg({type:'revealHand', target:s.pid, which:s.which}, botId);
+}
+function botRandomLegal(botId){
+  const unknown = botUnknownFields();
+  if(unknown.length && Math.random()<0.7) { onMsg({type:'revealField', idx:unknown[Math.floor(Math.random()*unknown.length)]}, botId); return true; }
+  // だれかの手札（場が尽きたときの保険にもなる）
+  const cands = [];
+  for(const p of fs.players){
+    if(availableHand(p).length===0) continue;
+    cands.push({pid:p.id, which:'min'}); cands.push({pid:p.id, which:'max'});
+  }
+  if(cands.length){ const c=cands[Math.floor(Math.random()*cands.length)]; onMsg({type:'revealHand', target:c.pid, which:c.which}, botId); return true; }
+  if(unknown.length){ onMsg({type:'revealField', idx:unknown[0]}, botId); return true; }
+  // 記憶済みの場札しか残っていない場合
+  const anyField = fs.field.findIndex(c=>!c.up && !c.taken);
+  if(anyField>=0){ onMsg({type:'revealField', idx:anyField}, botId); return true; }
+  return false;
+}
+
+function botAct(botId){
+  botTimer = null;
+  if(!fs || fs.phase!=='playing' || fs.lock) return;
+  const bot = fs.players[fs.turnIdx];
+  if(!bot || bot.id!==botId || !bot.bot) return;
+
+  const cur = fs.revealed.length ? fs.revealed[0].n : null;
+  const sources = botSources(bot);
+
+  if(cur == null) {
+    // 1枚目: 完成が見えている数字を優先
+    const count = {};
+    sources.forEach(s=>{ count[s.n]=(count[s.n]||0)+1; });
+    // 自分の手札内の同値重複も戦力（min×2 など連続公開できる）
+    const avail = availableHand(bot);
+    if(avail.length>=2 && avail[0]===avail[1]) count[avail[0]]=(count[avail[0]]||0)+1;
+    if(avail.length>=2 && avail[avail.length-1]===avail[avail.length-2]) count[avail[avail.length-1]]=(count[avail[avail.length-1]]||0)+1;
+    let best=null, bestScore=-1;
+    for(const k in count){
+      const v=+k;
+      let score = count[k];
+      if(v===7) score += 1.5;                       // 7は即勝利
+      if(bot.sets.length===1){
+        const a=bot.sets[0];
+        if(a+v===7 || Math.abs(a-v)===7) score += 1; // 足し引き7が狙える
+      }
+      if(score>bestScore){ bestScore=score; best=v; }
+    }
+    if(best!=null && bestScore>=2){
+      const s = sources.find(x=>x.n===best);
+      if(s){ botDo(s, botId); return; }
+    }
+    if(!botRandomLegal(botId)) resolveFail();
+    return;
+  }
+
+  // 2枚目以降: cur と同じ数字を出せる手を探す
+  const s = sources.find(x=>x.n===cur);
+  if(s){ botDo(s, botId); return; }
+  if(!botRandomLegal(botId)) resolveFail();
+}
+
+// ============================================================
+// SESSION（localStorage / 3時間）
+// ============================================================
+const PG_SESSION_KEY = 'pgSession_nana';
+function pgSaveSession(){ if(isSolo) return; try{ localStorage.setItem(PG_SESSION_KEY, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); }catch(e){} }
+function pgLoadSession(){ try{ const r=localStorage.getItem(PG_SESSION_KEY); if(!r) return null; const s=JSON.parse(r); if(Date.now()-s.ts>3*60*60*1000){ pgClearSession(); return null; } return s; }catch(e){ return null; } }
+function pgClearSession(){ try{ localStorage.removeItem(PG_SESSION_KEY); }catch(e){} }
+function pgShowReconnect(){ const s=pgLoadSession(); const b=g('btn-reconnect'); if(!b) return; if(!s||!s.roomCode){ b.style.display='none'; return; } b.style.display=''; b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）'; }
+function pgSaveHostState(){
+  if(!isHost || isSolo || !fbRoom || !fs) return;
+  try { fbPut('hostState', {ts: Date.now(), fsJson: JSON.stringify(fs), actTs: JSON.stringify(fbLastActTs||{})}); } catch(e){}
+}
+async function pgReconnect(){
+  const s = pgLoadSession(); if(!s) return;
+  myId=s.myId; myName=s.myName; roomCode=s.roomCode; fbRoom=s.fbRoom; isHost=s.isHost; isSolo=false;
+  setSt('再接続中...');
+  try{
+    const meta = await fbGet('meta');
+    if(!meta){ pgClearSession(); pgShowReconnect(); setErr('ルームが見つかりません（終了済みの可能性）'); setSt(''); fbRoom=''; return; }
+    if(isHost){
+      const hs = await fbGet('hostState');
+      if(hs && hs.fsJson){
+        fs = JSON.parse(hs.fsJson);
+        // 復帰時に判定途中だった場合は仕切り直し（場札を裏へ戻し、手番は維持）
+        if(fs.lock || (fs.revealed && fs.revealed.length)){
+          for(const r of (fs.revealed||[])) if(r.src==='field' && fs.field[r.fieldIdx]) fs.field[r.fieldIdx].up=false;
+          fs.revealed=[]; fs.lock=false; fs.lastEvent=null;
+          addLog('（ホスト復帰のためチャレンジを仕切り直し）');
+        }
+        fbListen();
+        try { fbLastActTs = JSON.parse(hs.actTs||'{}'); } catch(e){ fbLastActTs = {}; }
+        if(g('disp-code')) g('disp-code').textContent = roomCode;
+        pgSaveSession();
+        botResetMemory();
+        sendHands();
+        bcast();
+      } else {
+        setErr('ルームの状態を復元できませんでした'); setSt(''); return;
+      }
+    } else {
+      fbListen();
+      fbSendToHost({type:'join', name:myName, id:myId});
+      pgSaveSession();
+      if(g('disp-code')) g('disp-code').textContent = roomCode;
+      const bs=g('btn-start'); if(bs) bs.style.display='none';
+      show('waiting');
+    }
+    setErr(''); setSt('');
+  }catch(e){ setErr('再接続に失敗しました'); setSt(''); }
+}
+setTimeout(pgShowReconnect, 300);
+window.addEventListener('pageshow', ()=>pgShowReconnect());
+</script>
+
+<script>
+/* ================================================================
+   PG共通アドオン v1（2026-07 追加）
+   ゲーム本体のコードには手を入れず、後付けで動く独立モジュール。
+   ① 切断検知: 15秒ごとに presence へ生存報告、40秒途絶で画面上部に表示
+   ② 名前保存: 全ゲーム共通キー pgPlayerName で名前を自動入力
+   ③ ルーム掃除: 24時間更新のないルームを削除（端末ごと6時間に1回）
+   ④ 遊び方: ルールモーダルを追加
+   ================================================================ */
+(function(){
+'use strict';
+var HB_MS=15000, WATCH_MS=10000, STALE_MS=40000;
+var ROOM_TTL=24*60*60*1000, CLEAN_EVERY=6*60*60*1000;
+var NAME_KEY='pgPlayerName';
+
+function db(){
+  try{ if(typeof FB_URL==='string' && FB_URL.indexOf('https://')===0) return FB_URL; }catch(e){}
+  try{ if(typeof fbUrl==='string' && fbUrl.indexOf('https://')===0) return fbUrl; }catch(e){}
+  return 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+}
+function room(){ try{ return (typeof fbRoom==='string') ? fbRoom : ''; }catch(e){ return ''; } }
+function me(){ var id='',nm='';
+  try{ if(typeof myId==='string') id=myId; }catch(e){}
+  try{ if(typeof myName==='string') nm=myName; }catch(e){}
+  return {id:id, name:nm};
+}
+function put(url,body){ try{ return fetch(url,{method:'PUT',body:JSON.stringify(body),keepalive:true}); }catch(e){ return null; } }
+
+/* ========== 名前の共通保存・自動入力 ========== */
+function initName(){
+  var saved='';
+  try{ saved = localStorage.getItem(NAME_KEY) || localStorage.getItem('spName') || ''; }catch(e){}
+  ['in-name','my-name'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    if(saved && !el.value) el.value=saved;
+    function save(){ var v=(el.value||'').trim(); if(v){ try{ localStorage.setItem(NAME_KEY,v); }catch(e){} } }
+    el.addEventListener('change',save);
+    el.addEventListener('blur',save);
+  });
+}
+
+/* ========== 切断検知（ハートビート） ========== */
+var lastRoom='';
+function syncRoom(){
+  var r=room(), m=me();
+  if(r!==lastRoom){
+    if(lastRoom && m.id){
+      try{ fetch(db()+'/rooms/'+lastRoom+'/presence/'+m.id+'.json',{method:'DELETE',keepalive:true}); }catch(e){}
+    }
+    lastRoom=r;
+  }
+}
+function beat(){
+  syncRoom();
+  var r=room(), m=me(); if(!r||!m.id) return;
+  put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?'});
+}
+function markLeft(){
+  syncRoom();
+  var r=room(), m=me(); if(!r||!m.id) return;
+  put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?',left:1});
+}
+var hideUntil=0;
+function banner(txt){
+  var b=document.getElementById('pga-banner');
+  if(!txt || Date.now()<hideUntil){ if(b) b.style.display='none'; return; }
+  if(!b){
+    b=document.createElement('div'); b.id='pga-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99990;background:rgba(178,34,34,.93);color:#fff;font-size:12px;line-height:1.4;padding:5px 30px 5px 10px;text-align:center;font-family:sans-serif;';
+    var t=document.createElement('span'); t.id='pga-banner-text'; b.appendChild(t);
+    var x=document.createElement('span'); x.textContent='\u2715';
+    x.style.cssText='position:absolute;right:8px;top:4px;cursor:pointer;padding:0 4px;';
+    x.onclick=function(){ hideUntil=Date.now()+60000; b.style.display='none'; };
+    b.appendChild(x);
+    document.body.appendChild(b);
+  }
+  document.getElementById('pga-banner-text').textContent=txt;
+  b.style.display='block';
+}
+function watch(){
+  syncRoom();
+  var r=room(), m=me();
+  if(!r){ banner(''); return; }
+  fetch(db()+'/rooms/'+r+'/presence.json').then(function(res){ return res.json(); }).then(function(d){
+    if(room()!==r) return;
+    if(!d){ banner(''); return; }
+    var now=Date.now(), gone=[];
+    Object.keys(d).forEach(function(pid){
+      if(pid===m.id) return;
+      var p=d[pid]||{};
+      if(p.left || (p.t && now-p.t>STALE_MS)) gone.push(p.n||'?');
+    });
+    banner(gone.length ? ('\u26A0\uFE0F \u901A\u4FE1\u304C\u9014\u5207\u308C\u3066\u3044\u307E\u3059: '+gone.join('\u3001')) : '');
+  }).catch(function(){});
+}
+setInterval(beat,HB_MS); setTimeout(beat,1500);
+setInterval(watch,WATCH_MS); setTimeout(watch,4000);
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'){ beat(); watch(); }
+});
+window.addEventListener('pagehide',markLeft);
+
+/* ========== 古いルームの自動削除 ========== */
+function tsOf(k,sub){
+  return fetch(db()+'/rooms/'+k+'/'+sub+'.json').then(function(r){ return r.json(); }).catch(function(){ return null; });
+}
+async function cleanup(){
+  try{
+    var last=0; try{ last=+(localStorage.getItem('pgLastCleanup')||0); }catch(e){}
+    if(Date.now()-last < CLEAN_EVERY) return;
+    try{ localStorage.setItem('pgLastCleanup', String(Date.now())); }catch(e){}
+    var res=await fetch(db()+'/rooms.json?shallow=true');
+    var keys=await res.json(); if(!keys) return;
+    var list=Object.keys(keys).filter(function(k){ return /^[A-Za-z0-9_]{1,6}-/.test(k) && k!==room(); });
+    list.sort(function(){ return Math.random()-0.5; });
+    var checked=0, deleted=0;
+    for(var i=0;i<list.length;i++){
+      if(checked>=80 || deleted>=25) break;
+      var k=list[i]; checked++;
+      var ts=0, v;
+      v=await tsOf(k,'meta/ts');      if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'broadcast/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'hostState/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'presence');
+      if(v){ Object.keys(v).forEach(function(pid){ var t=v[pid]&&v[pid].t; if(typeof t==='number') ts=Math.max(ts,t); }); }
+      if(!ts) continue; /* 時刻が取れないルームには触らない */
+      if(Date.now()-ts > ROOM_TTL){
+        try{ await fetch(db()+'/rooms/'+k+'.json',{method:'DELETE'}); deleted++; }catch(e){}
+      }
+    }
+  }catch(e){}
+}
+setTimeout(cleanup,5000);
+
+/* ========== 遊び方モーダル ========== */
+var RULES="<h3 style=\"margin:0 0 8px;font-size:16px;\">🎴 ナナ NANA（2〜5人）</h3><p style=\"margin:6px 0;\">同じ数字を<b>続けて3枚</b>公開する「チャレンジ」に挑むカードゲーム。カードは1〜12が3枚ずつ（人数により使用範囲が変わる）。手札は昇順にそろえ、中身は自分だけが見られる。</p><ul style=\"margin:6px 0;padding-left:18px;\"><li><b>準備</b>：2人=カード1〜10・手札10枚・場札10枚／3人=1〜11・8枚・9枚／4人=1〜12・7枚・8枚／5人=1〜12・6枚・6枚。残りは裏向きの場札</li><li><b>手番</b>：次のどちらかで1枚ずつ公開する。①だれかの手札（自分もOK）の<b>「一番小さい」か「一番大きい」</b>カードを公開させる（同値が複数あっても1枚だけ）②好きな<b>場札</b>を1枚めくる</li><li><b>失敗</b>：1枚目と違う数字が出た瞬間に終了。手札は持ち主へ戻り、場札は裏向きに戻る（＝みんなの記憶に残る）</li><li><b>成功</b>：同じ数字3枚がそろったら、その3枚を自分の手元に獲得。成功でも失敗でも次の人の手番へ</li></ul><p style=\"margin:6px 0;\"><b>勝ち方は3つ：</b></p><ul style=\"margin:6px 0;padding-left:18px;\"><li>① チャレンジを<b>3回成功</b>させる</li><li>② 2セットの数字を<b>足すか引くかして7</b>にする（例：3と4、9と2）</li><li>③ <b>「7」のセット</b>を完成させる（1回で即勝利の大逆転）</li></ul><p style=\"margin:6px 0;\">💡 公開されたカードは戻っても情報として残る。「あの人の最大は9だった」「あの場札は5」——記憶と読みで3枚を狙い撃とう。</p>";
+function openRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='flex'; }
+function closeRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='none'; }
+function initRules(){
+  if(!RULES) return;
+  var m=document.createElement('div'); m.id='pga-rules';
+  m.style.cssText='display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:14px;';
+  m.innerHTML='<div style="background:#1d222b;color:#e8e8e8;max-width:520px;width:100%;max-height:82vh;overflow-y:auto;border-radius:12px;padding:18px 16px;font-size:13.5px;line-height:1.75;font-family:sans-serif;-webkit-overflow-scrolling:touch;">'+RULES+'<button id="pga-rules-close" style="display:block;width:100%;margin-top:14px;padding:11px;border:none;border-radius:8px;background:#3a4557;color:#fff;font-size:14px;cursor:pointer;">\u9589\u3058\u308B</button></div>';
+  m.addEventListener('click',function(ev){ if(ev.target===m) closeRulesPga(); });
+  document.body.appendChild(m);
+  document.getElementById('pga-rules-close').onclick=closeRulesPga;
+  ['screen-lobby','screen-waiting'].forEach(function(id){
+    var sc=document.getElementById(id); if(!sc) return;
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent='\uD83D\uDCD6 \u904A\u3073\u65B9';
+    btn.style.cssText='display:block;width:100%;margin:10px 0 0;padding:11px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.06);color:inherit;font-size:14px;cursor:pointer;';
+    btn.onclick=openRulesPga;
+    sc.appendChild(btn);
+  });
+}
+
+initName();
+initRules();
+})();
+</script>
+</body>
+</html>

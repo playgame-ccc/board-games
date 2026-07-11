@@ -944,6 +944,10 @@ h3 { font-size: 1rem; font-weight: 600; }
         <span class="game-tab-icon">🎬</span>
         <span class="game-tab-name">ノセテロ</span>
       </button>
+      <button class="game-tab" id="tab-nn" data-game="nana" onclick="selectLobbyGame('nana')">
+        <span class="game-tab-icon">🎴</span>
+        <span class="game-tab-name">ナナ</span>
+      </button>
     </div>
 
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
@@ -1305,6 +1309,25 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- NANA section（別ページ誘導） -->
+    <div id="lobby-nn" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(255,90,117,0.05); border:1px solid rgba(255,90,117,0.3); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">🎴</div>
+          <div style="font-family:var(--mono); color:#ff5a75; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">ナナ</div>
+          <div style="color:var(--muted); font-size:0.72rem;">NANA · 同じ数字3枚を当てる記憶ゲーム</div>
+        </div>
+        <a href="nana.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(255,90,117,0.12); color:#ff5a75; border:1px solid rgba(255,90,117,0.5);">
+            🎴 ナナのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
+          ※ ナナは専用のページで動作します<br>2〜5人で対戦・BOT相手の練習モードつき
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1423,6 +1446,12 @@ h3 { font-size: 1rem; font-weight: 600; }
         タップ／クリックで<strong style="color:#ffd23f;">ジャンプ</strong>し、障害物を避けてゴールを目指します。<br>
         <strong style="color:#ff6ec7;">5の倍数のステージはボス戦</strong>。<br>
         オンライン接続は不要で、1人でいつでも遊べます。
+      </p>
+      <p id="rules-nn" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        2〜5人。だれかの手札の<strong style="color:#ff5a75;">「最小」か「最大」</strong>、または場札を1枚ずつ公開。<br>
+        同じ数字を<strong style="color:#2dff8a;">続けて3枚</strong>公開できたらセット獲得。<br>
+        勝ち方は3つ：①3セット ②2セットの<strong style="color:#ffd84d;">足し引きが7</strong> ③<strong style="color:#ffd84d;">「7」のセット</strong>で即勝利。<br>
+        💡 戻ったカードも記憶に残る。覚えた者勝ちの記憶ゲーム。
       </p>
     </div>
   </div>
@@ -3904,13 +3933,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
