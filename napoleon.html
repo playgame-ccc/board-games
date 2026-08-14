@@ -1,0 +1,1548 @@
+<!-- NAPOLEON v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>👑 ナポレオン</title>
+<style>
+:root {
+  --bg: #0a0d16;
+  --surface: #141a28;
+  --surface2: #1c2435;
+  --surface3: #2e3a52;
+  --text: #eef2fa;
+  --muted: #8b96ae;
+  --red: #ff5566;
+  --green: #35e08c;
+  --blue: #4db8ff;
+  --gold: #e8c46a;
+  --nap: #d4af37;
+  --nap-dim: rgba(212,175,55,0.14);
+  --card-face: #f7f4ec;
+  --card-ink: #1d2331;
+  --card-red: #c62b3d;
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  --mono: "SF Mono", Menlo, Monaco, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 16px; line-height: 1.5;
+  overscroll-behavior: none; padding-bottom: env(safe-area-inset-bottom);
+}
+.app { max-width: 480px; margin: 0 auto; padding: 12px; min-height: 100dvh; display: flex; flex-direction: column; gap: 10px; }
+body.ingame { overflow: hidden; height: 100dvh; }
+body.ingame .app { height: 100dvh; min-height: 0; }
+.screen { display: none; flex-direction: column; gap: 10px; }
+.screen.active { display: flex; }
+h1 { font-size: 1.8rem; text-align: center; }
+h2 { font-size: 1.3rem; text-align: center; }
+h3 { font-size: 0.8rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 18px; border-radius: 10px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  font-family: var(--sans); font-size: 0.95rem; font-weight: 600; transition: all 0.15s; user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-nap { background: var(--nap); border-color: var(--nap); color: #241d05; }
+.btn-blue { background: rgba(77,184,255,0.15); border-color: rgba(77,184,255,0.5); color: var(--blue); }
+.btn-ghost { background: transparent; }
+.btn-sm { padding: 6px 10px; font-size: 0.78rem; border-radius: 8px; }
+.input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--surface3); background: var(--surface2); color: var(--text);
+  font-size: 1rem; font-family: var(--sans); outline: none;
+}
+.input:focus { border-color: var(--nap); }
+.code-input { font-family: var(--mono); font-size: 1.3rem; text-align: center; letter-spacing: 6px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.divider { height: 1px; background: var(--surface3); margin: 4px 0; }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 12px; }
+.status-txt { text-align: center; font-size: 0.85rem; color: var(--blue); min-height: 1.2em; }
+.error { text-align: center; font-size: 0.85rem; color: var(--red); min-height: 1.2em; }
+.code-box { text-align: center; background: var(--surface); border: 1px dashed var(--surface3); border-radius: 12px; padding: 10px; }
+.code-box .label { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); letter-spacing: 2px; }
+.code-box .code { font-size: 2rem; font-family: var(--mono); letter-spacing: 8px; color: var(--gold); font-weight: 700; }
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-chip { display: flex; align-items: center; gap: 8px; background: var(--surface2); border-radius: 10px; padding: 9px 12px; font-size: 0.92rem; }
+.log { font-size: 0.72rem; color: var(--muted); overflow-y: auto; line-height: 1.6; font-family: var(--mono); }
+.log div { border-bottom: 1px solid rgba(255,255,255,0.04); padding: 2px 0; }
+.tag { font-size: 0.64rem; color: var(--muted); font-family: var(--mono); }
+
+/* ===== カード ===== */
+.card {
+  width: 40px; height: 55px; border-radius: 6px; border: 1.5px solid #cfc9ba;
+  background: var(--card-face); color: var(--card-ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-weight: 800; line-height: 1; user-select: none; flex: 0 0 auto; position: relative;
+}
+.card .cr { font-size: 1rem; }
+.card .cs { font-size: 0.85rem; }
+.card.sp .cr, .card.sp .cs { transform: translateY(-3px); }
+.card.red { color: var(--card-red); }
+.card.joker { background: linear-gradient(135deg,#fff0b8,#ffd54f 55%,#f0b429); font-size: 1.3rem; border-color: var(--gold); }
+.card.sp { box-shadow: 0 0 0 2px var(--nap) inset; }
+.card .badge {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--nap); color: #241d05; font-size: 0.46rem; font-weight: 800;
+  line-height: 1.5; border-radius: 0 0 4px 4px; text-align: center;
+  white-space: nowrap; font-family: var(--sans); letter-spacing: -0.02em;
+}
+.card.dim { opacity: 0.3; }
+.card.pick { outline: 2px solid var(--red); outline-offset: 1px; transform: translateY(-4px); }
+.hand { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+.hand .card { cursor: pointer; }
+
+/* ===== ゲーム画面 ===== */
+#screen-game { height: 100%; gap: 6px; overflow: hidden; }
+#screen-game > * { flex-shrink: 0; }
+#screen-game > #panel-log { flex-shrink: 1; }
+#screen-game .panel { padding: 7px 9px; }
+#screen-game h3 { margin-bottom: 5px !important; font-size: 0.66rem; }
+.turnbar { text-align: center; padding: 6px; border-radius: 10px; font-weight: 700; font-size: 0.86rem; background: var(--surface); border: 1px solid var(--surface3); }
+.turnbar.me { background: var(--nap-dim); border-color: var(--nap); color: var(--nap); animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(212,175,55,0.35);} 50%{ box-shadow: 0 0 0 7px rgba(212,175,55,0);} }
+.hdr { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-family: var(--mono); color: var(--muted); }
+.hdr b { color: var(--gold); }
+.trick { display: flex; gap: 6px; justify-content: center; align-items: flex-start; min-height: 74px; }
+.tslot { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tslot .tname { font-size: 0.56rem; color: var(--muted); max-width: 46px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tslot.win .card { box-shadow: 0 0 10px var(--green); border-color: var(--green); }
+.tslot.win .tname { color: var(--green); }
+.prow { display: flex; align-items: center; gap: 6px; background: var(--surface2); border-radius: 9px; padding: 4px 7px; border: 1px solid transparent; font-size: 0.78rem; }
+.prow.turn { border-color: var(--nap); background: var(--nap-dim); }
+.prow .pname { min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rolebadge { font-size: 0.6rem; padding: 1px 5px; border-radius: 5px; font-weight: 700; white-space: nowrap; }
+.rb-nap { background: var(--nap); color: #241d05; }
+.rb-ally { background: rgba(212,175,55,0.25); color: var(--nap); border: 1px solid var(--nap); }
+.rb-uni { background: rgba(77,184,255,0.18); color: var(--blue); }
+.seg { display: flex; gap: 5px; }
+.seg .btn { flex: 1; padding: 8px 2px; font-size: 0.82rem; }
+.seg .btn.on { background: var(--nap-dim); border-color: var(--nap); color: var(--nap); }
+#panel-log { flex: 1 1 0; min-height: 40px; display: flex; flex-direction: column; overflow: hidden; }
+#panel-log .log { flex: 1 1 0; min-height: 0; }
+.btn-exit { padding: 3px 9px; font-size: 0.7rem; border-radius: 7px; }
+.msg { text-align: center; font-size: 0.76rem; font-weight: 700; min-height: 1.1em; line-height: 1.15; }
+.leadsuit { text-align: center; font-size: 0.74rem; font-weight: 700; color: var(--muted); line-height: 1.35; }
+.leadsuit .ls { font-size: 1.05rem; vertical-align: -1px; }
+.opendis { text-align: center; font-size: 0.66rem; color: var(--gold); line-height: 1.3; padding: 2px 4px; border: 1px dashed rgba(212,175,55,0.4); border-radius: 7px; }
+.msg.ok { color: var(--green); }
+.msg.gold { color: var(--gold); }
+
+.result-hero { text-align: center; padding: 18px 10px; }
+.result-emoji { font-size: 3rem; }
+.result-title { font-size: 1.4rem; font-weight: 800; margin-top: 6px; }
+.result-sub { font-size: 0.88rem; color: var(--muted); margin-top: 4px; }
+
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 500; align-items: center; justify-content: center; padding: 16px; }
+.modal { background: var(--surface); border: 1px solid var(--surface3); border-radius: 14px; padding: 16px; width: 100%; max-width: 420px; }
+
+@media (max-height: 700px) {
+  body.ingame .app { padding: 8px 10px; }
+  #screen-game { gap: 4px; }
+  #screen-game .panel { padding: 5px 8px; }
+  .turnbar { padding: 4px; font-size: 0.8rem; }
+  .card { width: 34px; height: 47px; }
+  .card .cr { font-size: 0.85rem; }
+  .trick { min-height: 64px; }
+  .prow { padding: 2px 6px; }
+  .player-list { gap: 4px; }
+  #panel-log { min-height: 32px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ LOBBY ============ -->
+  <div id="screen-lobby" class="screen active">
+    <h1>👑 ナポレオン</h1>
+    <p style="text-align:center; font-family:var(--mono); font-size:0.72rem; color:var(--muted); letter-spacing:1px;">絵札20枚を奪い合うトリックテイキング（4〜6人）</p>
+
+    <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" id="btn-reconnect" style="display:none; background:rgba(45,189,110,0.15); color:#2dbd6e; border:1px solid rgba(45,189,110,0.5);" onclick="pgReconnect()"></button>
+      <button class="btn btn-nap" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+      <div class="divider"></div>
+      <div class="panel">
+        <h3 style="margin-bottom:8px;">🤖 練習モード（BOT対戦）</h3>
+        <div class="seg" id="bot-seg">
+          <button class="btn" data-b="3" onclick="setBots(3)">4人</button>
+          <button class="btn on" data-b="4" onclick="setBots(4)">5人</button>
+          <button class="btn" data-b="5" onclick="setBots(5)">6人</button>
+        </div>
+        <button class="btn" style="width:100%; margin-top:8px;" onclick="startSolo()">▶ ひとりで練習する</button>
+      </div>
+    </div>
+
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+
+    <p style="text-align:center; font-size:0.72rem; color:var(--muted); line-height:1.6;">
+      強さ：🃏 &gt; ♠A &gt; 表J &gt; 裏J &gt; 切り札 &gt; 台札<br>
+      セイム2・よろめき（🃏→♥Q→♥K）・クラブ3のあぶり出しつき
+    </p>
+
+    <a href="index.html" style="text-decoration:none; margin-top:6px;">
+      <button class="btn btn-ghost" style="width:100%;">← ホームに戻る</button>
+    </a>
+  </div>
+
+  <!-- ============ WAITING ============ -->
+  <div id="screen-waiting" class="screen">
+    <h2>待機ロビー</h2>
+    <div class="code-box">
+      <div class="label">ルームコード</div>
+      <div class="code" id="disp-code">----</div>
+      <button class="btn btn-ghost btn-sm" onclick="copyCode()" style="margin-top:4px;">📋 コードをコピー</button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:8px;">プレイヤー（4〜6人）</h3>
+      <div class="player-list" id="wait-players"></div>
+    </div>
+    <div class="panel" style="font-size:0.78rem; color:var(--muted); line-height:1.7;" id="wait-setup"></div>
+    <button class="btn btn-nap" id="btn-start" onclick="startGame()">▶ ゲーム開始</button>
+    <div id="wait-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- ============ GAME ============ -->
+  <div id="screen-game" class="screen">
+    <div class="row" style="justify-content:space-between;">
+      <span class="hdr" id="hdr-left"></span>
+      <button class="btn btn-ghost btn-exit" onclick="leaveRoom()">退出</button>
+    </div>
+    <div class="turnbar" id="turnbar"></div>
+    <div class="opendis" id="opendis" style="display:none;"></div>
+
+    <!-- 競り -->
+    <div class="panel" id="panel-bid" style="display:none;">
+      <h3 style="margin-bottom:6px;">競り（最低13枚）</h3>
+      <div id="bid-cur" style="text-align:center; font-size:0.84rem; margin-bottom:7px;"></div>
+      <div id="bid-ui" style="display:none;">
+        <div class="seg" style="margin-bottom:5px;" id="bid-num"></div>
+        <div class="seg" style="margin-bottom:6px;" id="bid-suit"></div>
+        <div class="row">
+          <button class="btn btn-nap" id="btn-bid" style="flex:1;" onclick="uiBid()">宣言する</button>
+          <button class="btn" style="flex:0 0 90px;" onclick="uiPass()">パス</button>
+        </div>
+        <div class="tag" id="bid-hint" style="text-align:center; margin-top:4px; min-height:1em;"></div>
+      </div>
+    </div>
+
+    <!-- 副官指定 -->
+    <div class="panel" id="panel-adj" style="display:none;">
+      <h3 style="margin-bottom:6px;">副官カードを指定</h3>
+      <div id="adj-ui" style="display:none;">
+        <div class="seg" style="margin-bottom:5px;" id="adj-suit"></div>
+        <div class="seg" style="margin-bottom:6px; flex-wrap:wrap;" id="adj-rank"></div>
+        <button class="btn btn-nap" id="btn-adj" style="width:100%;" onclick="uiAdjutant()">このカードを副官にする</button>
+      </div>
+      <div id="adj-wait" style="text-align:center; font-size:0.82rem; color:var(--muted);"></div>
+    </div>
+
+    <!-- 場のカード -->
+    <div id="panel-trick" style="display:none;">
+      <div class="leadsuit" id="leadsuit"></div>
+      <div class="trick" id="trick"></div>
+      <div class="msg" id="trick-msg"></div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-bottom:6px;">プレイヤー<span style="text-transform:none; letter-spacing:0;" id="score-hint"></span></h3>
+      <div class="player-list" id="players"></div>
+    </div>
+
+    <div class="panel" id="hand-panel">
+      <h3 style="margin-bottom:6px;">あなたの手札<span style="text-transform:none; letter-spacing:0;" id="hand-hint"></span></h3>
+      <div class="hand" id="myhand"></div>
+      <button class="btn btn-nap btn-sm" id="btn-discard" style="width:100%; margin-top:6px; display:none;" onclick="uiDiscard()"></button>
+    </div>
+
+    <div class="panel" id="panel-log">
+      <h3 style="margin-bottom:5px;">ログ</h3>
+      <div class="log" id="game-log"></div>
+    </div>
+  </div>
+
+  <!-- ============ RESULT ============ -->
+  <div id="screen-result" class="screen">
+    <div class="result-hero">
+      <div class="result-emoji" id="result-emoji">👑</div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:8px;">獲得絵札</h3>
+      <div class="player-list" id="result-players"></div>
+    </div>
+    <button class="btn btn-nap" id="btn-rematch" onclick="rematch()" style="display:none;">🔄 もう一度</button>
+    <div id="result-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ</button>
+    <a href="index.html" style="text-decoration:none;"><button class="btn btn-ghost" style="width:100%;">🏠 ハブに戻る</button></a>
+  </div>
+
+</div>
+
+<!-- FB CONFIG MODAL -->
+<div class="modal-bg" id="fb-modal">
+  <div class="modal">
+    <h3 style="margin-bottom:10px;">Firebase 設定</h3>
+    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">Realtime Database の URL を入力してください。</p>
+    <input class="input" id="fb-url" type="url" placeholder="https://xxxx.firebaseio.com">
+    <button class="btn btn-nap" style="width:100%; margin-top:10px;" onclick="saveFbConfig()">保存</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// NAPOLEON — ホワイトボードのハウスルール準拠
+//   強さ: 🃏 > ♠A(マイティー) > 表J > [セイム2の上限] > 裏J > 切り札 > 台札
+//   セイム2: 切り札と同色は無効 / 初トリック無効 / 裏Jまでしか勝てない
+//   よろめき: ♥Q を出した連合軍はナポレオン軍へ寝返る
+//   クラブ3: ジョーカーが出たトリックで ♣3 を出すとジョーカーに勝つ
+// ============================================================
+const SUITS = ['S','H','D','C'];
+const SUIT_MARK = {S:'\u2660', H:'\u2665', D:'\u2666', C:'\u2663'};
+const SUIT_NAME = {S:'スペード', H:'ハート', D:'ダイヤ', C:'クラブ'};
+const SUIT_ORDER = {C:0, D:1, H:2, S:3};   // 競りのタイブレーク: ク<ダ<ハ<ス
+const SETUP = { 4:{hand:13,kitty:1}, 5:{hand:10,kitty:3}, 6:{hand:8,kitty:5} };
+const MIN_BID = 13, MAX_BID = 20;
+const BOT_NAMES = ['🤖アカ','🤖アオ','🤖キイロ','🤖ミドリ','🤖ムラサキ'];
+let RESOLVE_MS = 2000, BOT_WAIT = 800, BOT_WAIT_R = 600;
+
+// ---------- カードユーティリティ ----------
+function ck(c){ return c.s==='X' ? 'X0' : c.s + c.r; }
+function isJoker(c){ return c.s==='X'; }
+function isMighty(c){ return c.s==='S' && c.r===1; }
+function isClub3(c){ return c.s==='C' && c.r===3; }
+function isHeartQ(c){ return c.s==='H' && c.r===12; }
+function isHeartK(c){ return c.s==='H' && c.r===13; }
+function isRed(s){ return s==='H' || s==='D'; }
+function sameColor(a,b){ return isRed(a)===isRed(b); }
+function backSuit(trump){ return SUITS.find(s=>s!==trump && sameColor(s,trump)); }
+function isFrontJ(c,t){ return c.s===t && c.r===11; }
+function isBackJ(c,t){ return c.s===backSuit(t) && c.r===11; }
+function isFace(c){ return !isJoker(c) && (c.r===1 || c.r>=10); }   // A,10,J,Q,K
+function rankVal(r){ return r===1 ? 14 : r; }
+function rankLabel(r){ return ({1:'A',11:'J',12:'Q',13:'K'})[r] || String(r); }
+function cardName(c){ return isJoker(c) ? 'ジョーカー' : SUIT_MARK[c.s] + rankLabel(c.r); }
+
+// セイム2の判定
+//  ・台札と同じスートの2（自分がリードした2も有効）
+//  ・トリックのカードのスートが全て揃っている場合のみ有効
+//    （誰かが切り札・別スート・ジョーカーを出した時点で無効）
+//  ・切り札のスートは無効 / 第1トリックは無効
+function isSame2(c, ctx){
+  if(isJoker(c) || c.r !== 2) return false;
+  if(!ctx.lead || c.s !== ctx.lead) return false;
+  if(ctx.trickNo === 0) return false;
+  if(c.s === ctx.trump) return false;   // 切り札の2はただの切り札
+  if(!ctx.allSame) return false;        // スートが揃っていなければ無効
+  return true;
+}
+
+// カードの強さ（大きいほど強い）
+function cardPower(c, ctx){
+  if(ctx.kaeshi && isHeartK(c)) return 1100;        // よろめき返し（♥Q より後に出た ♥K が制す）
+  if(ctx.yoromeki && isHeartQ(c)) return 1050;      // よろめき（♥Q がジョーカーを制す）
+  if(isJoker(c)) return 900;
+  if(isMighty(c)) return 800;
+  if(isFrontJ(c, ctx.trump)) return 700;
+  if(isSame2(c, ctx)) return 650;                   // 裏J以下にのみ勝つ
+  if(isBackJ(c, ctx.trump)) return 600;
+  if(c.s === ctx.trump) return 400 + rankVal(c.r);
+  if(ctx.lead && c.s === ctx.lead) return 200 + rankVal(c.r);
+  return rankVal(c.r);
+}
+
+// トリックの状況（よろめき成立判定を含む）
+function trickInfo(plays, trump, trickNo){
+  const lead = leadSuitOf(plays);
+  const jokerIdx = plays.findIndex(p=>isJoker(p.card));
+  const jokerInTrick = jokerIdx >= 0;
+  const hqIdx = plays.findIndex(p=>isHeartQ(p.card));
+  const hkIdx = plays.findIndex(p=>isHeartK(p.card));
+  // よろめき: ジョーカーより「後」に ♥Q が出されたときだけ成立
+  const yoromeki = jokerInTrick && hqIdx > jokerIdx;
+  // よろめき返し: さらに ♥Q より「後」に ♥K が出されたときだけ成立
+  const kaeshi = yoromeki && hkIdx > hqIdx;
+  const club3 = plays.some(p=>isClub3(p.card));   // ♣3 は強さを持たない（あぶり出し用）
+  // トリックのスートが全て揃っているか（セイム2の発動条件）
+  const allSame = !!lead && plays.every(p=>!isJoker(p.card) && p.card.s === lead);
+  return {lead, jokerInTrick, yoromeki, kaeshi, club3, allSame, trump, trickNo};
+}
+// トリックの勝者インデックスを返す（plays = [{pid, card}]）
+function trickWinnerIdx(plays, trump, trickNo){
+  const info = trickInfo(plays, trump, trickNo);
+  let best = -1, bestP = -1;
+  plays.forEach((p,i)=>{
+    const pw = cardPower(p.card, Object.assign({}, info, {isLeadCard:i===0}));
+    if(pw > bestP){ bestP = pw; best = i; }
+  });
+  return best;
+}
+
+// そのトリックの台札スートを返す
+// ジョーカーがリードされた場合は「2枚目に出されたカードのスート」が台札になる
+function leadSuitOf(trick){
+  if(!trick || !trick.length) return null;
+  if(!isJoker(trick[0].card)) return trick[0].card.s;
+  if(trick.length >= 2 && !isJoker(trick[1].card)) return trick[1].card.s;
+  return null;   // ジョーカー1枚だけ＝台札はまだ決まっていない
+}
+// マストフォロー（ジョーカーはいつでも出せる）
+// club3Out: そのトリックで既に ♣3 が出ている場合、ジョーカー保持者は必ず出す
+function legalCards(hand, lead, club3Out){
+  if(club3Out){
+    const joker = hand.filter(isJoker);
+    if(joker.length) return joker;
+  }
+  if(!lead) return hand.slice();
+  const follow = hand.filter(c=>c.s===lead);
+  if(follow.length === 0) return hand.slice();
+  return hand.filter(c=>c.s===lead || isJoker(c));
+}
+// そのトリックで ♣3 が既に出ているか
+function club3Played(trick){ return (trick||[]).some(t=>isClub3(t.card)); }
+
+// ============================================================
+// FIREBASE
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+function saveFbConfig(){
+  const url = g('fb-url').value.trim().replace(/\/$/,'');
+  if(!url) return;
+  fbUrl = url; localStorage.setItem(FB_KEY, url); g('fb-modal').style.display='none';
+}
+async function checkFbConfig(){
+  if(!fbUrl){ g('fb-modal').style.display='flex'; return false; }
+  try {
+    const r = await fetch(`${fbUrl}/.json?shallow=true`);
+    if(!r.ok && r.status !== 404){ setErr('Firebase接続エラー'); return false; }
+  } catch(e){ setErr('Firebase接続失敗'); return false; }
+  return true;
+}
+let fbRoom = '', fbPollTimer = null, fbLastBcastTs = 0, fbLastPrvTs = 0, fbLastActTs = {};
+async function fbPut(sub, data){ if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)}); } catch(e){} }
+async function fbGet(sub){ if(!fbRoom) return null; try { const r = await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+async function fbDel(sub){ if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){} }
+function fbListen(){
+  if(fbPollTimer) clearInterval(fbPollTimer);
+  fbLastBcastTs = 0; fbLastPrvTs = 0; fbLastActTs = {};
+  fbPollTimer = setInterval(fbPoll, 500);
+}
+function fbClose(){ if(fbPollTimer) clearInterval(fbPollTimer); fbPollTimer = null; fbRoom = ''; }
+async function fbPoll(){
+  if(!fbRoom) return;
+  const bc = await fbGet('broadcast');
+  if(bc && bc.ts > fbLastBcastTs){ fbLastBcastTs = bc.ts; if(!isHost && bc.msg) handleBroadcast(bc.msg); }
+  const prv = await fbGet(`private/${myId}`);
+  if(prv && prv.ts > fbLastPrvTs){ fbLastPrvTs = prv.ts; if(prv.msg) handlePrivate(prv.msg); }
+  if(isHost){
+    const acts = await fbGet('action');
+    if(acts) for(const pid in acts){
+      const a = acts[pid];
+      if(a && a.ts > (fbLastActTs[pid]||0)){ fbLastActTs[pid] = a.ts; if(a.msg) onMsg(a.msg, pid); }
+    }
+  }
+}
+function fbBroadcast(msg){ fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg){ fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg){ if(isSolo){ onMsg(msg, myId); return; } fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '';
+let isHost = false, isSolo = false, roomCode = '';
+let fs = null, gs = null, myHand = [];
+let soloBots = 4, botTimer = null, prevActPid = null;
+let uiBidNum = MIN_BID, uiBidSuit = 'S', uiAdjSuit = 'S', uiAdjRank = 1, discardPick = [];
+
+function g(id){ return document.getElementById(id); }
+function mk(tag, cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function show(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-'+name); if(el) el.classList.add('active');
+  document.body.classList.toggle('ingame', name==='game');
+}
+function setErr(m){ const e=g('lobby-error'); if(e) e.textContent = m||''; }
+function setSt(m){ const s=g('lobby-status'); if(s) s.textContent = m||''; }
+function genId(){ return 'p_' + Math.random().toString(36).slice(2,10); }
+function shuffle(a){ const x=a.slice(); for(let i=x.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [x[i],x[j]]=[x[j],x[i]]; } return x; }
+function copyCode(){ navigator.clipboard?.writeText(g('disp-code').textContent); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+let audioCtx = null;
+document.addEventListener('pointerdown', ()=>{ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } }, {once:true});
+function notifyTurn(){
+  try{ if(navigator.vibrate) navigator.vibrate(120); }catch(e){}
+  try{
+    if(!audioCtx) return;
+    const o=audioCtx.createOscillator(), gn=audioCtx.createGain();
+    o.frequency.value=880; gn.gain.value=0.06;
+    o.connect(gn); gn.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+0.09);
+  }catch(e){}
+}
+
+// ============================================================
+// ROOM
+// ============================================================
+function setBots(n){
+  soloBots = n;
+  document.querySelectorAll('#bot-seg .btn').forEach(b=>b.classList.toggle('on', +b.dataset.b===n));
+}
+async function createRoom(){
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name){ setErr('名前を入力してください'); return; }
+  myName=name; isHost=true; isSolo=false;
+  const code = Array.from({length:4}, ()=>Math.floor(Math.random()*10)).join('');
+  roomCode=code; fbRoom='NP-'+code;
+  setSt('接続中...');
+  try{
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'napoleon', ts:Date.now()});
+    fs = initFs([{id:myId, name:myName, bot:false}]);
+    fbListen(); pgSaveSession();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    show('waiting'); bcast();
+  }catch(e){ setErr(e.message||'エラー'); setSt(''); isHost=false; }
+}
+async function joinRoom(){
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name){ setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)){ setErr('4桁の数字'); return; }
+  myName=name; isHost=false; isSolo=false; roomCode=code; fbRoom='NP-'+code;
+  setSt('接続中...');
+  try{
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta){ setErr('ルームが見つかりません'); setSt(''); fbRoom=''; return; }
+    if(meta.game !== 'napoleon'){ setErr('ゲーム種別が違います'); setSt(''); fbRoom=''; return; }
+    fbListen(); pgSaveSession();
+    fbSendToHost({type:'join', name:myName, id:myId});
+    setSt('接続しました...');
+    show('waiting');
+    g('disp-code').textContent = code;
+    g('btn-start').style.display='none';
+    let retries=0;
+    const rj = setInterval(()=>{
+      if(!fbRoom || retries>=5){ clearInterval(rj); return; }
+      if(gs?.players?.find(p=>p.id===myId)){ clearInterval(rj); return; }
+      fbSendToHost({type:'join', name:myName, id:myId}); retries++;
+    }, 2000);
+  }catch(e){ setErr(e.message||'エラー'); setSt(''); }
+}
+function startSolo(){
+  const name = g('in-name').value.trim() || 'あなた';
+  myName=name; isHost=true; isSolo=true; roomCode=''; fbRoom=''; myId=genId();
+  const players=[{id:myId, name:myName, bot:false}];
+  for(let i=0;i<soloBots;i++) players.push({id:'bot_'+i, name:BOT_NAMES[i], bot:true});
+  fs = initFs(players);
+  setErr(''); setSt('');
+  hostStart();
+}
+function leaveRoom(){
+  if(botTimer) clearTimeout(botTimer);
+  pgClearSession(); fbClose();
+  fs=null; gs=null; isHost=false; isSolo=false; myHand=[]; prevActPid=null;
+  show('lobby'); pgShowReconnect();
+}
+
+// ============================================================
+// HOST: 状態
+// ============================================================
+function initFs(players){
+  return {
+    phase:'waiting',
+    players: players.map(p=>({id:p.id, name:p.name, bot:!!p.bot, hand:[], won:[], role:'union', revealed:false, passed:false, bid:null})),
+    kitty:[], openDiscards:[], trump:'S', bidNum:MIN_BID, napIdx:0, adjCard:null, adjFound:false,
+    bidTurn:0, high:null, dealerIdx:0,
+    trick:[], leadIdx:0, turnIdx:0, trickNo:0,
+    lock:false, lastWin:-1, winner:null, log:[]
+  };
+}
+function addLog(t){ fs.log.push(t); if(fs.log.length>80) fs.log = fs.log.slice(-80); }
+
+function deal(){
+  const n = fs.players.length, cfg = SETUP[n];
+  let deck = [{s:'X', r:0}];
+  for(const s of SUITS) for(let r=1;r<=13;r++) deck.push({s, r});
+  deck = shuffle(deck);
+  fs.players.forEach(p=>{
+    p.hand = deck.splice(0, cfg.hand).sort(handSort);
+    p.won = []; p.role='union'; p.revealed=false; p.passed=false; p.bid=null;
+  });
+  fs.kitty = deck.splice(0, cfg.kitty);
+  fs.trick=[]; fs.trickNo=0; fs.lock=false; fs.lastWin=-1; fs.winner=null;
+  fs.openDiscards=[]; fs.trickEvent=null;
+  fs.adjCard=null; fs.adjFound=false; fs.high=null;
+}
+function handSort(a,b){
+  const o = c => isJoker(c) ? -1 : SUIT_ORDER[c.s];
+  if(o(a)!==o(b)) return o(b)-o(a);
+  return rankVal(b.r)-rankVal(a.r);
+}
+
+function hostStart(){
+  const n = fs.players.length;
+  if(n<4 || n>6){ if(!isSolo) setErr('4〜6人で開始できます'); return; }
+  deal();
+  fs.phase='bid';
+  fs.bidTurn = fs.dealerIdx;
+  addLog(`ゲーム開始（${n}人 / 手札${SETUP[n].hand}枚 / 埋め札${SETUP[n].kitty}枚）`);
+  addLog(`競り開始：${fs.players[fs.bidTurn].name} から`);
+  sendHands(); bcast();
+}
+function startGame(){ if(isHost) hostStart(); }
+function hostRematch(){
+  fs.dealerIdx = (fs.dealerIdx+1) % fs.players.length;
+  deal();
+  fs.phase='bid'; fs.bidTurn = fs.dealerIdx;
+  addLog('── もう一度 ──');
+  addLog(`競り開始：${fs.players[fs.bidTurn].name} から`);
+  sendHands(); bcast();
+}
+function rematch(){ if(isHost) hostRematch(); else g('result-status').textContent='ホストの「もう一度」を待っています'; }
+
+function redeal(){
+  addLog('全員パス → 流局。配り直します');
+  deal();
+  fs.dealerIdx = (fs.dealerIdx+1) % fs.players.length;
+  fs.bidTurn = fs.dealerIdx;
+  fs.phase='bid';
+  sendHands(); bcast();
+}
+
+// ============================================================
+// HOST: メッセージ処理
+// ============================================================
+function onMsg(d, pid){
+  if(!d || !fs) return;
+  switch(d.type){
+    case 'join': {
+      const ex = fs.players.find(p=>p.id===d.id);
+      if(ex){ bcast(); sendHand(ex); return; }
+      if(fs.phase!=='waiting'){ fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
+      if(fs.players.length>=6){ fbSendTo(d.id, {type:'error', msg:'満員（最大6人）'}); return; }
+      fs.players.push({id:d.id, name:d.name, bot:false, hand:[], won:[], role:'union', revealed:false, passed:false, bid:null});
+      bcast(); break;
+    }
+    case 'bid': doBid(pid, d.num, d.suit); break;
+    case 'pass': doPass(pid); break;
+    case 'adjutant': doAdjutant(pid, d.s, d.r); break;
+    case 'discard': doDiscard(pid, d.keys); break;
+    case 'play': doPlay(pid, d.key); break;
+  }
+}
+
+function doBid(pid, num, suit){
+  if(fs.phase!=='bid') return;
+  const p = fs.players[fs.bidTurn];
+  if(!p || p.id!==pid) return;
+  num = Math.max(MIN_BID, Math.min(MAX_BID, num|0));
+  if(!SUITS.includes(suit)) return;
+  if(fs.high && !(num>fs.high.num || (num===fs.high.num && SUIT_ORDER[suit]>SUIT_ORDER[fs.high.suit]))) return;
+  fs.high = {pid, num, suit, idx:fs.bidTurn};
+  addLog(`${p.name}：${num}枚 ${SUIT_MARK[suit]}${SUIT_NAME[suit]} を宣言`);
+  advanceBid();
+}
+function doPass(pid){
+  if(fs.phase!=='bid') return;
+  const p = fs.players[fs.bidTurn];
+  if(!p || p.id!==pid) return;
+  p.passed = true;
+  addLog(`${p.name}：パス`);
+  advanceBid();
+}
+function advanceBid(){
+  const n = fs.players.length;
+  const active = fs.players.filter(p=>!p.passed);
+  if(!fs.high && active.length===0){ redeal(); return; }
+  if(fs.high){
+    const others = fs.players.filter(p=>!p.passed && p.id!==fs.high.pid);
+    if(others.length===0){ startAdjutant(); return; }
+  }
+  let i = fs.bidTurn;
+  for(let k=0;k<n;k++){
+    i = (i+1)%n;
+    const p = fs.players[i];
+    if(!p.passed && !(fs.high && p.id===fs.high.pid)){ fs.bidTurn=i; bcast(); return; }
+  }
+  if(fs.high) startAdjutant(); else redeal();
+}
+function startAdjutant(){
+  fs.napIdx = fs.high.idx;
+  fs.trump = fs.high.suit;
+  fs.bidNum = fs.high.num;
+  fs.players.forEach(p=>{ p.role='union'; p.revealed=false; });
+  const nap = fs.players[fs.napIdx];
+  nap.role='napoleon'; nap.revealed=true;
+  fs.phase='adjutant';
+  addLog(`👑 ${nap.name} がナポレオン（${fs.bidNum}枚 / 切り札 ${SUIT_MARK[fs.trump]}${SUIT_NAME[fs.trump]}）`);
+  bcast();
+}
+function doAdjutant(pid, s, r){
+  if(fs.phase!=='adjutant') return;
+  const nap = fs.players[fs.napIdx];
+  if(!nap || nap.id!==pid) return;
+  const isJokerPick = (s==='X' && r===0);
+  if(!isJokerPick && (!SUITS.includes(s) || !(r>=1 && r<=13))) return;
+  fs.adjCard = {s, r};
+  addLog(`副官カード：${cardName(fs.adjCard)}`);
+  const holder = fs.players.find(p=>p.id!==nap.id && p.hand.some(c=>c.s===s && c.r===r));
+  // 副官が誰か（または不在か）は公開しない。ナポレオンは自分の手札と埋め札で判断できる
+  if(holder){ holder.role='ally'; }
+  else { fs.adjFound = true; }
+  // 埋め札を手札へ
+  nap.hand = nap.hand.concat(fs.kitty).sort(handSort);
+  fs.kitty = [];
+  fs.phase='discard';
+  sendHand(nap); bcast();
+}
+function doDiscard(pid, keys){
+  if(fs.phase!=='discard') return;
+  const nap = fs.players[fs.napIdx];
+  if(!nap || nap.id!==pid) return;
+  const need = SETUP[fs.players.length].kitty;
+  if(!Array.isArray(keys) || keys.length!==need) return;
+  const rest = nap.hand.slice(), out = [];
+  for(const k of keys){
+    const i = rest.findIndex(c=>ck(c)===k);
+    if(i<0) return;
+    out.push(rest.splice(i,1)[0]);
+  }
+  nap.hand = rest.sort(handSort);
+  fs.kitty = out;
+  fs.openDiscards = out.filter(isFace).sort(handSort);   // 10以上は公開情報
+  fs.phase='play';
+  fs.leadIdx = fs.napIdx; fs.turnIdx = fs.napIdx; fs.trickNo=0; fs.trick=[];
+  addLog(`ナポレオンが${need}枚を伏せて交換（伏せ札は得点になりません）`);
+  if(fs.openDiscards.length){
+    addLog(`📢 伏せ札の公開：${fs.openDiscards.map(cardName).join(' ')}（この絵札は場から消えます）`);
+  }
+  addLog(`▶ ${nap.name} のリードで開始`);
+  sendHand(nap); bcast();
+}
+function doPlay(pid, key){
+  if(fs.phase!=='play' || fs.lock) return;
+  const p = fs.players[fs.turnIdx];
+  if(!p || p.id!==pid) return;
+  const lead = leadSuitOf(fs.trick);
+  const legal = legalCards(p.hand, lead, club3Played(fs.trick));
+  const idx = p.hand.findIndex(c=>ck(c)===key);
+  if(idx<0) return;
+  const card = p.hand[idx];
+  if(!legal.some(c=>ck(c)===key)) return;
+  p.hand.splice(idx,1);
+  fs.trick.push({pid:p.id, card});
+  addLog(`${p.name}：${cardName(card)}`);
+  if(isClub3(card) && fs.trick.length < fs.players.length){
+    addLog('♣3！ これより後の手番でジョーカーを持つ人は必ず出すこと');
+  }
+
+  // 副官カードが出ても正体は公表しない（結果発表まで伏せたまま）
+  if(fs.adjCard && !fs.adjFound && card.s===fs.adjCard.s && card.r===fs.adjCard.r){
+    fs.adjFound = true;
+  }
+  sendHand(p);
+
+  if(fs.trick.length === fs.players.length){
+    fs.lock = true;
+    const info = trickInfo(fs.trick, fs.trump, fs.trickNo);
+    if(info.kaeshi) addLog('💃 よろめき返し！ ♥K が ♥Q を制した');
+    else if(info.yoromeki) addLog('💃 よろめき！ ♥Q がジョーカーを制した');
+    fs.trickEvent = info.kaeshi ? 'kaeshi' : (info.yoromeki ? 'yoromeki' : null);
+    const w = trickWinnerIdx(fs.trick, fs.trump, fs.trickNo);
+    fs.lastWin = w;
+    bcast();
+    setTimeout(resolveTrick, RESOLVE_MS);
+  } else {
+    fs.turnIdx = (fs.turnIdx+1) % fs.players.length;
+    bcast();
+  }
+}
+function resolveTrick(){
+  if(!fs || fs.phase!=='play') return;
+  const w = fs.lastWin;
+  const winPid = fs.trick[w].pid;
+  const wp = fs.players.find(p=>p.id===winPid);
+  const faces = fs.trick.map(t=>t.card).filter(isFace);
+  wp.won = wp.won.concat(faces);
+  addLog(`🏅 ${wp.name} がトリック獲得（絵札 +${faces.length}）`);
+  fs.trick=[]; fs.lastWin=-1; fs.trickEvent=null; fs.trickNo++;
+  const wi = fs.players.findIndex(p=>p.id===winPid);
+  fs.leadIdx = wi; fs.turnIdx = wi;
+  fs.lock=false;
+  if(fs.players[0].hand.length===0){ finishGame(); return; }
+  bcast();
+}
+function napSide(p){ return p.role==='napoleon' || p.role==='ally'; }
+function finishGame(){
+  const napFaces = fs.players.filter(napSide).reduce((a,p)=>a+p.won.length, 0);
+  const ok = napFaces >= fs.bidNum;
+  fs.players.forEach(p=>p.revealed=true);
+  fs.winner = { side: ok?'nap':'union', napFaces, bidNum:fs.bidNum, napName:fs.players[fs.napIdx].name };
+  fs.phase='result';
+  addLog(`ナポレオン軍 絵札${napFaces}枚 / 宣言${fs.bidNum}枚 → ${ok?'達成':'未達'}`);
+  bcast();
+  if(!isSolo) fbPut('meta', {host:myId, game:'napoleon', ts:Date.now()});
+}
+
+// ============================================================
+// HOST: 配信
+// ============================================================
+function pubPlayer(p){
+  const open = p.revealed || p.role==='napoleon';
+  return { id:p.id, name:p.name, bot:p.bot, handCount:p.hand.length, wonCount:p.won.length,
+           role: open ? p.role : 'hidden', passed:p.passed };
+}
+function pubFs(f){
+  return {
+    phase:f.phase, trump:f.trump, bidNum:f.bidNum, napIdx:f.napIdx, adjCard:f.adjCard,
+    bidTurn:f.bidTurn, high:f.high ? {pid:f.high.pid, num:f.high.num, suit:f.high.suit} : null,
+    turnIdx:f.turnIdx, trickNo:f.trickNo, lock:f.lock, lastWin:f.lastWin, winner:f.winner,
+    kittyCount: SETUP[f.players.length] ? SETUP[f.players.length].kitty : 0,
+    openDiscards: (f.openDiscards||[]).slice(), trickEvent: f.trickEvent||null,
+    players: f.players.map(pubPlayer),
+    trick: f.trick.map(t=>({pid:t.pid, card:t.card})),
+    log: f.log.slice(-40)
+  };
+}
+function bcast(){
+  if(!fs) return;
+  gs = pubFs(fs);
+  const msg = {type:'state', s:gs};
+  if(isSolo){ handleBroadcast(msg); }
+  else { fbBroadcast(msg); if(!fs.lock) pgSaveHostState(); handleBroadcast(msg); }
+  maybeBot();
+}
+function sendHand(p){
+  if(p.bot) return;
+  const msg = {type:'hand', hand:p.hand.slice(), role:p.role};
+  if(p.id===myId) handlePrivate(msg);
+  else if(!isSolo) fbSendTo(p.id, msg);
+}
+function sendHands(){ fs.players.forEach(sendHand); }
+
+// ============================================================
+// CLIENT
+// ============================================================
+let myRole = 'union';
+function handleBroadcast(msg){
+  if(!msg) return;
+  if(msg.type==='state'){
+    gs = msg.s;
+    pgTouchSession();
+    routeScreen();
+    const act = actorPid();
+    if(gs.phase!=='result' && act===myId && prevActPid!==myId && !gs.lock) notifyTurn();
+    prevActPid = act;
+  }
+}
+function handlePrivate(msg){
+  if(!msg) return;
+  if(msg.type==='hand'){ myHand = msg.hand.slice(); if(msg.role) myRole = msg.role; if(gs) renderGame(); }
+  if(msg.type==='error'){ setErr(msg.msg||'エラー'); show('lobby'); fbClose(); pgClearSession(); }
+}
+function actorPid(){
+  if(!gs) return null;
+  if(gs.phase==='bid') return gs.players[gs.bidTurn]?.id;
+  if(gs.phase==='adjutant' || gs.phase==='discard') return gs.players[gs.napIdx]?.id;
+  if(gs.phase==='play') return gs.players[gs.turnIdx]?.id;
+  return null;
+}
+function routeScreen(){
+  if(!gs) return;
+  if(gs.phase==='waiting'){ show('waiting'); renderWaiting(); }
+  else if(gs.phase==='result'){ show('result'); renderResult(); }
+  else { show('game'); renderGame(); }
+}
+function myTurn(){ return gs && !gs.lock && actorPid()===myId; }
+
+// ---------- UIアクション ----------
+function send(msg){ if(isHost||isSolo) onMsg(msg, myId); else fbSendToHost(msg); }
+function uiBid(){ if(!myTurn() || !canOutbid(uiBidNum, uiBidSuit)) return; send({type:'bid', num:uiBidNum, suit:uiBidSuit}); }
+function uiPass(){ if(!myTurn()) return; send({type:'pass'}); }
+function uiAdjutant(){
+  if(!myTurn()) return;
+  if(uiAdjSuit==='X') send({type:'adjutant', s:'X', r:0});
+  else send({type:'adjutant', s:uiAdjSuit, r:uiAdjRank});
+}
+function uiDiscard(){
+  if(!myTurn() || gs.phase!=='discard') return;
+  if(discardPick.length !== gs.kittyCount) return;
+  send({type:'discard', keys:discardPick.slice()});
+  discardPick = [];
+}
+function uiPlayCard(key){
+  if(!myTurn() || gs.phase!=='play') return;
+  send({type:'play', key});
+}
+function uiTapCard(key){
+  if(!gs) return;
+  if(gs.phase==='discard' && myTurn()){
+    const i = discardPick.indexOf(key);
+    if(i>=0) discardPick.splice(i,1);
+    else if(discardPick.length < gs.kittyCount) discardPick.push(key);
+    renderGame();
+  } else if(gs.phase==='play'){
+    uiPlayCard(key);
+  }
+}
+
+// ---------- 描画 ----------
+function renderWaiting(){
+  const box = g('wait-players'); box.innerHTML='';
+  gs.players.forEach((p,i)=>{
+    const c = mk('div','player-chip');
+    c.innerHTML = `<span>${i===0?'👑':'🎴'}</span><span style="flex:1;">${esc(p.name)}${p.id===myId?' <span class="tag">(あなた)</span>':''}</span>`;
+    box.appendChild(c);
+  });
+  const n = gs.players.length, cfg = SETUP[n];
+  g('wait-setup').innerHTML = cfg
+    ? `いまの人数（${n}人）：手札 <b>${cfg.hand}枚</b> ／ 埋め札 <b>${cfg.kitty}枚</b> ／ 絵札は全20枚`
+    : `4〜6人で開始できます（現在${n}人）`;
+  if(isHost){
+    g('btn-start').style.display='';
+    g('btn-start').disabled = !(n>=4 && n<=6);
+    g('wait-status').textContent = (n>=4&&n<=6) ? '' : '4〜6人で開始できます';
+  } else {
+    g('btn-start').style.display='none';
+    g('wait-status').textContent = 'ホストの開始を待っています...';
+  }
+}
+
+function cardEl(c, opt){
+  opt = opt || {};
+  const d = mk('div','card' + (isJoker(c)?' joker':'') + ((!isJoker(c)&&isRed(c.s))?' red':''));
+  if(isJoker(c)) d.textContent = '🃏';
+  else d.innerHTML = `<span class="cr">${rankLabel(c.r)}</span><span class="cs">${SUIT_MARK[c.s]}</span>`;
+  const t = gs ? gs.trump : 'S';
+  let bd = '';
+  if(isMighty(c)) bd='マイティー';
+  else if(isJoker(c)) bd='';
+  else if(gs && gs.phase!=='bid' && isFrontJ(c,t)) bd='表J';
+  else if(gs && gs.phase!=='bid' && isBackJ(c,t)) bd='裏J';
+  else if(isHeartQ(c)) bd='よろめき';
+  else if(isHeartK(c)) bd='よろ返し';
+  else if(isClub3(c)) bd='あぶり出し';
+  if(bd){ const b=mk('div','badge'); b.textContent=bd; d.appendChild(b); d.classList.add('sp'); }
+  if(opt.dim) d.classList.add('dim');
+  if(opt.pick) d.classList.add('pick');
+  if(opt.onclick) d.onclick = opt.onclick;
+  return d;
+}
+
+function roleBadge(p){
+  if(p.role==='napoleon') return '<span class="rolebadge rb-nap">ナポレオン</span>';
+  if(p.role==='ally') return '<span class="rolebadge rb-ally">副官</span>';
+  if(p.role==='union') return '<span class="rolebadge rb-uni">連合軍</span>';
+  return '';
+}
+
+function renderGame(){
+  if(!gs) return;
+  const n = gs.players.length;
+  // ヘッダー
+  const hl = g('hdr-left');
+  if(gs.phase==='bid'){
+    hl.innerHTML = `${isSolo?'練習モード':(roomCode?'ルーム '+roomCode:'')} ／ 競り`;
+  } else {
+    const adj = gs.adjCard ? (isJoker(gs.adjCard) ? '🃏' : `${SUIT_MARK[gs.adjCard.s]}${rankLabel(gs.adjCard.r)}`) : '—';
+    hl.innerHTML = `切り札 <b>${SUIT_MARK[gs.trump]}</b> ／ 宣言 <b>${gs.bidNum}</b> ／ 副官 <b>${adj}</b> ／ ${gs.trickNo+1}巡`;
+  }
+  // 手番バー
+  const tb = g('turnbar');
+  const actor = gs.players.find(p=>p.id===actorPid());
+  let txt = '';
+  if(gs.lock) txt = '判定中...';
+  else if(gs.phase==='bid') txt = myTurn() ? '▶ あなたの番：宣言 or パス' : `▶ ${actor?actor.name:''} が競り中`;
+  else if(gs.phase==='adjutant') txt = myTurn() ? '▶ 副官カードを指定してください' : `▶ ${actor?actor.name:''} が副官を指定中`;
+  else if(gs.phase==='discard') txt = myTurn() ? `▶ ${gs.kittyCount}枚を伏せてください` : `▶ ${actor?actor.name:''} がカード交換中`;
+  else txt = myTurn() ? '▶ あなたの番：カードを出す' : `▶ ${actor?actor.name:''} の番`;
+  tb.textContent = txt;
+  tb.className = 'turnbar' + ((!gs.lock && myTurn()) ? ' me' : '');
+
+  // フェーズ別パネル
+  g('panel-bid').style.display = gs.phase==='bid' ? '' : 'none';
+  g('panel-adj').style.display = gs.phase==='adjutant' ? '' : 'none';
+  g('panel-trick').style.display = (gs.phase==='play') ? '' : 'none';
+
+  if(gs.phase==='bid') renderBid();
+  if(gs.phase==='adjutant') renderAdj();
+  if(gs.phase==='play') renderTrick();
+
+  // プレイヤー一覧
+  const pl = g('players'); pl.innerHTML='';
+  const curPid = actorPid();
+  gs.players.forEach(p=>{
+    const row = mk('div','prow' + (p.id===curPid && !gs.lock ? ' turn':''));
+    let right = '';
+    if(gs.phase==='bid') right = p.passed ? '<span class="tag">パス</span>' : (gs.high && gs.high.pid===p.id ? `<span class="tag" style="color:var(--gold)">${gs.high.num}${SUIT_MARK[gs.high.suit]}</span>` : '');
+    else right = `<span class="tag">絵札${p.wonCount} / 手札${p.handCount}</span>`;
+    const shown = (p.id===myId && p.role==='hidden') ? Object.assign({}, p, {role:myRole}) : p;
+    row.innerHTML =
+      `<span class="pname" style="flex:1;">${esc(p.name)}${p.id===myId?'★':''}</span>` +
+      roleBadge(shown) + right;
+    pl.appendChild(row);
+  });
+  const opened = (gs.openDiscards||[]).length;
+  g('score-hint').textContent = gs.phase==='bid' ? ''
+    : `（絵札は残り${20-opened}枚・ナポレオン軍は${gs.bidNum}枚で勝ち）`;
+  const od = g('opendis');
+  if(opened && gs.phase!=='bid'){
+    od.style.display='';
+    od.innerHTML = '📢 公開された伏せ札（得点対象外）：' + gs.openDiscards.map(c=>esc(cardName(c))).join(' ');
+  } else od.style.display='none';
+
+  // 手札
+  const mh = g('myhand'); mh.innerHTML='';
+  const lead = (gs.phase==='play') ? leadSuitOf(gs.trick) : null;
+  const c3out = gs.phase==='play' && club3Played(gs.trick);
+  const legal = (gs.phase==='play' && gs.trick.length) ? legalCards(myHand, lead, c3out) : myHand;
+  myHand.forEach(c=>{
+    const key = ck(c);
+    const playable = gs.phase==='play' ? (myTurn() && legal.some(x=>ck(x)===key)) : (gs.phase==='discard' && myTurn());
+    const el = cardEl(c, {
+      dim: (gs.phase==='play' && myTurn() && !playable),
+      pick: gs.phase==='discard' && discardPick.includes(key),
+      onclick: ()=>uiTapCard(key)
+    });
+    mh.appendChild(el);
+  });
+  const hint = g('hand-hint');
+  if(gs.phase==='discard' && myTurn()) hint.textContent = `（${discardPick.length}/${gs.kittyCount}枚 選択中）`;
+  else if(gs.phase==='play' && myTurn() && c3out && myHand.some(isJoker)) hint.textContent = '（♣3が出たのでジョーカーを出す義務があります）';
+  else if(gs.phase==='play' && myTurn() && gs.trick.length===1 && isJoker(gs.trick[0].card)) hint.textContent = '（ジョーカーリード：好きなカードを出せます。出したスートが台札になります）';
+  else if(gs.phase==='play' && myTurn() && gs.trick.length) hint.textContent = lead ? `（台札 ${SUIT_MARK[lead]}・薄いカードは出せません）` : '（自由に出せます）';
+  else hint.textContent = myRole==='napoleon' ? '（あなたはナポレオン）' : (myRole==='ally' ? '（あなたは副官）' : '');
+  const bd = g('btn-discard');
+  if(gs.phase==='discard' && myTurn()){
+    bd.style.display=''; bd.textContent = `この${discardPick.length}枚を伏せる`;
+    bd.disabled = discardPick.length !== gs.kittyCount;
+  } else bd.style.display='none';
+
+  // ログ
+  const lg = g('game-log'); lg.innerHTML='';
+  (gs.log||[]).slice().reverse().forEach(t=>{ const d=mk('div'); d.textContent=t; lg.appendChild(d); });
+}
+
+function renderBid(){
+  const cur = g('bid-cur');
+  cur.innerHTML = gs.high
+    ? `現在の最高：<b style="color:var(--gold)">${gs.high.num}枚 ${SUIT_MARK[gs.high.suit]}${SUIT_NAME[gs.high.suit]}</b>（${esc(gs.players.find(p=>p.id===gs.high.pid)?.name||'')}）`
+    : '<span style="color:var(--muted)">まだ宣言はありません（最低13枚）</span>';
+  const ui = g('bid-ui');
+  if(!myTurn()){ ui.style.display='none'; return; }
+  ui.style.display='';
+  const minNum = gs.high ? gs.high.num : MIN_BID;
+  if(uiBidNum < minNum) uiBidNum = minNum;
+  const nb = g('bid-num'); nb.innerHTML='';
+  for(let v=minNum; v<=Math.min(MAX_BID, minNum+3); v++){
+    const b = mk('button','btn'+(v===uiBidNum?' on':''));
+    b.textContent = v+'枚';
+    b.onclick = ()=>{ uiBidNum=v; renderBid(); };
+    nb.appendChild(b);
+  }
+  const sb = g('bid-suit'); sb.innerHTML='';
+  SUITS.forEach(s=>{
+    const b = mk('button','btn'+(s===uiBidSuit?' on':''));
+    b.innerHTML = SUIT_MARK[s];
+    b.style.color = isRed(s) ? '#ff6b7a' : '';
+    b.onclick = ()=>{ uiBidSuit=s; renderBid(); };
+    sb.appendChild(b);
+  });
+  // 現在の最高を上回れる組み合わせかを判定
+  const okBid = canOutbid(uiBidNum, uiBidSuit);
+  g('btn-bid').disabled = !okBid;
+  g('bid-hint').textContent = okBid ? ''
+    : `${gs.high.num}枚 ${SUIT_MARK[gs.high.suit]} より上（枚数を増やすか、より強いスート）が必要です`;
+}
+function canOutbid(num, suit){
+  if(!gs || !gs.high) return true;
+  return num > gs.high.num || (num === gs.high.num && SUIT_ORDER[suit] > SUIT_ORDER[gs.high.suit]);
+}
+function renderAdj(){
+  const mine = myTurn();
+  g('adj-ui').style.display = mine ? '' : 'none';
+  g('adj-wait').textContent = mine ? '' : 'ナポレオンが副官カードを指定しています...';
+  if(!mine) return;
+  const sb = g('adj-suit'); sb.innerHTML='';
+  SUITS.concat(['X']).forEach(s=>{
+    const b = mk('button','btn'+(s===uiAdjSuit?' on':''));
+    b.innerHTML = s==='X' ? '🃏' : SUIT_MARK[s];
+    if(s!=='X') b.style.color = isRed(s) ? '#ff6b7a' : '';
+    b.onclick = ()=>{ uiAdjSuit=s; renderAdj(); };
+    sb.appendChild(b);
+  });
+  const rb = g('adj-rank');
+  if(uiAdjSuit==='X'){
+    rb.style.display='none';
+    g('btn-adj').textContent = 'ジョーカーを副官カードにする';
+    return;
+  }
+  rb.style.display='';
+  g('btn-adj').textContent = 'このカードを副官にする';
+  rb.innerHTML='';
+  [1,13,12,11,10].forEach(r=>{
+    const b = mk('button','btn'+(r===uiAdjRank?' on':''));
+    b.textContent = rankLabel(r);
+    b.onclick = ()=>{ uiAdjRank=r; renderAdj(); };
+    rb.appendChild(b);
+  });
+}
+function renderTrick(){
+  // 台札は常に表示する
+  const ls = g('leadsuit');
+  const lsuit = leadSuitOf(gs.trick);
+  const jokerLed = gs.trick.length > 0 && isJoker(gs.trick[0].card);
+  if(gs.trick.length === 0){
+    ls.innerHTML = '台札：<span style="opacity:.6">まだ出ていません（リード待ち）</span>';
+  } else if(!lsuit){
+    ls.innerHTML = '台札：<span style="color:var(--gold)">未定（ジョーカーリード → 次のカードのスートが台札）</span>';
+  } else {
+    const col = isRed(lsuit) ? '#ff6b7a' : '#e8eefc';
+    ls.innerHTML = `台札：<span class="ls" style="color:${col}">${SUIT_MARK[lsuit]}</span> <span style="color:${col}">${SUIT_NAME[lsuit]}</span>`
+      + (jokerLed ? '<span style="opacity:.65; font-weight:400;">（ジョーカーリードの2枚目）</span>' : '');
+  }
+  const tr = g('trick'); tr.innerHTML='';
+  gs.trick.forEach((t,i)=>{
+    const sl = mk('div','tslot' + (gs.lock && gs.lastWin===i ? ' win':''));
+    sl.appendChild(cardEl(t.card, {}));
+    const nm = mk('div','tname');
+    nm.textContent = gs.players.find(p=>p.id===t.pid)?.name || '';
+    sl.appendChild(nm);
+    tr.appendChild(sl);
+  });
+  const m = g('trick-msg');
+  if(gs.lock && gs.lastWin>=0){
+    const w = gs.players.find(p=>p.id===gs.trick[gs.lastWin].pid);
+    const faces = gs.trick.map(t=>t.card).filter(isFace).length;
+    const ev = {kaeshi:'💃 よろめき返し！ ', yoromeki:'💃 よろめき！ '}[gs.trickEvent] || '';
+    m.className='msg ok'; m.textContent = `${ev}${w?w.name:''} が獲得（絵札 ${faces}枚）`;
+  } else if(gs.trick.length===0){ m.className='msg'; m.textContent=''; }
+  else if(club3Played(gs.trick) && !gs.trick.some(t=>isJoker(t.card))){
+    m.className='msg gold'; m.textContent = '♣3！ ジョーカー保持者は出す義務あり';
+  }
+  else { m.className='msg'; m.textContent=''; }
+}
+function renderResult(){
+  const w = gs.winner || {};
+  const iAmNap = gs.players.find(p=>p.id===myId && (p.role==='napoleon'||p.role==='ally'));
+  const iWin = (w.side==='nap') === !!iAmNap;
+  g('result-emoji').textContent = iWin ? '🏆' : '💀';
+  g('result-title').textContent = w.side==='nap' ? 'ナポレオン軍の勝ち！' : '連合軍の勝ち！';
+  const opened = (gs.openDiscards||[]);
+  g('result-sub').innerHTML = `宣言 ${w.bidNum}枚 に対し ナポレオン軍は ${w.napFaces}枚`
+    + (opened.length ? `<br><span style="font-size:0.78rem;">伏せ札で場から消えた絵札：${opened.map(c=>esc(cardName(c))).join(' ')}</span>` : '');
+  const box = g('result-players'); box.innerHTML='';
+  gs.players.forEach(p=>{
+    const c = mk('div','player-chip');
+    c.innerHTML = `<span style="flex:1;">${esc(p.name)}${p.id===myId?'★':''}</span>${roleBadge(p)}<span class="tag">絵札 ${p.wonCount}</span>`;
+    box.appendChild(c);
+  });
+  g('btn-rematch').style.display = isHost ? '' : 'none';
+  g('result-status').textContent = isHost ? '' : 'ホストが「もう一度」を押すと再戦できます';
+}
+
+// ============================================================
+// BOT
+// ============================================================
+function maybeBot(){
+  if(botTimer){ clearTimeout(botTimer); botTimer=null; }
+  if(!fs || !(isHost||isSolo)) return;
+  if(fs.lock || fs.phase==='waiting' || fs.phase==='result') return;
+  let p = null;
+  if(fs.phase==='bid') p = fs.players[fs.bidTurn];
+  else if(fs.phase==='adjutant' || fs.phase==='discard') p = fs.players[fs.napIdx];
+  else if(fs.phase==='play') p = fs.players[fs.turnIdx];
+  if(!p || !p.bot) return;
+  const pid = p.id;
+  botTimer = setTimeout(()=>botAct(pid), BOT_WAIT + Math.random()*BOT_WAIT_R);
+}
+function handScore(hand, trump){
+  let s = hand.filter(c=>c.s===trump).length * 1.15;
+  if(hand.some(isJoker)) s += 2.6;
+  if(hand.some(isMighty)) s += 3.0;
+  if(hand.some(c=>isFrontJ(c,trump))) s += 2.0;
+  if(hand.some(c=>isBackJ(c,trump))) s += 1.2;
+  s += hand.filter(isFace).length * 0.55;
+  s += hand.filter(c=>c.s===trump && rankVal(c.r)>=12).length * 0.4;
+  return s;
+}
+function botBestBid(hand){
+  let best = null;
+  for(const s of SUITS){
+    const sc = handScore(hand, s);
+    if(!best || sc > best.score) best = {score:sc, suit:s};
+  }
+  const extra = Math.max(0, Math.min(3, Math.floor((best.score - 9.5)/1.6)));
+  return { suit:best.suit, num: MIN_BID + extra, score: best.score };
+}
+function botAct(pid){
+  botTimer = null;
+  if(!fs || fs.lock) return;
+  const p = fs.players.find(x=>x.id===pid);
+  if(!p || !p.bot) return;
+
+  if(fs.phase==='bid'){
+    if(fs.players[fs.bidTurn]?.id !== pid) return;
+    const b = botBestBid(p.hand);
+    const minNum = fs.high ? fs.high.num : MIN_BID;
+    let num = Math.max(b.num, minNum), suit = b.suit;
+    if(fs.high && num===fs.high.num && SUIT_ORDER[suit] <= SUIT_ORDER[fs.high.suit]){
+      const up = SUITS.filter(s=>SUIT_ORDER[s] > SUIT_ORDER[fs.high.suit]);
+      if(up.length && b.score >= 9.5) suit = up[0]; else num += 1;
+    }
+    const canAfford = b.score >= 8.6 + (num - MIN_BID) * 1.5;
+    if(num <= MAX_BID && canAfford) doBid(pid, num, suit);
+    else doPass(pid);
+    return;
+  }
+  if(fs.phase==='adjutant'){
+    const want = [{s:'S',r:1}, {s:'X',r:0}, {s:fs.trump,r:11}, {s:fs.trump,r:1}, {s:fs.trump,r:13}];
+    let pick = want.find(w=>!p.hand.some(c=>c.s===w.s && c.r===w.r));
+    if(!pick){
+      const lack = SUITS.find(s=>!p.hand.some(c=>c.s===s && c.r===1));
+      pick = lack ? {s:lack, r:1} : {s:'S', r:13};
+    }
+    doAdjutant(pid, pick.s, pick.r);
+    return;
+  }
+  if(fs.phase==='discard'){
+    const need = SETUP[fs.players.length].kitty;
+    const score = c => {
+      if(isJoker(c)) return 999;
+      if(isMighty(c)) return 998;
+      if(isFrontJ(c,fs.trump)) return 997;
+      if(isBackJ(c,fs.trump)) return 990;
+      if(isClub3(c)) return 900;
+      if(c.s===fs.trump) return 500 + rankVal(c.r);
+      if(isFace(c)) return 300 + rankVal(c.r);
+      return rankVal(c.r);
+    };
+    const keys = p.hand.slice().sort((a,b)=>score(a)-score(b)).slice(0, need).map(ck);
+    doDiscard(pid, keys);
+    return;
+  }
+  if(fs.phase==='play'){
+    if(fs.players[fs.turnIdx]?.id !== pid) return;
+    doPlay(pid, botChooseCard(p));
+  }
+}
+function botKnownTeam(bot, other){
+  if(other.id===bot.id) return 'self';
+  if(other.role==='napoleon') return 'nap';
+  if(other.revealed) return napSide(other) ? 'nap' : 'union';
+  return '?';
+}
+function botIsAlly(bot, other){
+  const t = botKnownTeam(bot, other);
+  if(t==='self') return true;
+  if(napSide(bot)) return t==='nap';
+  return t==='union' ? true : (t==='nap' ? false : true);   // 連合軍は未判明を味方とみなす
+}
+function botChooseCard(bot){
+  const lead = leadSuitOf(fs.trick);
+  const legal = legalCards(bot.hand, lead, club3Played(fs.trick));
+  if(legal.length===1) return ck(legal[0]);
+  const ctx = fs.trick.length
+    ? Object.assign({}, trickInfo(fs.trick, fs.trump, fs.trickNo), {isLeadCard:false})
+    : {trump:fs.trump, lead, jokerInTrick:false, yoromeki:false, trickNo:fs.trickNo, isLeadCard:false};
+  const low = arr => arr.slice().sort((a,b)=>{
+    const f = c => (isFace(c)?100:0) + (c.s===fs.trump?50:0) + rankVal(c.r);
+    return f(a)-f(b);
+  })[0];
+
+  // リード
+  if(fs.trick.length===0){
+    const strong = legal.filter(c=>isJoker(c)||isMighty(c)||isFrontJ(c,fs.trump));
+    if(strong.length && (fs.trickNo>=1 || napSide(bot))) return ck(strong[0]);
+    // セイム2をリードして安くトリックを取りに行く（第1トリックは無効なので除外）
+    const same2 = legal.filter(c=>c.r===2 && c.s !== fs.trump);
+    if(same2.length && fs.trickNo>=1 && Math.random()<0.3) return ck(same2[0]);
+    const trumps = legal.filter(c=>c.s===fs.trump && rankVal(c.r)>=12);
+    if(trumps.length && fs.trickNo>=2) return ck(trumps[0]);
+    const plain = legal.filter(c=>!isFace(c) && c.s!==fs.trump && !isJoker(c));
+    return ck(plain.length ? low(plain) : low(legal));
+  }
+  // フォロー
+  let bestP = -1, bestPid = null;
+  fs.trick.forEach((t,i)=>{
+    const pw = cardPower(t.card, Object.assign({}, ctx, {isLeadCard:i===0}));
+    if(pw > bestP){ bestP = pw; bestPid = t.pid; }
+  });
+  const winnerP = fs.players.find(p=>p.id===bestPid);
+  const teammateWinning = winnerP && botIsAlly(bot, winnerP);
+  const faceInTrick = fs.trick.filter(t=>isFace(t.card)).length;
+  const last = fs.trick.length === fs.players.length - 1;
+
+  if(teammateWinning && (last || faceInTrick>0)){
+    const myFace = legal.filter(isFace);
+    if(myFace.length) return ck(low(myFace));   // 味方が勝っているなら絵札を乗せる
+    return ck(low(legal));
+  }
+  const winners = legal.filter(c=>cardPower(c, ctx) > bestP)
+                       .sort((a,b)=>cardPower(a,ctx)-cardPower(b,ctx));
+  if(winners.length){
+    const worth = faceInTrick>0 || last || fs.trickNo>=fs.players.length-2;
+    if(worth) return ck(winners[0]);
+    const cheap = winners.filter(c=>!isJoker(c) && !isMighty(c) && !isFrontJ(c,fs.trump));
+    if(cheap.length) return ck(cheap[0]);
+  }
+  const junk = legal.filter(c=>!isFace(c) && !isJoker(c));
+  return ck(junk.length ? low(junk) : low(legal));
+}
+
+// ============================================================
+// SESSION
+// ============================================================
+const PG_SESSION_KEY = 'pgSession_napoleon';
+let pgLastTouch = 0;
+function pgSaveSession(){ if(isSolo) return; pgLastTouch = Date.now(); try{ localStorage.setItem(PG_SESSION_KEY, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); }catch(e){} }
+// プレイ中も定期的に保存し直す（60秒に1回まで）。長時間対局でセッションが期限切れになるのを防ぐ
+function pgTouchSession(){ if(isSolo || !fbRoom) return; if(Date.now()-pgLastTouch < 60000) return; pgSaveSession(); }
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && fbRoom && !isSolo) pgSaveSession(); });
+window.addEventListener('pagehide', ()=>{ if(fbRoom && !isSolo) pgSaveSession(); });
+function pgLoadSession(){ try{ const r=localStorage.getItem(PG_SESSION_KEY); if(!r) return null; const s=JSON.parse(r); if(Date.now()-s.ts>3*60*60*1000){ pgClearSession(); return null; } return s; }catch(e){ return null; } }
+function pgClearSession(){ try{ localStorage.removeItem(PG_SESSION_KEY); }catch(e){} }
+function pgShowReconnect(){ const s=pgLoadSession(), b=g('btn-reconnect'); if(!b) return; if(!s||!s.roomCode){ b.style.display='none'; return; } b.style.display=''; b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）'; }
+function pgSaveHostState(){
+  if(!isHost || isSolo || !fbRoom || !fs) return;
+  try{ fbPut('hostState', {ts:Date.now(), fsJson:JSON.stringify(fs), actTs:JSON.stringify(fbLastActTs||{})}); }catch(e){}
+}
+async function pgReconnect(){
+  const s = pgLoadSession(); if(!s) return;
+  myId=s.myId; myName=s.myName; roomCode=s.roomCode; fbRoom=s.fbRoom; isHost=s.isHost; isSolo=false;
+  setSt('再接続中...');
+  try{
+    const meta = await fbGet('meta');
+    if(!meta){ pgClearSession(); pgShowReconnect(); setErr('ルームが見つかりません（終了済みの可能性）'); setSt(''); fbRoom=''; return; }
+    if(isHost){
+      const hs = await fbGet('hostState');
+      if(hs && hs.fsJson){
+        fs = JSON.parse(hs.fsJson);
+        if(fs.lock){ fs.lock=false; fs.lastWin=-1; }
+        fbListen();
+        try{ fbLastActTs = JSON.parse(hs.actTs||'{}'); }catch(e){ fbLastActTs={}; }
+        if(g('disp-code')) g('disp-code').textContent = roomCode;
+        pgSaveSession(); sendHands(); bcast();
+      } else { setErr('ルームの状態を復元できませんでした'); setSt(''); return; }
+    } else {
+      fbListen();
+      fbSendToHost({type:'join', name:myName, id:myId});
+      pgSaveSession();
+      if(g('disp-code')) g('disp-code').textContent = roomCode;
+      const bs=g('btn-start'); if(bs) bs.style.display='none';
+      show('waiting');
+    }
+    setErr(''); setSt('');
+  }catch(e){ setErr('再接続に失敗しました'); setSt(''); }
+}
+setTimeout(pgShowReconnect, 300);
+window.addEventListener('pageshow', ()=>pgShowReconnect());
+
+// テスト用に内部関数を公開
+window.__nap = { cardPower, trickWinnerIdx, trickInfo, legalCards, leadSuitOf, club3Played, isSame2, isFace, ck, SETUP, backSuit };
+</script>
+
+<script>
+/* ================================================================
+   PG共通アドオン v1
+   ① 切断検知 ② 名前保存 ③ 古いルーム掃除 ④ 遊び方モーダル
+   ================================================================ */
+(function(){
+'use strict';
+var HB_MS=15000, WATCH_MS=10000, STALE_MS=40000;
+var ROOM_TTL=24*60*60*1000, CLEAN_EVERY=6*60*60*1000;
+var NAME_KEY='pgPlayerName';
+
+function db(){
+  try{ if(typeof fbUrl==='string' && fbUrl.indexOf('https://')===0) return fbUrl; }catch(e){}
+  return 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+}
+function room(){ try{ return (typeof fbRoom==='string') ? fbRoom : ''; }catch(e){ return ''; } }
+function me(){ var id='',nm='';
+  try{ if(typeof myId==='string') id=myId; }catch(e){}
+  try{ if(typeof myName==='string') nm=myName; }catch(e){}
+  return {id:id, name:nm};
+}
+function put(url,body){ try{ return fetch(url,{method:'PUT',body:JSON.stringify(body),keepalive:true}); }catch(e){ return null; } }
+
+function initName(){
+  var saved='';
+  try{ saved = localStorage.getItem(NAME_KEY) || localStorage.getItem('spName') || ''; }catch(e){}
+  ['in-name','my-name'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    if(saved && !el.value) el.value=saved;
+    function save(){ var v=(el.value||'').trim(); if(v){ try{ localStorage.setItem(NAME_KEY,v); }catch(e){} } }
+    el.addEventListener('change',save); el.addEventListener('blur',save);
+  });
+}
+
+var lastRoom='';
+function syncRoom(){
+  var r=room(), m=me();
+  if(r!==lastRoom){
+    if(lastRoom && m.id){ try{ fetch(db()+'/rooms/'+lastRoom+'/presence/'+m.id+'.json',{method:'DELETE',keepalive:true}); }catch(e){} }
+    lastRoom=r;
+  }
+}
+function beat(){ syncRoom(); var r=room(), m=me(); if(!r||!m.id) return; put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?'}); }
+function markLeft(){ syncRoom(); var r=room(), m=me(); if(!r||!m.id) return; put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?',left:1}); }
+var hideUntil=0;
+function banner(txt){
+  var b=document.getElementById('pga-banner');
+  if(!txt || Date.now()<hideUntil){ if(b) b.style.display='none'; return; }
+  if(!b){
+    b=document.createElement('div'); b.id='pga-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99990;background:rgba(178,34,34,.93);color:#fff;font-size:12px;line-height:1.4;padding:5px 30px 5px 10px;text-align:center;font-family:sans-serif;';
+    var t=document.createElement('span'); t.id='pga-banner-text'; b.appendChild(t);
+    var x=document.createElement('span'); x.textContent='\u2715';
+    x.style.cssText='position:absolute;right:8px;top:4px;cursor:pointer;padding:0 4px;';
+    x.onclick=function(){ hideUntil=Date.now()+60000; b.style.display='none'; };
+    b.appendChild(x); document.body.appendChild(b);
+  }
+  document.getElementById('pga-banner-text').textContent=txt;
+  b.style.display='block';
+}
+function watch(){
+  syncRoom();
+  var r=room(), m=me();
+  if(!r){ banner(''); return; }
+  fetch(db()+'/rooms/'+r+'/presence.json').then(function(res){ return res.json(); }).then(function(d){
+    if(room()!==r) return;
+    if(!d){ banner(''); return; }
+    var now=Date.now(), gone=[];
+    Object.keys(d).forEach(function(pid){
+      if(pid===m.id) return;
+      var p=d[pid]||{};
+      if(p.left || (p.t && now-p.t>STALE_MS)) gone.push(p.n||'?');
+    });
+    banner(gone.length ? ('\u26A0\uFE0F \u901A\u4FE1\u304C\u9014\u5207\u308C\u3066\u3044\u307E\u3059: '+gone.join('\u3001')) : '');
+  }).catch(function(){});
+}
+setInterval(beat,HB_MS); setTimeout(beat,1500);
+setInterval(watch,WATCH_MS); setTimeout(watch,4000);
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ beat(); watch(); } });
+window.addEventListener('pagehide',markLeft);
+
+function tsOf(k,sub){ return fetch(db()+'/rooms/'+k+'/'+sub+'.json').then(function(r){ return r.json(); }).catch(function(){ return null; }); }
+async function cleanup(){
+  try{
+    var last=0; try{ last=+(localStorage.getItem('pgLastCleanup')||0); }catch(e){}
+    if(Date.now()-last < CLEAN_EVERY) return;
+    try{ localStorage.setItem('pgLastCleanup', String(Date.now())); }catch(e){}
+    var res=await fetch(db()+'/rooms.json?shallow=true');
+    var keys=await res.json(); if(!keys) return;
+    var list=Object.keys(keys).filter(function(k){ return /^[A-Za-z0-9_]{1,6}-/.test(k) && k!==room(); });
+    list.sort(function(){ return Math.random()-0.5; });
+    var checked=0, deleted=0;
+    for(var i=0;i<list.length;i++){
+      if(checked>=80 || deleted>=25) break;
+      var k=list[i]; checked++;
+      var ts=0, v;
+      v=await tsOf(k,'meta/ts');      if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'broadcast/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'hostState/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'presence');
+      if(v){ Object.keys(v).forEach(function(pid){ var t=v[pid]&&v[pid].t; if(typeof t==='number') ts=Math.max(ts,t); }); }
+      if(!ts) continue;
+      if(Date.now()-ts > ROOM_TTL){ try{ await fetch(db()+'/rooms/'+k+'.json',{method:'DELETE'}); deleted++; }catch(e){} }
+    }
+  }catch(e){}
+}
+setTimeout(cleanup,5000);
+
+var RULES = [
+'<h3 style="margin:0 0 8px;font-size:16px;">👑 ナポレオン（4〜6人）</h3>',
+'<p style="margin:6px 0;">絵札（A・K・Q・J・10 の全20枚）を奪い合うトリックテイキング。ナポレオン軍が宣言した枚数を取れば勝ち、防げば連合軍の勝ち。</p>',
+'<p style="margin:10px 0 4px;"><b>■ 準備</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>4人＝手札13枚／埋め札1枚、5人＝10枚／3枚、6人＝8枚／5枚（ジョーカー1枚を含む53枚）</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ 競り</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>「絵札を何枚取るか＋切り札のスート」を宣言。最低13枚</li>',
+'<li>同じ枚数なら強いスートが上（クラブ＜ダイヤ＜ハート＜スペード）</li>',
+'<li>他が全員パスしたら、その人がナポレオン。全員パスなら配り直し</li>',
+'<li>ナポレオンは副官カードを1枚指名し、全員に公開する。そのカードを持つ人が副官。<b>ジョーカーを指名することもできます</b></li>',
+'<li><b>副官が誰かはゲーム終了まで公表されません</b>。副官カードが場に出れば推測はできますが、システムは知らせません</li>',
+'<li>ナポレオンは埋め札を手札に加え、好きなカードを同じ枚数だけ伏せる（自由に交換できる）</li>',
+'<li>伏せた札は得点に数えません。<b>10以上（10・J・Q・K・A）を伏せた場合は全員に公開</b>され、その絵札は場から消えます</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ カードの強さ（強い順）</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>🃏 ジョーカー（マストフォローなし＝台札を持っていても出せる）</li>',
+'<li>♠A マイティー</li>',
+'<li>表J（切り札と同じスートのJ）</li>',
+'<li>── ここまではセイム2でも勝てない ──</li>',
+'<li>裏J（切り札と同じ色のもう一方のJ）</li>',
+'<li>切り札</li>',
+'<li>台札（最初に出されたスート）</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ 特殊ルール</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li><b>セイム2</b>：台札と同じスートの2は強い。<b>自分がリードした2も有効</b>。ただし発動するのは<b>そのトリックのカードのスートが全て揃ったときだけ</b>で、誰かが切り札・別のスート・ジョーカーを出した時点で無効になります。切り札のスートの2も無効（ただの切り札）、第1トリックも無効</li>',
+'<li><b>よろめき</b>：ジョーカーの<b>後に</b> ♥Q を出すと、♥Q がジョーカーに勝つ。♥Q が先でジョーカーが後なら成立しません</li>',
+'<li><b>よろめき返し</b>：よろめきが成立したあと、さらに ♥Q より<b>後に</b> ♥K を出すと、♥K が ♥Q に勝つ。♥K が先だと成立しません</li>',
+'<li><b>クラブの3（あぶり出し）</b>：♣3 を出すと、そのトリックでそれ以降の手番の人は、ジョーカーを持っていれば<b>必ず出さなければなりません</b>。♣3 自体に強さはなく、ただの ♣3 です</li>',
+'<li>重なったときの強さは <b>♥K ＞ ♥Q ＞ 🃏 ＞ ♠A</b> の順です</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ 進行と勝敗</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>台札と同じスートを持っていたら必ず出す（マストフォロー）。ジョーカーは例外でいつでも出せる</li>',
+'<li><b>ジョーカーがリードされたとき</b>は、2枚目に出されたカードのスートが台札になり、3人目以降はそれにフォローする。2枚目の人は好きなカードを出せます</li>',
+'<li>自分の番でカードを出さずにパスすることはできません</li>',
+'<li>♣3 が出たあとの手番では、ジョーカーの提出義務がマストフォローより優先されます</li>',
+'<li>トリックの勝者が絵札を獲得し、次のリードを行う</li>',
+'<li>全トリック終了時、ナポレオン軍の絵札が宣言枚数以上ならナポレオン軍の勝ち</li>',
+'</ul>'
+].join('');
+function openRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='flex'; }
+function closeRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='none'; }
+function initRules(){
+  var m=document.createElement('div'); m.id='pga-rules';
+  m.style.cssText='display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:14px;';
+  m.innerHTML='<div style="background:#1d222b;color:#e8e8e8;max-width:520px;width:100%;max-height:82vh;overflow-y:auto;border-radius:12px;padding:18px 16px;font-size:13.5px;line-height:1.75;font-family:sans-serif;-webkit-overflow-scrolling:touch;">'+RULES+'<button id="pga-rules-close" style="display:block;width:100%;margin-top:14px;padding:11px;border:none;border-radius:8px;background:#3a4557;color:#fff;font-size:14px;cursor:pointer;">\u9589\u3058\u308B</button></div>';
+  m.addEventListener('click',function(ev){ if(ev.target===m) closeRulesPga(); });
+  document.body.appendChild(m);
+  document.getElementById('pga-rules-close').onclick=closeRulesPga;
+  ['screen-lobby','screen-waiting'].forEach(function(id){
+    var sc=document.getElementById(id); if(!sc) return;
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent='\uD83D\uDCD6 \u904A\u3073\u65B9';
+    btn.style.cssText='display:block;width:100%;margin:10px 0 0;padding:11px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.06);color:inherit;font-size:14px;cursor:pointer;';
+    btn.onclick=openRulesPga;
+    sc.appendChild(btn);
+  });
+}
+
+initName();
+initRules();
+})();
+</script>
+</body>
+</html>

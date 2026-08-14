@@ -948,6 +948,10 @@ h3 { font-size: 1rem; font-weight: 600; }
         <span class="game-tab-icon">🎴</span>
         <span class="game-tab-name">ナナ</span>
       </button>
+      <button class="game-tab" id="tab-np" data-game="napoleon" onclick="selectLobbyGame('napoleon')">
+        <span class="game-tab-icon">👑</span>
+        <span class="game-tab-name">ナポレオン</span>
+      </button>
     </div>
 
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
@@ -1328,6 +1332,25 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- NAPOLEON section（別ページ誘導） -->
+    <div id="lobby-np" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(212,175,55,0.05); border:1px solid rgba(212,175,55,0.3); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">👑</div>
+          <div style="font-family:var(--mono); color:#d4af37; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">ナポレオン</div>
+          <div style="color:var(--muted); font-size:0.72rem;">NAPOLEON · 絵札20枚の争奪戦</div>
+        </div>
+        <a href="napoleon.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(212,175,55,0.12); color:#d4af37; border:1px solid rgba(212,175,55,0.5);">
+            👑 ナポレオンのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
+          ※ ナポレオンは専用のページで動作します<br>4〜6人で対戦・BOT相手の練習モードつき
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1452,6 +1475,14 @@ h3 { font-size: 1rem; font-weight: 600; }
         同じ数字を<strong style="color:#2dff8a;">続けて3枚</strong>公開できたらセット獲得。<br>
         勝ち方は3つ：①3セット ②2セットの<strong style="color:#ffd84d;">足し引きが7</strong> ③<strong style="color:#ffd84d;">「7」のセット</strong>で即勝利。<br>
         💡 戻ったカードも記憶に残る。覚えた者勝ちの記憶ゲーム。
+      </p>
+      <p id="rules-np" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        4〜6人。<strong style="color:#d4af37;">絵札（A・K・Q・J・10 の全20枚）</strong>を奪い合うトリックテイキング。<br>
+        競りで「何枚取るか＋切り札」を宣言し、勝った人がナポレオン。副官カードを1枚指名する。<br>
+        強さは <strong style="color:#d4af37;">🃏 ＞ ♠A ＞ 表J ＞ 裏J ＞ 切り札 ＞ 台札</strong>。<br>
+        宣言枚数を取ればナポレオン軍の勝ち、防げば連合軍の勝ち。<br>
+        💡 よろめき（🃏の後の♥Q）→ よろめき返し（さらに後の♥K）、セイム2、<br>
+        ♣3のあぶり出し（以降の手番はジョーカー提出義務）つき。
       </p>
     </div>
   </div>
@@ -3933,13 +3964,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn','np'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana',np:'napoleon'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn',napoleon:'np'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
