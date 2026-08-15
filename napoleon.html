@@ -109,7 +109,8 @@ h3 { font-size: 0.8rem; color: var(--muted); font-family: var(--mono); text-tran
 .turnbar { text-align: center; padding: 6px; border-radius: 10px; font-weight: 700; font-size: 0.86rem; background: var(--surface); border: 1px solid var(--surface3); }
 .turnbar.me { background: var(--nap-dim); border-color: var(--nap); color: var(--nap); animation: pulse 1.6s infinite; }
 @keyframes pulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(212,175,55,0.35);} 50%{ box-shadow: 0 0 0 7px rgba(212,175,55,0);} }
-.hdr { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-family: var(--mono); color: var(--muted); }
+.hdr { display: block; font-size: 0.66rem; font-family: var(--mono); color: var(--muted);
+       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hdr b { color: var(--gold); }
 .trick { display: flex; gap: 6px; justify-content: center; align-items: flex-start; min-height: 74px; }
 .tslot { display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -221,7 +222,8 @@ h3 { font-size: 0.8rem; color: var(--muted); font-family: var(--mono); text-tran
   <!-- ============ GAME ============ -->
   <div id="screen-game" class="screen">
     <div class="row" style="justify-content:space-between;">
-      <span class="hdr" id="hdr-left"></span>
+      <span class="hdr" id="hdr-left" style="flex:1; min-width:0;"></span>
+      <button class="btn btn-ghost btn-exit" onclick="openRules()" title="ルール">📖</button>
       <button class="btn btn-ghost btn-exit" onclick="leaveRoom()">退出</button>
     </div>
     <div class="turnbar" id="turnbar"></div>
@@ -970,7 +972,7 @@ function renderGame(){
     hl.innerHTML = `${isSolo?'練習モード':(roomCode?'ルーム '+roomCode:'')} ／ 競り`;
   } else {
     const adj = gs.adjCard ? (isJoker(gs.adjCard) ? '🃏' : `${SUIT_MARK[gs.adjCard.s]}${rankLabel(gs.adjCard.r)}`) : '—';
-    hl.innerHTML = `切り札 <b>${SUIT_MARK[gs.trump]}</b> ／ 宣言 <b>${gs.bidNum}</b> ／ 副官 <b>${adj}</b> ／ ${gs.trickNo+1}巡`;
+    hl.innerHTML = `切札<b>${SUIT_MARK[gs.trump]}</b>／宣言<b>${gs.bidNum}</b>／副官<b>${adj}</b>／${gs.trickNo+1}巡`;
   }
   // 手番バー
   const tb = g('turnbar');
@@ -1360,6 +1362,7 @@ async function pgReconnect(){
     setErr(''); setSt('');
   }catch(e){ setErr('再接続に失敗しました'); setSt(''); }
 }
+function openRules(){ if(typeof window.openRulesPga==='function') window.openRulesPga(); }
 setTimeout(pgShowReconnect, 300);
 window.addEventListener('pageshow', ()=>pgShowReconnect());
 
@@ -1521,6 +1524,7 @@ var RULES = [
 '</ul>'
 ].join('');
 function openRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='flex'; }
+window.openRulesPga = openRulesPga;
 function closeRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='none'; }
 function initRules(){
   var m=document.createElement('div'); m.id='pga-rules';

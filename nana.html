@@ -247,7 +247,8 @@ h3 { font-size: 0.85rem; color: var(--muted); font-family: var(--mono); text-tra
   <div id="screen-game" class="screen">
     <div class="row" style="justify-content:space-between;">
       <span class="tag" id="game-code"></span>
-      <span class="tag" id="game-range"></span>
+      <span class="tag" id="game-range" style="flex:1; text-align:right;"></span>
+      <button class="btn btn-ghost btn-exit" onclick="openRules()">📖</button>
       <button class="btn btn-ghost btn-exit" onclick="leaveRoom()">退出</button>
     </div>
     <div class="turnbar" id="turnbar"></div>
@@ -1128,6 +1129,7 @@ async function pgReconnect(){
     setErr(''); setSt('');
   }catch(e){ setErr('再接続に失敗しました'); setSt(''); }
 }
+function openRules(){ if(typeof window.openRulesPga==='function') window.openRulesPga(); }
 setTimeout(pgShowReconnect, 300);
 window.addEventListener('pageshow', ()=>pgShowReconnect());
 </script>
@@ -1267,8 +1269,9 @@ async function cleanup(){
 setTimeout(cleanup,5000);
 
 /* ========== 遊び方モーダル ========== */
-var RULES="<h3 style=\"margin:0 0 8px;font-size:16px;\">🎴 ナナ NANA（2〜5人）</h3><p style=\"margin:6px 0;\">同じ数字を<b>続けて3枚</b>公開する「チャレンジ」に挑むカードゲーム。カードは1〜12が3枚ずつ（人数により使用範囲が変わる）。手札は昇順にそろえ、中身は自分だけが見られる。</p><ul style=\"margin:6px 0;padding-left:18px;\"><li><b>準備</b>：2人=カード1〜10・手札10枚・場札10枚／3人=1〜11・8枚・9枚／4人=1〜12・7枚・8枚／5人=1〜12・6枚・6枚。残りは裏向きの場札</li><li><b>手番</b>：次のどちらかで1枚ずつ公開する。①だれかの手札（自分もOK）の<b>「一番小さい」か「一番大きい」</b>カードを公開させる（同値が複数あっても1枚だけ）②好きな<b>場札</b>を1枚めくる</li><li><b>失敗</b>：1枚目と違う数字が出た瞬間に終了。手札は持ち主へ戻り、場札は裏向きに戻る（＝みんなの記憶に残る）</li><li><b>成功</b>：同じ数字3枚がそろったら、その3枚を自分の手元に獲得。成功でも失敗でも次の人の手番へ</li></ul><p style=\"margin:6px 0;\"><b>勝ち方は3つ：</b></p><ul style=\"margin:6px 0;padding-left:18px;\"><li>① チャレンジを<b>3回成功</b>させる</li><li>② 2セットの数字を<b>足すか引くかして7</b>にする（例：3と4、9と2）</li><li>③ <b>「7」のセット</b>を完成させる（1回で即勝利の大逆転）</li></ul><p style=\"margin:6px 0;\">💡 公開されたカードは戻っても情報として残る。「あの人の最大は9だった」「あの場札は5」——記憶と読みで3枚を狙い撃とう。</p>";
+var RULES="<h3 style=\"margin:0 0 8px;font-size:16px;\">🎴 ナナ NANA（2〜5人）</h3><p style=\"margin:6px 0;\">同じ数字を<b>続けて3枚</b>公開する「チャレンジ」に挑むカードゲーム。カードは1〜12が3枚ずつ（人数により使用範囲が変わる）。手札は昇順にそろえ、中身は自分だけが見られる。</p><ul style=\"margin:6px 0;padding-left:18px;\"><li><b>準備</b>：2人=カード1〜10・手札10枚・場札10枚／3人=1〜11・8枚・9枚／4人=1〜12・7枚・8枚／5人=1〜12・6枚・6枚。残りは裏向きの場札</li><li><b>手番</b>：次のどちらかで1枚ずつ公開する。①だれかの手札（自分もOK）の<b>「一番小さい（最小）」か「一番大きい（最大）」</b>カードを公開させる（同値が複数あっても1枚だけ）②好きな<b>場札</b>を1枚めくる</li><li><b>失敗</b>：1枚目と違う数字が出た瞬間に終了。手札は持ち主へ戻り、場札は裏向きに戻る（＝みんなの記憶に残る）</li><li><b>成功</b>：同じ数字3枚がそろったら、その3枚を自分の手元に獲得。成功でも失敗でも次の人の手番へ</li></ul><p style=\"margin:6px 0;\"><b>勝ち方は3つ：</b></p><ul style=\"margin:6px 0;padding-left:18px;\"><li>① チャレンジを<b>3回成功</b>させる</li><li>② 2セットの数字を<b>足すか引くかして7</b>にする（例：3と4、9と2）</li><li>③ <b>「7」のセット</b>を完成させる（1回で即勝利の大逆転）</li></ul><p style=\"margin:6px 0;\">💡 公開されたカードは戻っても情報として残る。「あの人の最大は9だった」「あの場札は5」——記憶と読みで3枚を狙い撃とう。</p>";
 function openRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='flex'; }
+window.openRulesPga = openRulesPga;
 function closeRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='none'; }
 function initRules(){
   if(!RULES) return;
