@@ -191,6 +191,14 @@ h3 { font-size: 1rem; font-weight: 600; }
 }
 .bank-cell:hover { background: var(--surface2); }
 .bank-cell.selected { background: rgba(255,216,77,0.15); border: 1px solid var(--accent); }
+.sh-badge { position:absolute; top:2px; left:2px; font-size:0.6rem; font-weight:800;
+  padding:0 3px; border-radius:4px; background:rgba(0,0,0,0.65); border:1px solid currentColor; }
+.dev-card.sh-mine { box-shadow: 0 0 0 2px #35e08c inset; }
+.dev-card.sh-other { box-shadow: 0 0 0 2px #ff5566 inset; opacity:0.72; }
+.dev-card.sh-pick { outline: 2px dashed var(--accent); outline-offset: 1px; }
+.orient-card { border: 1px solid #ffd84d !important; background: linear-gradient(160deg,#2a2233,#1d1a26) !important; }
+.sh-bar { background:rgba(255,216,77,0.1); border:1px solid var(--accent); border-radius:10px;
+  padding:8px; font-size:0.8rem; text-align:center; margin-bottom:8px; }
 .bank-cell.unavail { opacity: 0.35; cursor: not-allowed; }
 .bank-cell .count {
   font-family: var(--mono); font-weight: 700; font-size: 0.85rem;
@@ -470,9 +478,12 @@ function pgConfirm(message, onOk, onCancel){
 
   <div>
     <div class="section-title">ルール</div>
-    <div class="count-buttons" id="mode-buttons">
+    <div class="count-buttons" id="mode-buttons" style="flex-wrap:wrap;">
       <button class="count-btn active" data-m="base" onclick="setSpMode('base')">通常版</button>
-      <button class="count-btn" data-m="cities" onclick="setSpMode('cities')">拡張版：都市</button>
+      <button class="count-btn" data-m="cities" onclick="setSpMode('cities')">都市</button>
+      <button class="count-btn" data-m="posts" onclick="setSpMode('posts')">交易所</button>
+      <button class="count-btn" data-m="orient" onclick="setSpMode('orient')">東洋</button>
+      <button class="count-btn" data-m="strongholds" onclick="setSpMode('strongholds')">城塞</button>
     </div>
     <div class="tiny-row" style="margin-top:6px;line-height:1.5;" id="mode-desc"></div>
   </div>
@@ -547,6 +558,7 @@ function pgConfirm(message, onOk, onCancel){
 
   <div>
     <div class="section-title">🃏 マーケット</div>
+    <div class="sh-bar" id="sh-bar" style="display:none;"></div>
     <div class="market" id="market"></div>
   </div>
 
@@ -638,6 +650,27 @@ function pgConfirm(message, onOk, onCancel){
       <div style="margin-bottom:12px;">
         <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🏆 勝利条件</div>
         15点（威信ポイント）に最初に到達。到達者が出たラウンドの最後まで進めて、最高得点者が勝利。
+      </div>
+      <div style="margin-top:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🏳️ 拡張版：交易所</div>
+        条件を満たすと交易所の特殊能力を1つずつ獲得します（紋章は各自5個・以後ずっと有効）。<br>
+        ・赤3+白1 → カードを買ったあと宝石トークンを1枚もらう<br>
+        ・白2 → 同じ色を2枚取るとき、別の色をもう1枚取る<br>
+        ・青3+黒1 → 自分の金トークン1枚が2枚分として使える<br>
+        ・緑5+貴族1枚 → 威信ポイント+5<br>
+        ・黒3 → 盤上の自分の紋章1つにつき+1点
+      </div>
+      <div style="margin-top:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🏯 拡張版：東洋</div>
+        各レベルの右側に東洋カードが2枚ずつ並びます。効果は7種類。<br>
+        金2枚分／色を真似る／真似る+Lv1無料／ボーナス2個ぶん／貴族を予約／Lv2無料／同色カード2枚を捨てて購入。<br>
+        カードをタップすると効果の説明が出ます。
+      </div>
+      <div style="margin-top:12px;">
+        <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🏰 拡張版：城塞</div>
+        カードを購入するたびに、城塞を「置く・動かす」か「相手の城塞を取り除く」のどちらかを1回行います（各自3個）。<br>
+        城塞が乗ったカードは、その持ち主しか購入・予約できません。<br>
+        同じカードに自分の城塞を3個そろえる（制圧）と、行動のあとにそのカードを追加で購入できます。
       </div>
       <div style="margin-top:12px;">
         <div style="color:var(--accent);font-weight:700;margin-bottom:4px;">🏙 拡張版：都市（Cities of Splendor）</div>
@@ -946,10 +979,95 @@ function cityReqText(city) {
   return parts.join(' ');
 }
 
+// 東洋カード（拡張「東洋」）— 30枚（各レベル10枚）。ability で特殊効果を表す
+//  gold2      : 金2枚分として1回の購入で使える（使い切り）
+//  pair       : 取得済みカード1枚と組にして、その色のボーナス1個になる
+//  pairFree1  : pair に加えて、表向きのLv1カードを1枚タダで取る
+//  dbl        : 指定色のボーナス2個ぶんになる
+//  resNoble   : 貴族タイルを1枚予約する（以後その貴族は自分だけが獲得できる）
+//  free2      : 表向きのLv2カードを1枚タダで取る
+//  discard2   : 宝石ではなく、指定色のカード2枚を捨てて購入する
+const ORIENT = [
+  // Lv1
+  {lv:1, ability:'gold2', bonus:null, pv:0, cost:{w:0,b:3,g:0,r:0,k:0}},
+  {lv:1, ability:'gold2', bonus:null, pv:0, cost:{w:3,b:0,g:0,r:0,k:0}},
+  {lv:1, ability:'gold2', bonus:null, pv:0, cost:{w:0,b:0,g:3,r:0,k:0}},
+  {lv:1, ability:'gold2', bonus:null, pv:0, cost:{w:0,b:0,g:0,r:3,k:0}},
+  {lv:1, ability:'gold2', bonus:null, pv:0, cost:{w:0,b:0,g:0,r:0,k:3}},
+  {lv:1, ability:'pair',  bonus:null, pv:0, cost:{w:2,b:0,g:0,r:0,k:2}},
+  {lv:1, ability:'pair',  bonus:null, pv:0, cost:{w:0,b:2,g:2,r:0,k:0}},
+  {lv:1, ability:'pair',  bonus:null, pv:0, cost:{w:0,b:0,g:2,r:2,k:0}},
+  {lv:1, ability:'pair',  bonus:null, pv:0, cost:{w:2,b:2,g:0,r:0,k:0}},
+  {lv:1, ability:'pair',  bonus:null, pv:0, cost:{w:0,b:0,g:0,r:2,k:2}},
+  // Lv2
+  {lv:2, ability:'pairFree1', bonus:null, pv:1, cost:{w:0,b:0,g:5,r:0,k:0}},
+  {lv:2, ability:'pairFree1', bonus:null, pv:1, cost:{w:5,b:0,g:0,r:0,k:0}},
+  {lv:2, ability:'dbl', bonus:'w', pv:0, cost:{w:0,b:0,g:0,r:5,k:0}},
+  {lv:2, ability:'dbl', bonus:'b', pv:0, cost:{w:0,b:0,g:0,r:0,k:5}},
+  {lv:2, ability:'dbl', bonus:'g', pv:0, cost:{w:5,b:0,g:0,r:0,k:0}},
+  {lv:2, ability:'dbl', bonus:'r', pv:0, cost:{w:0,b:5,g:0,r:0,k:0}},
+  {lv:2, ability:'dbl', bonus:'k', pv:0, cost:{w:0,b:0,g:5,r:0,k:0}},
+  {lv:2, ability:'resNoble', bonus:null, pv:0, cost:{w:0,b:0,g:0,r:4,k:2}},
+  {lv:2, ability:'resNoble', bonus:null, pv:0, cost:{w:2,b:4,g:0,r:0,k:0}},
+  {lv:2, ability:'resNoble', bonus:null, pv:0, cost:{w:0,b:0,g:4,r:0,k:2}},
+  // Lv3
+  {lv:3, ability:'free2', bonus:null, pv:3, cost:{w:0,b:0,g:0,r:0,k:6}},
+  {lv:3, ability:'free2', bonus:null, pv:3, cost:{w:6,b:0,g:0,r:0,k:0}},
+  {lv:3, ability:'free2', bonus:null, pv:3, cost:{w:0,b:6,g:0,r:0,k:0}},
+  {lv:3, ability:'discard2', bonus:'w', pv:3, discard:'w', cost:{w:0,b:0,g:0,r:0,k:0}},
+  {lv:3, ability:'discard2', bonus:'b', pv:3, discard:'b', cost:{w:0,b:0,g:0,r:0,k:0}},
+  {lv:3, ability:'discard2', bonus:'g', pv:3, discard:'g', cost:{w:0,b:0,g:0,r:0,k:0}},
+  {lv:3, ability:'discard2', bonus:'r', pv:3, discard:'r', cost:{w:0,b:0,g:0,r:0,k:0}},
+  {lv:3, ability:'discard2', bonus:'k', pv:3, discard:'k', cost:{w:0,b:0,g:0,r:0,k:0}},
+  {lv:3, ability:'dbl', bonus:'r', pv:1, cost:{w:0,b:0,g:3,r:0,k:5}},
+  {lv:3, ability:'dbl', bonus:'k', pv:1, cost:{w:3,b:5,g:0,r:0,k:0}},
+];
+const ORIENT_LABEL = {
+  gold2:'金2枚分', pair:'色を真似る', pairFree1:'真似る+Lv1無料',
+  dbl:'ボーナス2個', resNoble:'貴族を予約', free2:'Lv2無料', discard2:'カード2枚で購入'
+};
+
+// 交易所（拡張「交易所」）— 5つの特殊能力。条件を満たすと紋章を置いて以後ずっと有効
+const POSTS = [
+  { id:'tp1', reqs:{r:3, w:1}, name:'購入後にトークン1枚', desc:'カードを1枚購入したあと、宝石トークンを1枚受け取る' },
+  { id:'tp2', reqs:{w:2},      name:'同色2枚＋別色1枚',   desc:'同じ色のトークンを2枚取るとき、別の色をもう1枚取る' },
+  { id:'tp3', reqs:{b:3, k:1}, name:'金は2枚分',           desc:'自分の金トークン1枚が、同じ色の宝石2枚分として使える' },
+  { id:'tp4', reqs:{g:5}, needNoble:true, name:'+5点',     desc:'威信ポイント+5（貴族タイルを1枚以上持っていること）' },
+  { id:'tp5', reqs:{k:3},      name:'紋章1つにつき+1点',   desc:'盤上に置いた自分の紋章1つにつき威信ポイント+1' },
+];
+// 城塞（拡張「城塞」）— 市場のカードごとに {owner, n} を保持する
+function shKey(lv, idx) { return lv + ':' + idx; }
+function shAt(lv, idx) { return (gs.sh && gs.sh[shKey(lv,idx)]) || null; }
+// そのカードを購入・予約できるか（他人の城塞が乗っていたら不可）
+function shBlocked(player, lv, idx) {
+  if(!gs || gs.mode !== 'strongholds') return false;
+  const s = shAt(lv, idx);
+  return !!(s && s.owner !== player.id);
+}
+// 3つそろっていれば「制圧」— 行動後にもう1枚買える
+function shConquered(player, lv, idx) {
+  if(!gs || gs.mode !== 'strongholds') return false;
+  const s = shAt(lv, idx);
+  return !!(s && s.owner === player.id && s.n >= 3);
+}
+function shClearAt(lv, idx) {
+  const s = shAt(lv, idx);
+  if(!s) return;
+  const owner = gs.players.find(p=>p.id===s.owner);
+  if(owner) owner.strongholds += s.n;
+  delete gs.sh[shKey(lv,idx)];
+}
+function postOk(p, post) {
+  for(const c in post.reqs) if((p.bonuses[c]||0) < post.reqs[c]) return false;
+  if(post.needNoble && (p.nobles||[]).length < 1) return false;
+  return true;
+}
+function hasPost(p, id) { return !!(p.posts && p.posts[id]); }
+
 // ============================================================
 // STATE
 // ============================================================
-let spMode = 'base';   // 'base' | 'cities'
+let spMode = 'base';   // 'base' | 'cities' | 'posts' | 'orient' | 'strongholds'
 let myId = genId(), myName = '';
 let isHost = false, roomCode = '';
 let isSolo = false, soloCount = 4;
@@ -962,13 +1080,17 @@ let pendingDiscard = { w:0, b:0, g:0, r:0, k:0, y:0 };
 
 const SP_MODE_DESC = {
   base: '15点に最初に到達したラウンドで終了。貴族タイルは3点のボーナス',
-  cities: '貴族タイルの代わりに都市タイル3枚。条件を満たして都市を獲得した人が勝ち'
+  cities: '貴族の代わりに都市タイル3枚。条件を満たして都市を獲得した人が勝ち',
+  posts: '条件を満たすと交易所の特殊能力を獲得。紋章は各自5個',
+  orient: '各レベルに東洋カードが2枚追加。特殊効果で戦略が広がる',
+  strongholds: '城塞コマ3個で場のカードを占拠。3個そろえたカードは行動後にも買える'
 };
+const SP_MODE_LABEL = { base:'通常版', cities:'拡張：都市', posts:'拡張：交易所', orient:'拡張：東洋', strongholds:'拡張：城塞' };
 function setSpMode(m) {
   spMode = m;
   document.querySelectorAll('#mode-buttons .count-btn').forEach(b=>b.classList.toggle('active', b.dataset.m===m));
   const d = g('mode-desc'); if(d) d.textContent = SP_MODE_DESC[m];
-  const w = g('wait-mode'); if(w) w.textContent = (m==='cities'?'拡張版：都市':'通常版');
+  const w = g('wait-mode'); if(w) w.textContent = SP_MODE_LABEL[m] || '通常版';
 }
 setTimeout(()=>setSpMode('base'), 0);
 function setSoloCount(n) {
@@ -1139,6 +1261,9 @@ function freshGameState() {
     market: { 1:[null,null,null,null], 2:[null,null,null,null], 3:[null,null,null,null] },
     nobles: [],
     cities: [],
+    sh: {},
+    odecks: {1:[],2:[],3:[]},
+    omarket: {1:[null,null], 2:[null,null], 3:[null,null]},
     mode: spMode,
     log: [],
     finalRound: false,
@@ -1183,6 +1308,11 @@ function initializeGame() {
     p.reserved = []; // up to 3
     p.nobles = []; // taken nobles (full objects)
     p.points = 0;
+    p.posts = {};           // 交易所: 獲得した能力
+    p.city = null;          // 都市
+    p.strongholds = 3;      // 城塞: 手元に残っているコマ
+    p.resNobles = [];       // 東洋: 予約した貴族
+    p.orientGold = 0;       // 東洋: 金2枚分カードの残り
   });
   // decks
   gs.decks[1] = shuffle(CARDS.filter(c=>c.lv===1).map((c,i)=>({...c, id:'c1_'+i})));
@@ -1191,6 +1321,15 @@ function initializeGame() {
   // market: reveal 4 each
   for(let lv=1; lv<=3; lv++) {
     for(let s=0;s<4;s++) gs.market[lv][s] = gs.decks[lv].shift() || null;
+  }
+  // 東洋：レベルごとに2枚を表向きで並べる
+  gs.odecks = {1:[],2:[],3:[]};
+  gs.omarket = {1:[null,null], 2:[null,null], 3:[null,null]};
+  if(gs.mode === 'orient') {
+    for(let lv=1; lv<=3; lv++) {
+      gs.odecks[lv] = shuffle(ORIENT.filter(c=>c.lv===lv).map((c,i)=>({...c, id:'o'+lv+'_'+i, orient:true})));
+      for(let s=0;s<2;s++) gs.omarket[lv][s] = gs.odecks[lv].shift() || null;
+    }
   }
   // 貴族 or 都市
   if(gs.mode === 'cities') {
@@ -1204,7 +1343,12 @@ function initializeGame() {
   // turn
   gs.turnIdx = 0;
   gs.phase = 'play';
-  gs.log.push(`💎 ゲーム開始！（${n}人プレイ${gs.mode==='cities'?' / 拡張：都市':''}）`);
+  const MODE_LABEL = { base:'', cities:' / 拡張：都市', posts:' / 拡張：交易所', orient:' / 拡張：東洋', strongholds:' / 拡張：城塞' };
+  gs.sh = {};
+  gs.log.push(`💎 ゲーム開始！（${n}人プレイ${MODE_LABEL[gs.mode]||''}）`);
+  if(gs.mode==='posts') gs.log.push('🏳️ 条件を満たすと交易所の能力を獲得します（紋章は各自5個）');
+  if(gs.mode==='strongholds') gs.log.push('🏰 カード購入のたびに城塞を1回操作します（各自3個）');
+  if(gs.mode==='orient') gs.log.push('🏯 各レベルに東洋カードが2枚ずつ並びます');
   if(gs.mode==='cities') gs.log.push('🏙 都市を1枚でも獲得すればラウンド終了→獲得者の勝ち');
   gs.log.push(`👉 ${gs.players[0].name} のターン`);
 }
@@ -1303,21 +1447,68 @@ function renderGame() {
       slot.className = 'dev-card bonus-'+card.bonus;
       const affordable = me && canAfford(me, card);
       if(isMyTurn && affordable) slot.classList.add('affordable');
+      const s = (gs.mode==='strongholds') ? shAt(lv, idx) : null;
+      const mineSh = s && me && s.owner===me.id;
+      if(s) slot.classList.add(mineSh ? 'sh-mine' : 'sh-other');
+      slot.style.position = 'relative';
       slot.innerHTML = `
+        ${s ? `<div class="sh-badge" style="color:${mineSh?'#35e08c':'#ff5566'}">🏰${s.n}</div>` : ''}
         <div class="top-row">
           <div class="pv ${card.pv===0?'zero':''}">${card.pv||''}</div>
           <div class="bonus-mark">${GEM_ICONS[card.bonus]}</div>
         </div>
         <div class="costs">${costHtml(card.cost)}</div>
       `;
-      if(isMyTurn) {
+      const shTurn = gs.shPhase && gs.shPhase.pid===myId;
+      if(shTurn) {
+        const canPut = me && canPutAt(me, lv, idx);
+        const canDel = s && !mineSh;
+        if(canPut || canDel) {
+          slot.classList.add('sh-pick');
+          slot.onclick = ()=> sendActionToHost(canDel && !canPut
+            ? { kind:'sh_remove', lv, idx }
+            : (canDel ? { kind:'sh_remove', lv, idx } : { kind:'sh_place', lv, idx }));
+        } else slot.onclick = null;
+      } else if(isMyTurn) {
         slot.onclick = ()=> openCardActionModal(card, 'market', { lv, idx });
       }
       slots.appendChild(slot);
     });
+    if(gs.mode === 'orient') {
+      ((gs.omarket||{})[lv]||[]).forEach((card, oidx)=>{
+        const slot = document.createElement('div');
+        if(!card) { slot.className='dev-card'; slot.style.opacity='0.2'; slots.appendChild(slot); return; }
+        slot.className = 'dev-card orient-card' + (card.bonus ? ' bonus-'+card.bonus : '');
+        if(isMyTurn && me && canAfford(me, card)) slot.classList.add('affordable');
+        slot.innerHTML = `
+          <div class="top-row">
+            <div class="pv ${!card.pv?'zero':''}">${card.pv||''}</div>
+            <div class="bonus-mark">${card.bonus?GEM_ICONS[card.bonus]:'🏯'}</div>
+          </div>
+          <div style="font-size:0.56rem;line-height:1.15;color:#ffd84d;text-align:center;margin:2px 0;">${ORIENT_LABEL[card.ability]}</div>
+          <div class="costs">${card.ability==='discard2' ? `${GEM_ICONS[card.discard]}×2枚` : costHtml(card.cost)}</div>
+        `;
+        if(isMyTurn && !gs.shPhase) slot.onclick = ()=> openOrientModal(card, lv, oidx);
+        slots.appendChild(slot);
+      });
+    }
     row.appendChild(slots);
     mkt.appendChild(row);
   });
+
+  // 城塞フェーズの案内
+  const shb = g('sh-bar');
+  if(gs.shPhase) {
+    const sp = gs.players.find(p=>p.id===gs.shPhase.pid);
+    shb.style.display = '';
+    if(gs.shPhase.pid===myId) {
+      shb.innerHTML = `🏰 城塞を1回操作してください（手元 ${me?me.strongholds:0}個）<br>`
+        + `<span style="font-size:0.72rem;color:var(--muted)">自分の城塞がある／空のカード＝置く、相手の城塞があるカード＝取り除く</span>`
+        + ` <button class="btn btn-ghost" style="padding:4px 10px;font-size:0.75rem;margin-top:6px;" onclick="sendActionToHost({kind:'sh_skip'})">何もしない</button>`;
+    } else {
+      shb.innerHTML = `🏰 ${sp?sp.name:''} が城塞を操作しています`;
+    }
+  } else shb.style.display = 'none';
 
   // Bank
   const br = g('bank-row');
@@ -1499,6 +1690,17 @@ function countDistinctSelected() { return Object.values(selectedGems).filter(v=>
 // CARD ACTION MODAL
 // ============================================================
 let cardModalCtx = null;
+function conquerNote(source, locator) {
+  if(!gs || gs.mode!=='strongholds' || source!=='market') return '';
+  const me = gs.players.find(p=>p.id===myId);
+  if(!me) return '';
+  if(shConquered(me, locator.lv, locator.idx))
+    return '<div style="color:#35e08c;font-size:0.78rem;margin-top:6px;">🏰 制圧中：このカードは行動後に自動で購入されます</div>';
+  const s = shAt(locator.lv, locator.idx);
+  if(s && s.owner!==me.id)
+    return '<div style="color:#ff5566;font-size:0.78rem;margin-top:6px;">🏰 相手の城塞に占拠されています（購入・予約できません）</div>';
+  return '';
+}
 function openCardActionModal(card, source, locator) {
   cardModalCtx = { card, source, locator };
   const me = gs.players.find(p=>p.id===myId);
@@ -1513,10 +1715,12 @@ function openCardActionModal(card, source, locator) {
       <div class="costs">${costHtml(card.cost)}</div>
     </div>
     <div class="tiny-row" style="margin-top:10px;">${affordStatus(me, card)}</div>
+    ${conquerNote(source, locator)}
   `;
+  const blocked = source==='market' && shBlocked(me, locator.lv, locator.idx);
   const btnContainer = g('card-modal-buttons');
   btnContainer.innerHTML = '';
-  if(canAfford(me, card)) {
+  if(canAfford(me, card) && !blocked) {
     const bBuy = document.createElement('button');
     bBuy.className = 'btn btn-green';
     bBuy.textContent = '💰 購入する';
@@ -1526,7 +1730,7 @@ function openCardActionModal(card, source, locator) {
     };
     btnContainer.appendChild(bBuy);
   }
-  if(source==='market' && (me.reserved||[]).length<3) {
+  if(source==='market' && !blocked && (me.reserved||[]).length<3) {
     const bRes = document.createElement('button');
     bRes.className = 'btn btn-blue';
     bRes.textContent = '📦 予約する（+ゴールド1枚）';
@@ -1540,16 +1744,72 @@ function openCardActionModal(card, source, locator) {
 }
 function closeCardModal() { g('card-modal').classList.remove('active'); cardModalCtx=null; }
 
+const ORIENT_HELP = {
+  gold2:'金トークン2枚ぶんとして、1回の購入でだけ使えます',
+  pair:'すでに持っているカード1枚と組にして、その色のボーナス1個になります（一番多い色を自動で選びます）',
+  pairFree1:'組にしたうえで、表向きのLv1カードを1枚タダで取ります',
+  dbl:'この色のボーナス2個ぶんとして数えます',
+  resNoble:'貴族タイルを1枚予約します。以後その貴族はあなただけが獲得できます',
+  free2:'表向きのLv2カードを1枚タダで取ります',
+  discard2:'宝石ではなく、指定色のカード2枚を捨てて購入します'
+};
+function openOrientModal(card, lv, idx) {
+  const me = gs.players.find(p=>p.id===myId);
+  g('card-modal-title').textContent = `東洋カード Lv${lv}（${ORIENT_LABEL[card.ability]}）`;
+  g('card-modal-body').innerHTML = `
+    <div class="dev-card orient-card ${card.bonus?'bonus-'+card.bonus:''}" style="max-width:200px;margin:0 auto;">
+      <div class="top-row">
+        <div class="pv ${!card.pv?'zero':''}">${card.pv||0}</div>
+        <div class="bonus-mark">${card.bonus?GEM_ICONS[card.bonus]:'🏯'}</div>
+      </div>
+      <div class="costs">${card.ability==='discard2' ? `${GEM_ICONS[card.discard]}カード×2` : costHtml(card.cost)}</div>
+    </div>
+    <div class="tiny-row" style="margin-top:10px;line-height:1.5;">${ORIENT_HELP[card.ability]||''}</div>
+    <div class="tiny-row" style="margin-top:6px;">${canAfford(me, card)?'✓ 購入可能':'× 支払えません'}</div>
+  `;
+  const bc = g('card-modal-buttons');
+  bc.innerHTML = '';
+  if(canAfford(me, card)) {
+    const b = document.createElement('button');
+    b.className = 'btn btn-green'; b.textContent = '💰 購入する';
+    b.onclick = ()=>{ sendActionToHost({ kind:'buy_orient', lv, idx }); closeCardModal(); };
+    bc.appendChild(b);
+  }
+  if((me.reserved||[]).length<3) {
+    const b = document.createElement('button');
+    b.className = 'btn btn-blue'; b.textContent = '📦 予約する（+ゴールド1枚）';
+    b.onclick = ()=>{ sendActionToHost({ kind:'reserve_orient', lv, idx }); closeCardModal(); };
+    bc.appendChild(b);
+  }
+  g('card-modal').classList.add('active');
+}
+
 function gemNameFull(c) { return GEM_NAMES[c] || c; }
+// 金トークン1枚が何枚分として使えるか（交易所tp3で2倍）
+function goldWorth(player) {
+  return (gs && gs.mode==='posts' && hasPost(player, 'tp3')) ? 2 : 1;
+}
+// 東洋「カード2枚で購入」— 指定色のボーナスカードを2枚捨てて買う
+function discardTargets(player, color) {
+  return (player.cards||[]).filter(c=>c.bonus===color && !c.dbl)
+    .sort((a,b)=>(a.pv||0)-(b.pv||0));
+}
 function canAfford(player, card) {
   if(!player) return false;
+  if(card.ability === 'discard2') return discardTargets(player, card.discard).length >= 2;
+  if(card.ability === 'pair' || card.ability === 'pairFree1') {
+    // 組にできるカードが1枚も無ければ買えない
+    if(!(player.cards||[]).some(c=>c.bonus)) return false;
+  }
   let goldNeeded = 0;
   for(const c of GEM_COLORS) {
     const need = Math.max(0, (card.cost[c]||0) - (player.bonuses?.[c]||0));
     const have = player.tokens?.[c]||0;
     if(have<need) goldNeeded += (need - have);
   }
-  return goldNeeded <= (player.tokens?.y||0);
+  const w = goldWorth(player);
+  const goldPower = (player.tokens?.y||0) * w + ((player.orientGold||0) * 2);
+  return goldNeeded <= goldPower;
 }
 function affordStatus(player, card) {
   if(!player) return '';
@@ -1581,6 +1841,9 @@ function handlePlayerAction(pid, action) {
   const player = gs.players.find(p=>p.id===pid);
   if(!player) return;
   if(gs.players[gs.turnIdx].id !== pid) return;
+  const shKinds = ['sh_place','sh_remove','sh_skip'];
+  if(gs.shPhase && shKinds.indexOf(action.kind) < 0) return;
+  if(!gs.shPhase && shKinds.indexOf(action.kind) >= 0) return;
   switch(action.kind) {
     case 'take_gems':    return hostTakeGems(player, action.gems);
     case 'buy_market':   return hostBuyMarket(player, action.lv, action.idx);
@@ -1589,6 +1852,11 @@ function handlePlayerAction(pid, action) {
     case 'reserve_deck': return hostReserveDeck(player, action.lv);
     case 'discard_tokens': return hostDiscardTokens(player, action.tokens);
     case 'pick_noble': return hostPickNoble(player, action.nobleId);
+    case 'buy_orient':     return hostBuyOrient(player, action.lv, action.idx);
+    case 'reserve_orient': return hostReserveOrient(player, action.lv, action.idx);
+    case 'sh_place':  return hostShPlace(player, action.lv, action.idx);
+    case 'sh_remove': return hostShRemove(player, action.lv, action.idx);
+    case 'sh_skip':   return hostShSkip(player);
   }
 }
 
@@ -1611,7 +1879,17 @@ function hostTakeGems(player, gems) {
     gs.bank[c] -= gems[c];
     player.tokens[c] = (player.tokens[c]||0) + gems[c];
   }
-  const desc = Object.keys(gems).filter(k=>gems[k]>0).map(k=>`${GEM_NAMES[k]}×${gems[k]}`).join('・');
+  let desc = Object.keys(gems).filter(k=>gems[k]>0).map(k=>`${GEM_NAMES[k]}×${gems[k]}`).join('・');
+  // 交易所tp2：同色2枚を取ったとき、別の色をもう1枚
+  if(gs.mode==='posts' && hasPost(player,'tp2') && distinct===1 && total===2) {
+    const taken = Object.keys(gems).find(k=>gems[k]===2);
+    const extra = GEM_COLORS.filter(c=>c!==taken && gs.bank[c]>0)
+      .sort((a,b)=>((player.tokens[a]||0)+(player.bonuses[a]||0))-((player.tokens[b]||0)+(player.bonuses[b]||0)))[0];
+    if(extra) {
+      gs.bank[extra]--; player.tokens[extra] = (player.tokens[extra]||0)+1;
+      desc += `・${GEM_NAMES[extra]}×1(交易所)`;
+    }
+  }
   gs.log.push(`💎 ${player.name} が ${desc} を取得`);
   selectedGems = { w:0,b:0,g:0,r:0,k:0 };
   finishTurn(player);
@@ -1620,11 +1898,37 @@ function hostTakeGems(player, gems) {
 function hostBuyMarket(player, lv, idx) {
   const card = gs.market[lv][idx];
   if(!card || !canAfford(player, card)) return;
+  if(shBlocked(player, lv, idx)) return;           // 他人の城塞に占拠されている
   payCost(player, card);
   givePurchasedCard(player, card);
+  if(gs.mode==='strongholds') shClearAt(lv, idx);  // 自分の城塞は手元に戻る
   // refill market slot
   gs.market[lv][idx] = gs.decks[lv].shift() || null;
   gs.log.push(`💰 ${player.name} がLv${lv}の${GEM_NAMES[card.bonus]}カードを購入 (${card.pv}点)`);
+  postBuyToken(player);
+  if(gs.mode==='strongholds') { startShPhase(player); return; }
+  finishTurn(player);
+}
+
+function hostBuyOrient(player, lv, idx) {
+  const card = gs.omarket[lv] && gs.omarket[lv][idx];
+  if(!card || !canAfford(player, card)) return;
+  payCost(player, card);
+  givePurchasedCard(player, card);
+  gs.omarket[lv][idx] = gs.odecks[lv].shift() || null;
+  gs.log.push(`🏯 ${player.name} が東洋カード(Lv${lv}・${ORIENT_LABEL[card.ability]})を購入`);
+  postBuyToken(player);
+  if(gs.mode==='strongholds') { startShPhase(player); return; }
+  finishTurn(player);
+}
+function hostReserveOrient(player, lv, idx) {
+  if((player.reserved||[]).length>=3) return;
+  const card = gs.omarket[lv] && gs.omarket[lv][idx];
+  if(!card) return;
+  player.reserved.push(card);
+  gs.omarket[lv][idx] = gs.odecks[lv].shift() || null;
+  if(gs.bank.y>0) { gs.bank.y--; player.tokens.y++; }
+  gs.log.push(`📦 ${player.name} が東洋カード(Lv${lv})を予約`);
   finishTurn(player);
 }
 
@@ -1635,6 +1939,8 @@ function hostBuyReserved(player, idx) {
   player.reserved.splice(idx,1);
   givePurchasedCard(player, card);
   gs.log.push(`💰 ${player.name} が予約カード(Lv${card.lv})を購入 (${card.pv}点)`);
+  postBuyToken(player);
+  if(gs.mode==='strongholds') { startShPhase(player); return; }
   finishTurn(player);
 }
 
@@ -1642,6 +1948,8 @@ function hostReserveMarket(player, lv, idx) {
   if((player.reserved||[]).length>=3) return;
   const card = gs.market[lv][idx];
   if(!card) return;
+  if(shBlocked(player, lv, idx)) return;
+  if(gs.mode==='strongholds') shClearAt(lv, idx);
   player.reserved.push(card);
   gs.market[lv][idx] = gs.decks[lv].shift() || null;
   if(gs.bank.y>0) { gs.bank.y--; player.tokens.y++; }
@@ -1660,29 +1968,233 @@ function hostReserveDeck(player, lv) {
 }
 
 function payCost(player, card) {
-  let goldUsed = 0;
+  if(card.ability === 'discard2') {
+    const outs = discardTargets(player, card.discard).slice(0,2);
+    outs.forEach(o=>{
+      const i = player.cards.indexOf(o);
+      if(i>=0) player.cards.splice(i,1);
+      player.bonuses[o.bonus] -= (o.dbl?2:1);
+      player.points -= (o.pv||0);
+    });
+    gs.log.push(`🏯 ${player.name} が ${GEM_NAMES[card.discard]}カード2枚を捨てて購入`);
+    return;
+  }
+  const w = goldWorth(player);
+  let debt = 0;   // 金でまかなう必要のある枚数
   for(const c of GEM_COLORS) {
     const need = Math.max(0, (card.cost[c]||0) - (player.bonuses[c]||0));
     if(need===0) continue;
     const fromColor = Math.min(need, player.tokens[c]||0);
     player.tokens[c] -= fromColor;
     gs.bank[c] += fromColor;
-    const stillNeed = need - fromColor;
-    if(stillNeed>0) {
-      player.tokens.y -= stillNeed;
-      gs.bank.y += stillNeed;
-      goldUsed += stillNeed;
-    }
+    debt += need - fromColor;
+  }
+  if(debt>0) {
+    // 東洋の「金2枚分カード」を先に使う（使い切りで捨て札）
+    while(debt>0 && (player.orientGold||0)>0) { player.orientGold--; debt -= 2; }
+    // 残りは金トークン（交易所tp3なら1枚で2枚分）
+    while(debt>0 && player.tokens.y>0) { player.tokens.y--; gs.bank.y++; debt -= w; }
   }
 }
 
 function givePurchasedCard(player, card) {
+  // 東洋の特殊カード
+  if(card.orient) { giveOrientCard(player, card); return; }
   player.cards.push(card);
-  player.bonuses[card.bonus]++;
+  player.bonuses[card.bonus] += (card.dbl ? 2 : 1);
   player.points += (card.pv||0);
+}
+function giveOrientCard(player, card) {
+  const ab = card.ability;
+  if(ab === 'gold2') {
+    player.orientGold = (player.orientGold||0) + 1;
+    gs.log.push(`🏯 ${player.name} が「金2枚分」を獲得`);
+    return;   // 手札としては持たない（使い切り）
+  }
+  if(ab === 'pair' || ab === 'pairFree1') {
+    // 一番多く持っている色に合わせる（自動）
+    const best = GEM_COLORS.slice().sort((a,b)=>(player.bonuses[b]||0)-(player.bonuses[a]||0))[0];
+    const c = { ...card, bonus: best, paired: true };
+    player.cards.push(c);
+    player.bonuses[best] += 1;
+    player.points += (card.pv||0);
+    gs.log.push(`🏯 ${player.name} が「色を真似る」を ${GEM_NAMES[best]} として獲得`);
+    if(ab === 'pairFree1') takeFreeCard(player, 1);
+    return;
+  }
+  if(ab === 'dbl') {
+    const c = { ...card, dbl:true };
+    player.cards.push(c);
+    player.bonuses[card.bonus] += 2;
+    player.points += (card.pv||0);
+    gs.log.push(`🏯 ${player.name} が ${GEM_NAMES[card.bonus]}ボーナス2個ぶんのカードを獲得`);
+    return;
+  }
+  if(ab === 'resNoble') {
+    player.cards.push({ ...card, bonus:null });
+    player.points += (card.pv||0);
+    const n = gs.nobles.find(x=>!x.taken && !x.reservedBy);
+    if(n) {
+      n.reservedBy = player.id;
+      player.resNobles.push(n.id);
+      gs.log.push(`🏯 ${player.name} が貴族「${n.name}」を予約`);
+    }
+    return;
+  }
+  if(ab === 'free2') {
+    player.cards.push({ ...card, bonus:null });
+    player.points += (card.pv||0);
+    gs.log.push(`🏯 ${player.name} が「Lv2無料」を獲得`);
+    takeFreeCard(player, 2);
+    return;
+  }
+  // discard2 など通常のボーナス持ち
+  player.cards.push(card);
+  if(card.bonus) player.bonuses[card.bonus] += (card.dbl?2:1);
+  player.points += (card.pv||0);
+}
+// 指定レベルの表向きカードを1枚タダで取る（価値が高いものを自動選択）
+function takeFreeCard(player, lv) {
+  let best = null;
+  for(let i=0;i<4;i++){
+    const c = gs.market[lv][i];
+    if(!c) continue;
+    if(shBlocked(player, lv, i)) continue;
+    if(!best || (c.pv||0) > (best.card.pv||0)) best = { card:c, kind:'base', idx:i };
+  }
+  for(let i=0;i<2;i++){
+    const c = gs.omarket[lv] && gs.omarket[lv][i];
+    if(!c) continue;
+    if(c.ability==='pair' || c.ability==='pairFree1' || c.ability==='discard2') continue;  // 連鎖を避ける
+    if(!best || (c.pv||0) > (best.card.pv||0)) best = { card:c, kind:'orient', idx:i };
+  }
+  if(!best) return;
+  if(best.kind === 'base') {
+    gs.market[lv][best.idx] = gs.decks[lv].shift() || null;
+    givePurchasedCard(player, best.card);
+  } else {
+    gs.omarket[lv][best.idx] = gs.odecks[lv].shift() || null;
+    givePurchasedCard(player, best.card);
+  }
+  gs.log.push(`🏯 ${player.name} がLv${lv}カードを無料で獲得`);
+}
+// 交易所tp1：カード購入後に宝石トークンを1枚もらう
+// （どの色を取るかは選択制だが、ここでは手薄な色を自動で選ぶ）
+function postBuyToken(player) {
+  if(gs.mode!=='posts' || !hasPost(player,'tp1')) return;
+  const c = GEM_COLORS.filter(c=>gs.bank[c]>0)
+    .sort((a,b)=>((player.tokens[a]||0)+(player.bonuses[a]||0))-((player.tokens[b]||0)+(player.bonuses[b]||0)))[0];
+  if(!c) return;
+  gs.bank[c]--; player.tokens[c] = (player.tokens[c]||0)+1;
+  gs.log.push(`🏳️ ${player.name} が交易所の能力で ${GEM_NAMES[c]}×1 を獲得`);
+}
+
+// 城塞：購入のたびに「置く/動かす」か「相手の城塞を取り除く」を1回行う
+function startShPhase(player) {
+  const canPlace = player.strongholds > 0 || hasOwnSh(player);
+  const canRemove = anyOtherSh(player);
+  if(!canPlace && !canRemove) { finishTurn(player); return; }
+  gs.shPhase = { pid: player.id };
+  if(player.isCpu) { setTimeout(()=>cpuStronghold(player), 300); pushStateAll(); renderGame(); return; }
+  pushStateAll(); renderGame();
+}
+function hasOwnSh(player) {
+  return Object.keys(gs.sh||{}).some(k=>gs.sh[k].owner===player.id);
+}
+// そのカードに城塞を置ける（＝手元にあるか、別のカードから移動できる）か
+function canPutAt(player, lv, idx) {
+  const s = shAt(lv, idx);
+  if(s && s.owner !== player.id) return false;
+  if(player.strongholds > 0) return true;
+  return Object.keys(gs.sh||{}).some(k=>gs.sh[k].owner===player.id && k!==shKey(lv,idx));
+}
+function anyOtherSh(player) {
+  return Object.keys(gs.sh||{}).some(k=>gs.sh[k].owner!==player.id);
+}
+// 置く/動かす
+function hostShPlace(player, lv, idx) {
+  if(!gs.shPhase || gs.shPhase.pid !== player.id) return;
+  if(!gs.market[lv] || !gs.market[lv][idx]) return;
+  if(!canPutAt(player, lv, idx)) return;
+  const cur = shAt(lv, idx);
+  if(player.strongholds <= 0) {
+    // 手元にないので、盤上の自分の城塞を1つ移動させる
+    const from = Object.keys(gs.sh).find(k=>gs.sh[k].owner===player.id && k!==shKey(lv,idx));
+    if(!from) return;
+    gs.sh[from].n--; player.strongholds++;
+    if(gs.sh[from].n<=0) delete gs.sh[from];
+  }
+  player.strongholds--;
+  if(cur) cur.n++;
+  else gs.sh[shKey(lv,idx)] = { owner: player.id, n: 1 };
+  gs.log.push(`🏰 ${player.name} が城塞を配置（Lv${lv}）`);
+  endShPhase(player);
+}
+// 相手の城塞を取り除く
+function hostShRemove(player, lv, idx) {
+  if(!gs.shPhase || gs.shPhase.pid !== player.id) return;
+  const s = shAt(lv, idx);
+  if(!s || s.owner === player.id) return;
+  const owner = gs.players.find(p=>p.id===s.owner);
+  s.n--;
+  if(owner) owner.strongholds++;
+  if(s.n<=0) delete gs.sh[shKey(lv,idx)];
+  gs.log.push(`🏰 ${player.name} が ${owner?owner.name:'相手'} の城塞を1つ取り除いた`);
+  endShPhase(player);
+}
+function hostShSkip(player) {
+  if(!gs.shPhase || gs.shPhase.pid !== player.id) return;
+  endShPhase(player);
+}
+function endShPhase(player) {
+  gs.shPhase = null;
+  finishTurn(player);
+}
+function cpuStronghold(cpu) {
+  if(!gs.shPhase || gs.shPhase.pid !== cpu.id) return;
+  // 自分の城塞が乗っていて、あと1つで制圧できるカードを優先
+  let best = null;
+  for(const lv of [3,2,1]) for(let i=0;i<4;i++){
+    const card = gs.market[lv][i];
+    if(!card || !canPutAt(cpu, lv, i)) continue;
+    const s = shAt(lv,i);
+    const sc = (s && s.owner===cpu.id) ? (100 + s.n*10 + (card.pv||0)) : ((card.pv||0)*3 + (4-lv));
+    if(!best || sc > best.score) best = {lv, idx:i, score: sc};
+  }
+  if(best) { hostShPlace(cpu, best.lv, best.idx); if(!gs.shPhase) return; }
+  // 置けないなら相手の城塞を取り除く
+  for(const lv of [3,2,1]) for(let i=0;i<4;i++){
+    const s = shAt(lv,i);
+    if(s && s.owner!==cpu.id && gs.market[lv][i]) { hostShRemove(cpu, lv, i); if(!gs.shPhase) return; }
+  }
+  hostShSkip(cpu);
+}
+
+// 城塞の制圧：3つそろったカードは、行動のあとに追加で購入できる
+// （3つ置いた時点で買う意思が明確なため、支払える場合は自動で購入する）
+function findConquered(player) {
+  for(const lv of [1,2,3]) for(let i=0;i<4;i++){
+    if(shConquered(player, lv, i) && gs.market[lv][i]) return {lv, idx:i};
+  }
+  return null;
+}
+function tryConquerBuy(player) {
+  if(gs.mode !== 'strongholds' || player.conqDone) return false;
+  const t = findConquered(player);
+  if(!t) return false;
+  const card = gs.market[t.lv][t.idx];
+  if(!card || !canAfford(player, card)) return false;
+  player.conqDone = true;
+  payCost(player, card);
+  givePurchasedCard(player, card);
+  shClearAt(t.lv, t.idx);
+  gs.market[t.lv][t.idx] = gs.decks[t.lv].shift() || null;
+  gs.log.push(`🏰 ${player.name} が制圧したLv${t.lv}カードを購入 (${card.pv}点)`);
+  return true;
 }
 
 function finishTurn(player) {
+  if(gs.mode === 'strongholds') tryConquerBuy(player);
   // check token limit (>10)
   const tot = Object.values(player.tokens).reduce((a,b)=>a+b,0);
   if(tot>10) {
@@ -1691,8 +2203,10 @@ function finishTurn(player) {
     return; // turn not advanced until discard done
   }
   if(gs.mode === 'cities') { finishTurnCities(player); return; }
-  // check noble visits
-  const eligible = gs.nobles.filter(n=>!n.taken && Object.keys(n.reqs).every(c=>player.bonuses[c]>=n.reqs[c]));
+  // check noble visits（東洋で予約された貴族は本人だけが獲得できる）
+  const eligible = gs.nobles.filter(n=>!n.taken
+    && (!n.reservedBy || n.reservedBy===player.id)
+    && Object.keys(n.reqs).every(c=>player.bonuses[c]>=n.reqs[c]));
   if(eligible.length>1) {
     // ask to pick
     promptNoblePick(player, eligible);
@@ -1700,6 +2214,7 @@ function finishTurn(player) {
   } else if(eligible.length===1) {
     claimNoble(player, eligible[0]);
   }
+  checkPosts(player);
   checkFinalRound(player);
   advanceTurn();
 }
@@ -1722,6 +2237,21 @@ function finishTurnCities(player) {
   }
   advanceTurn();
 }
+// 交易所：条件を満たした能力の紋章を置く（ターン終了時）
+function checkPosts(player) {
+  if(gs.mode !== 'posts') return;
+  POSTS.forEach((post, i)=>{
+    if(hasPost(player, post.id)) return;
+    if(!postOk(player, post)) return;
+    player.posts[post.id] = true;
+    // tp4=+5点 / tp5=紋章1つにつき+1点（あとから紋章が増えるたびに+1）
+    if(post.id === 'tp4') player.points += 5;
+    if(post.id === 'tp5') player.points += Object.keys(player.posts).length;
+    else if(hasPost(player, 'tp5')) player.points += 1;
+    gs.log.push(`🏳️ ${player.name} が交易所「${post.name}」を獲得`);
+  });
+}
+
 function checkFinalRound(player) {
   if(gs.mode === 'cities') return;   // 都市モードは15点では終わらない
   if(player.points >= 15 && !gs.finalRound) {
@@ -1764,13 +2294,16 @@ function hostDiscardTokens(player, tokens) {
   if(gs.mode === 'cities') { finishTurnCities(player); return; }
   // continue turn finalization
   // check nobles
-  const eligible = gs.nobles.filter(n=>!n.taken && Object.keys(n.reqs).every(c=>player.bonuses[c]>=n.reqs[c]));
+  const eligible = gs.nobles.filter(n=>!n.taken
+    && (!n.reservedBy || n.reservedBy===player.id)
+    && Object.keys(n.reqs).every(c=>player.bonuses[c]>=n.reqs[c]));
   if(eligible.length>1) {
     promptNoblePick(player, eligible);
     return;
   } else if(eligible.length===1) {
     claimNoble(player, eligible[0]);
   }
+  checkPosts(player);
   checkFinalRound(player);
   advanceTurn();
 }
@@ -1779,6 +2312,7 @@ function promptNoblePick(player, eligible) {
   if(player.isCpu) {
     // pick highest-value (all are 3, just pick first)
     claimNoble(player, eligible[0]);
+    checkPosts(player);
     checkFinalRound(player);
     advanceTurn();
     return;
@@ -1796,6 +2330,7 @@ function hostPickNoble(player, nobleId) {
   // verify eligibility
   if(!Object.keys(noble.reqs).every(c=>player.bonuses[c]>=noble.reqs[c])) return;
   claimNoble(player, noble);
+  checkPosts(player);
   checkFinalRound(player);
   advanceTurn();
 }
@@ -1812,6 +2347,7 @@ function advanceTurn() {
     return;
   }
   gs.turnIdx = next;
+  gs.players.forEach(p=>{ p.conqDone = false; });
   gs.log.push(`👉 ${gs.players[gs.turnIdx].name} のターン`);
   pushStateAll();
   renderGame();
@@ -1982,10 +2518,19 @@ function cpuTurn(cpu) {
   for(let lv=1; lv<=3; lv++) {
     gs.market[lv].forEach((c, i)=>{
       if(!c) return;
+      if(shBlocked(cpu, lv, i)) return;              // 相手の城塞に占拠されている
       if(canAfford(cpu, c)) {
         const score = c.pv*2 + (lv===1?0:lv===2?1:2) + cpuBonusValue(cpu, c.bonus);
         if(!best || score>best.score) best = { card:c, lv, idx:i, source:'market', score };
       }
+    });
+    // 東洋カード
+    if(gs.mode==='orient') ((gs.omarket||{})[lv]||[]).forEach((c, i)=>{
+      if(!c || !canAfford(cpu, c)) return;
+      const bv = c.bonus ? cpuBonusValue(cpu, c.bonus) : 1;
+      const extra = {gold2:1.5, pair:1.5, pairFree1:4, dbl:3, resNoble:1, free2:5, discard2:3}[c.ability]||0;
+      const score = (c.pv||0)*2 + (lv===1?0:lv===2?1:2) + bv + extra;
+      if(!best || score>best.score) best = { card:c, lv, idx:i, source:'orient', score };
     });
   }
   // 1b. Buy reserved
@@ -1997,6 +2542,7 @@ function cpuTurn(cpu) {
   });
   if(best) {
     if(best.source==='market') handlePlayerAction(cpu.id, { kind:'buy_market', lv:best.lv, idx:best.idx });
+    else if(best.source==='orient') handlePlayerAction(cpu.id, { kind:'buy_orient', lv:best.lv, idx:best.idx });
     else handlePlayerAction(cpu.id, { kind:'buy_reserved', idx:best.idx });
     return;
   }
@@ -2015,11 +2561,12 @@ function cpuTurn(cpu) {
 
   // 4. Reserve a card if possible
   if((cpu.reserved||[]).length<3) {
-    // pick highest-pv level 3 card
+    // pick highest-pv level 3 card（城塞で占拠されているカードは選ばない）
     let target = null;
-    for(let lv=3; lv>=1; lv--) {
-      const c = gs.market[lv].find(c=>c);
-      if(c) { target = { lv, idx: gs.market[lv].indexOf(c) }; break; }
+    for(let lv=3; lv>=1 && !target; lv--) {
+      for(let i=0;i<4;i++) {
+        if(gs.market[lv][i] && !shBlocked(cpu, lv, i)) { target = { lv, idx:i }; break; }
+      }
     }
     if(target) {
       handlePlayerAction(cpu.id, { kind:'reserve_market', lv:target.lv, idx:target.idx });
@@ -2043,6 +2590,13 @@ function cpuTurn(cpu) {
     availColors.slice(0, Math.min(3, availColors.length)).forEach(c=>gems[c]=1);
     handlePlayerAction(cpu.id, { kind:'take_gems', gems });
     return;
+  }
+
+  // 6b. デッキから予約する
+  if((cpu.reserved||[]).length<3) {
+    for(let lv=3; lv>=1; lv--) {
+      if((gs.decks[lv]||[]).length>0) { handlePlayerAction(cpu.id, { kind:'reserve_deck', lv }); return; }
+    }
   }
 
   // 7. Last resort: pass — shouldn't happen often, but advance turn
