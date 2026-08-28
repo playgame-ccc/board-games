@@ -1,0 +1,1270 @@
+<!-- SHADY LADY v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🍸 シェディー・レディー</title>
+<style>
+:root {
+  --bg: #0c0910;
+  --surface: #17121d;
+  --surface2: #201928;
+  --surface3: #362b42;
+  --text: #f4eff7;
+  --muted: #9a8fa8;
+  --red: #ff5566;
+  --green: #35e08c;
+  --blue: #4db8ff;
+  --gold: #e8c46a;
+  --sl: #d94f70;
+  --sl-dim: rgba(217,79,112,0.16);
+  --card-face: #f7f2ea;
+  --card-ink: #241c2c;
+  --sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
+  --mono: "SF Mono", Menlo, Monaco, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 16px; line-height: 1.5;
+  overscroll-behavior: none; padding-bottom: env(safe-area-inset-bottom);
+}
+.app { max-width: 480px; margin: 0 auto; padding: 12px; min-height: 100dvh; display: flex; flex-direction: column; gap: 10px; }
+body.ingame { overflow: hidden; height: 100dvh; }
+body.ingame .app { height: 100dvh; min-height: 0; }
+.screen { display: none; flex-direction: column; gap: 10px; }
+.screen.active { display: flex; }
+h1 { font-size: 1.7rem; text-align: center; }
+h2 { font-size: 1.3rem; text-align: center; }
+h3 { font-size: 0.78rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 2px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 11px 16px; border-radius: 10px; border: 1px solid var(--surface3);
+  background: var(--surface); color: var(--text); cursor: pointer;
+  font-family: var(--sans); font-size: 0.92rem; font-weight: 600; transition: all 0.15s; user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.32; cursor: not-allowed; }
+.btn-sl { background: var(--sl); border-color: var(--sl); color: #fff; }
+.btn-blue { background: rgba(77,184,255,0.15); border-color: rgba(77,184,255,0.5); color: var(--blue); }
+.btn-gold { background: rgba(232,196,106,0.15); border-color: rgba(232,196,106,0.55); color: var(--gold); }
+.btn-ghost { background: transparent; }
+.btn-sm { padding: 7px 11px; font-size: 0.74rem; border-radius: 8px; min-height: 32px; }
+.input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--surface3); background: var(--surface2); color: var(--text);
+  font-size: 1rem; font-family: var(--sans); outline: none;
+}
+.input:focus { border-color: var(--sl); }
+.code-input { font-family: var(--mono); font-size: 1.3rem; text-align: center; letter-spacing: 6px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.divider { height: 1px; background: var(--surface3); margin: 4px 0; }
+.panel { background: var(--surface); border: 1px solid var(--surface3); border-radius: 12px; padding: 12px; }
+.status-txt { text-align: center; font-size: 0.85rem; color: var(--blue); min-height: 1.2em; }
+.error { text-align: center; font-size: 0.85rem; color: var(--red); min-height: 1.2em; }
+.code-box { text-align: center; background: var(--surface); border: 1px dashed var(--surface3); border-radius: 12px; padding: 10px; }
+.code-box .label { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); letter-spacing: 2px; }
+.code-box .code { font-size: 2rem; font-family: var(--mono); letter-spacing: 8px; color: var(--gold); font-weight: 700; }
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-chip { display: flex; align-items: center; gap: 8px; background: var(--surface2); border-radius: 10px; padding: 9px 12px; font-size: 0.92rem; }
+.log { font-size: 0.72rem; color: var(--muted); overflow-y: auto; line-height: 1.6; font-family: var(--mono); }
+.log div { border-bottom: 1px solid rgba(255,255,255,0.04); padding: 2px 0; }
+.tag { font-size: 0.68rem; color: var(--muted); font-family: var(--mono); }
+
+/* ===== カード ===== */
+.card {
+  width: 46px; height: 62px; border-radius: 7px; border: 1.5px solid #cfc6bb;
+  background: var(--card-face); color: var(--card-ink);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 1.5rem; user-select: none; flex: 0 0 auto; position: relative;
+}
+.card.small { width: 34px; height: 46px; font-size: 1.05rem; }
+.card.back {
+  background: repeating-linear-gradient(135deg,#2c2338 0 7px,#241c2e 7px 14px);
+  color: rgba(255,255,255,0.3); border-color: var(--surface3); font-size: 0.9rem;
+}
+.card.pick { outline: 2px solid var(--sl); outline-offset: 2px; transform: translateY(-5px); }
+.card.dim { opacity: 0.35; }
+.hand { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.hand .card { cursor: pointer; }
+
+/* ===== ゲーム画面 ===== */
+#screen-game { height: 100%; gap: 6px; overflow: hidden; }
+#screen-game > * { flex-shrink: 0; }
+#screen-game > #panel-log { flex-shrink: 1; }
+#screen-game .panel { padding: 7px 9px; }
+#screen-game h3 { margin-bottom: 5px !important; font-size: 0.68rem; }
+.turnbar { text-align: center; padding: 6px; border-radius: 10px; font-weight: 700; font-size: 0.86rem; background: var(--surface); border: 1px solid var(--surface3); }
+.turnbar.me { background: var(--sl-dim); border-color: var(--sl); color: #ff8fa8; animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(217,79,112,0.4);} 50%{ box-shadow: 0 0 0 7px rgba(217,79,112,0);} }
+.hdr { display: block; font-size: 0.68rem; font-family: var(--mono); color: var(--muted);
+       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hdr b { color: var(--gold); }
+.prow { display: flex; align-items: center; gap: 6px; background: var(--surface2); border-radius: 9px; padding: 4px 7px; border: 1px solid transparent; font-size: 0.78rem; }
+.prow.turn { border-color: var(--sl); background: var(--sl-dim); }
+.prow .pname { min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 86px; }
+.pts { font-family: var(--mono); font-weight: 800; color: var(--gold); }
+.acts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+.acts .btn { padding: 9px 4px; font-size: 0.84rem; }
+.acts .btn .sub { font-size: 0.62rem; opacity: 0.75; margin-left: 3px; }
+.msg { text-align: center; font-size: 0.82rem; font-weight: 700; line-height: 1.35; }
+.sub { text-align: center; font-size: 0.7rem; color: var(--muted); line-height: 1.35; }
+#panel-log { flex: 1 1 0; min-height: 40px; display: flex; flex-direction: column; overflow: hidden; }
+#panel-log .log { flex: 1 1 0; min-height: 0; }
+.btn-exit { padding: 7px 11px; font-size: 0.72rem; border-radius: 8px; min-height: 32px; }
+.seg { display: flex; gap: 5px; }
+.seg .btn { flex: 1; padding: 8px 2px; font-size: 0.82rem; }
+.seg .btn.on { background: var(--sl-dim); border-color: var(--sl); color: #ff8fa8; }
+.role { display: inline-block; font-size: 0.68rem; padding: 1px 6px; border-radius: 6px; font-weight: 700; }
+.role-run { background: rgba(77,184,255,0.18); color: var(--blue); }
+.role-set { background: rgba(232,196,106,0.2); color: var(--gold); }
+
+.result-hero { text-align: center; padding: 18px 10px; }
+.result-emoji { font-size: 3rem; }
+.result-title { font-size: 1.4rem; font-weight: 800; margin-top: 6px; }
+.result-sub { font-size: 0.88rem; color: var(--muted); margin-top: 4px; }
+
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 500; align-items: center; justify-content: center; padding: 16px; }
+.modal { background: var(--surface); border: 1px solid var(--surface3); border-radius: 14px; padding: 16px; width: 100%; max-width: 420px; }
+
+@media (max-height: 800px) {
+  body.ingame .app { padding: 8px 10px; }
+  #screen-game { gap: 4px; }
+  #screen-game .panel { padding: 5px 8px; }
+  #screen-game h3 { font-size: 0.62rem; margin-bottom: 3px !important; }
+  .turnbar { padding: 4px; font-size: 0.8rem; }
+  .card { width: 42px; height: 56px; font-size: 1.35rem; }
+  .card.small { width: 30px; height: 41px; font-size: 0.95rem; }
+  .prow { padding: 2px 6px; }
+  .player-list { gap: 3px; }
+  .acts .btn { padding: 7px 3px; font-size: 0.8rem; }
+  .msg { font-size: 0.78rem; }
+  .sub { font-size: 0.66rem; }
+}
+@media (max-height: 700px) {
+  body.ingame .app { padding: 8px 10px; }
+  #screen-game { gap: 4px; }
+  #screen-game .panel { padding: 5px 8px; }
+  .turnbar { padding: 4px; font-size: 0.8rem; }
+  .card { width: 36px; height: 49px; font-size: 1.15rem; }
+  .card.small { width: 26px; height: 36px; font-size: 0.85rem; }
+  #screen-game .panel { padding: 4px 7px; }
+  .prow { padding: 1px 5px; font-size: 0.74rem; }
+  .acts .btn { padding: 5px 3px; font-size: 0.76rem; }
+  .prow { padding: 2px 6px; }
+  .player-list { gap: 4px; }
+  .acts .btn { padding: 7px 3px; font-size: 0.8rem; }
+  #panel-log { min-height: 32px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ LOBBY ============ -->
+  <div id="screen-lobby" class="screen active">
+    <h1>🍸 シェディー・レディー</h1>
+    <p style="text-align:center; font-family:var(--mono); font-size:0.72rem; color:var(--muted); letter-spacing:1px;">手札3枚で役を作る読み合い（2〜6人）</p>
+
+    <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" id="btn-reconnect" style="display:none; background:rgba(45,189,110,0.15); color:#2dbd6e; border:1px solid rgba(45,189,110,0.5);" onclick="pgReconnect()"></button>
+      <button class="btn btn-sl" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" autocomplete="off" style="flex:1;">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+      <div class="divider"></div>
+      <div class="panel">
+        <h3 style="margin-bottom:8px;">🤖 練習モード（BOT対戦）</h3>
+        <div class="seg" id="bot-seg">
+          <button class="btn" data-b="1" onclick="setBots(1)">2人</button>
+          <button class="btn on" data-b="3" onclick="setBots(3)">4人</button>
+          <button class="btn" data-b="5" onclick="setBots(5)">6人</button>
+        </div>
+        <button class="btn" style="width:100%; margin-top:8px;" onclick="startSolo()">▶ ひとりで練習する</button>
+      </div>
+    </div>
+
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+
+    <p style="text-align:center; font-size:0.72rem; color:var(--muted); line-height:1.6;">
+      カードは <b>1・2・3・4・6・7・8・9</b> が各10枚（5はなし）<br>
+      3枚で <b>連番</b> か <b>ゾロ目</b> を揃えて「トライ」、<br>
+      揃っていそうな人に「ジャック」。3点先取で勝ち
+    </p>
+
+    <a href="index.html" style="text-decoration:none; margin-top:6px;">
+      <button class="btn btn-ghost" style="width:100%;">← ホームに戻る</button>
+    </a>
+  </div>
+
+  <!-- ============ WAITING ============ -->
+  <div id="screen-waiting" class="screen">
+    <h2>待機ロビー</h2>
+    <div class="code-box">
+      <div class="label">ルームコード</div>
+      <div class="code" id="disp-code">----</div>
+      <button class="btn btn-ghost btn-sm" onclick="copyCode()" style="margin-top:4px;">📋 コードをコピー</button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:8px;">プレイヤー（2〜6人）</h3>
+      <div class="player-list" id="wait-players"></div>
+    </div>
+    <button class="btn btn-sl" id="btn-start" onclick="startGame()">▶ ゲーム開始</button>
+    <div id="wait-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- ============ GAME ============ -->
+  <div id="screen-game" class="screen">
+    <div class="row" style="justify-content:space-between;">
+      <span class="hdr" id="hdr-left" style="flex:1; min-width:0;"></span>
+      <button class="btn btn-ghost btn-exit" onclick="openRules()" title="ルール">📖</button>
+      <button class="btn btn-ghost btn-exit" onclick="leaveRoom()">退出</button>
+    </div>
+    <div class="turnbar" id="turnbar"></div>
+
+    <div class="panel" id="panel-main">
+      <div class="msg" id="main-msg"></div>
+      <div class="sub" id="main-sub"></div>
+      <div id="main-ui" style="margin-top:7px;"></div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-bottom:6px;">プレイヤー<span style="text-transform:none; letter-spacing:0;">（数字＝捨て札の一番上）</span></h3>
+      <div class="player-list" id="players"></div>
+    </div>
+
+    <div class="panel" id="hand-panel">
+      <h3 style="margin-bottom:6px;">あなたの手札<span style="text-transform:none; letter-spacing:0;" id="hand-hint"></span></h3>
+      <div class="hand" id="myhand"></div>
+    </div>
+
+    <div class="panel" id="panel-log">
+      <h3 style="margin-bottom:5px;">ログ</h3>
+      <div class="log" id="game-log"></div>
+    </div>
+  </div>
+
+  <!-- ============ RESULT ============ -->
+  <div id="screen-result" class="screen">
+    <div class="result-hero">
+      <div class="result-emoji" id="result-emoji">🏆</div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:8px;">最終得点</h3>
+      <div class="player-list" id="result-players"></div>
+    </div>
+    <button class="btn btn-sl" id="btn-rematch" onclick="rematch()" style="display:none;">🔄 もう一度</button>
+    <div id="result-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ</button>
+    <a href="index.html" style="text-decoration:none;"><button class="btn btn-ghost" style="width:100%;">🏠 ハブに戻る</button></a>
+  </div>
+
+</div>
+
+<!-- FB CONFIG MODAL -->
+<div class="modal-bg" id="fb-modal">
+  <div class="modal">
+    <h3 style="margin-bottom:10px;">Firebase 設定</h3>
+    <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">Realtime Database の URL を入力してください。</p>
+    <input class="input" id="fb-url" type="url" placeholder="https://xxxx.firebaseio.com">
+    <button class="btn btn-sl" style="width:100%; margin-top:10px;" onclick="saveFbConfig()">保存</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SHADY LADY（シェディー・レディー）
+//  カード: 1,2,3,4,6,7,8,9 が各10枚＝80枚（5は入っていない）
+//  手札3枚で「連番」か「ゾロ目」を作る。強さは 連番 < ゾロ目
+//  手番は4択：山札から引く / 誰かの捨て札から引く / トライ / ジャック
+//  3点先取で勝ち
+// ============================================================
+const NUMBERS = [1,2,3,4,6,7,8,9];
+const COPIES = 10;
+const HAND_SIZE = 3;
+const WIN_POINTS = 3;
+let RESOLVE_MS = 1600, BOT_WAIT = 800, BOT_WAIT_R = 600;
+const BOT_NAMES = ['🤖アカ','🤖アオ','🤖キイロ','🤖ミドリ','🤖ムラサキ'];
+
+// 役の判定。強さは 連番=100+最大値 / ゾロ目=200+数字
+function evalHand(cards) {
+  if(!cards || cards.length !== 3) return null;
+  const s = cards.slice().sort((a,b)=>a-b);
+  if(s[0]===s[1] && s[1]===s[2]) return { type:'set', num:s[0], power:200+s[0], label:`ゾロ目 ${s[0]}` };
+  if(s[1]===s[0]+1 && s[2]===s[1]+1) return { type:'run', num:s[2], power:100+s[2], label:`連番 ${s[0]}-${s[1]}-${s[2]}` };
+  return null;
+}
+function roleHtml(r) {
+  if(!r) return '<span class="tag">役なし</span>';
+  return `<span class="role ${r.type==='set'?'role-set':'role-run'}">${r.label}</span>`;
+}
+
+// ============================================================
+// FIREBASE
+// ============================================================
+const FB_KEY = 'partyGamesFbUrl';
+let fbUrl = localStorage.getItem(FB_KEY) || 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+function saveFbConfig(){
+  const url = g('fb-url').value.trim().replace(/\/$/,'');
+  if(!url) return;
+  fbUrl = url; localStorage.setItem(FB_KEY, url); g('fb-modal').style.display='none';
+}
+async function checkFbConfig(){
+  if(!fbUrl){ g('fb-modal').style.display='flex'; return false; }
+  try {
+    const r = await fetch(`${fbUrl}/.json?shallow=true`);
+    if(!r.ok && r.status !== 404){ setErr('Firebase接続エラー'); return false; }
+  } catch(e){ setErr('Firebase接続失敗'); return false; }
+  return true;
+}
+let fbRoom = '', fbPollTimer = null, fbLastBcastTs = 0, fbLastPrvTs = 0, fbLastActTs = {};
+async function fbPut(sub, data){ if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'PUT', body:JSON.stringify(data)}); } catch(e){} }
+async function fbGet(sub){ if(!fbRoom) return null; try { const r = await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`); if(!r.ok) return null; return await r.json(); } catch(e){ return null; } }
+async function fbDel(sub){ if(!fbRoom) return; try { await fetch(`${fbUrl}/rooms/${fbRoom}/${sub}.json`, {method:'DELETE'}); } catch(e){} }
+function fbListen(){
+  if(fbPollTimer) clearInterval(fbPollTimer);
+  fbLastBcastTs = 0; fbLastPrvTs = 0; fbLastActTs = {};
+  fbPollTimer = setInterval(fbPoll, 500);
+}
+function fbClose(){ if(fbPollTimer) clearInterval(fbPollTimer); fbPollTimer = null; fbRoom = ''; }
+async function fbPoll(){
+  if(!fbRoom) return;
+  const bc = await fbGet('broadcast');
+  if(bc && bc.ts > fbLastBcastTs){ fbLastBcastTs = bc.ts; if(!isHost && bc.msg) handleBroadcast(bc.msg); }
+  const prv = await fbGet(`private/${myId}`);
+  if(prv && prv.ts > fbLastPrvTs){ fbLastPrvTs = prv.ts; if(prv.msg) handlePrivate(prv.msg); }
+  if(isHost){
+    const acts = await fbGet('action');
+    if(acts) for(const pid in acts){
+      const a = acts[pid];
+      if(a && a.ts > (fbLastActTs[pid]||0)){ fbLastActTs[pid] = a.ts; if(a.msg) onMsg(a.msg, pid); }
+    }
+  }
+}
+function fbBroadcast(msg){ fbPut('broadcast', {ts:Date.now(), msg}); }
+function fbSendTo(pid, msg){ fbPut(`private/${pid}`, {ts:Date.now(), msg}); }
+function fbSendToHost(msg){ if(isSolo){ onMsg(msg, myId); return; } fbPut(`action/${myId}`, {ts:Date.now(), msg}); }
+
+// ============================================================
+// STATE
+// ============================================================
+let myId = genId(), myName = '';
+let isHost = false, isSolo = false, roomCode = '';
+let fs = null, gs = null, myHand = [];
+let soloBots = 3, botTimer = null, prevActPid = null;
+let uiMode = null;   // 'jack' = 対象選択中
+
+function g(id){ return document.getElementById(id); }
+function mk(tag, cls){ const e=document.createElement(tag); if(cls) e.className=cls; return e; }
+function show(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = g('screen-'+name); if(el) el.classList.add('active');
+  document.body.classList.toggle('ingame', name==='game');
+}
+function setErr(m){ const e=g('lobby-error'); if(e) e.textContent = m||''; }
+function setSt(m){ const s=g('lobby-status'); if(s) s.textContent = m||''; }
+function genId(){ return 'p_' + Math.random().toString(36).slice(2,10); }
+function shuffle(a){ const x=a.slice(); for(let i=x.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [x[i],x[j]]=[x[j],x[i]]; } return x; }
+function copyCode(){ navigator.clipboard?.writeText(g('disp-code').textContent); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function openRules(){ if(typeof window.openRulesPga==='function') window.openRulesPga(); }
+
+let audioCtx = null;
+document.addEventListener('pointerdown', ()=>{ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } }, {once:true});
+function notifyTurn(){
+  try{ if(navigator.vibrate) navigator.vibrate(120); }catch(e){}
+  try{
+    if(!audioCtx) return;
+    const o=audioCtx.createOscillator(), gn=audioCtx.createGain();
+    o.frequency.value=880; gn.gain.value=0.06;
+    o.connect(gn); gn.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+0.09);
+  }catch(e){}
+}
+
+// ============================================================
+// ROOM
+// ============================================================
+function setBots(n){
+  soloBots = n;
+  document.querySelectorAll('#bot-seg .btn').forEach(b=>b.classList.toggle('on', +b.dataset.b===n));
+}
+async function createRoom(){
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name){ setErr('名前を入力してください'); return; }
+  myName=name; isHost=true; isSolo=false;
+  const code = Array.from({length:4}, ()=>Math.floor(Math.random()*10)).join('');
+  roomCode=code; fbRoom='SL-'+code;
+  setSt('接続中...');
+  try{
+    myId = genId();
+    await fbDel('');
+    await fbPut('meta', {host:myId, game:'shadylady', ts:Date.now()});
+    fs = initFs([{id:myId, name:myName, bot:false}]);
+    fbListen(); pgSaveSession();
+    setErr(''); setSt('');
+    g('disp-code').textContent = code;
+    show('waiting'); bcast();
+  }catch(e){ setErr(e.message||'エラー'); setSt(''); isHost=false; }
+}
+async function joinRoom(){
+  if(!(await checkFbConfig())) return;
+  const name = g('in-name').value.trim();
+  if(!name){ setErr('名前を入力してください'); return; }
+  const code = g('in-code').value.trim();
+  if(!/^\d{4}$/.test(code)){ setErr('4桁の数字'); return; }
+  myName=name; isHost=false; isSolo=false; roomCode=code; fbRoom='SL-'+code;
+  setSt('接続中...');
+  try{
+    myId = genId();
+    const meta = await fbGet('meta');
+    if(!meta){ setErr('ルームが見つかりません'); setSt(''); fbRoom=''; return; }
+    if(meta.game !== 'shadylady'){ setErr('ゲーム種別が違います'); setSt(''); fbRoom=''; return; }
+    fbListen(); pgSaveSession();
+    fbSendToHost({type:'join', name:myName, id:myId});
+    setSt('接続しました...');
+    show('waiting');
+    g('disp-code').textContent = code;
+    g('btn-start').style.display='none';
+    let retries=0;
+    const rj = setInterval(()=>{
+      if(!fbRoom || retries>=5){ clearInterval(rj); return; }
+      if(gs?.players?.find(p=>p.id===myId)){ clearInterval(rj); return; }
+      fbSendToHost({type:'join', name:myName, id:myId}); retries++;
+    }, 2000);
+  }catch(e){ setErr(e.message||'エラー'); setSt(''); }
+}
+function startSolo(){
+  const name = g('in-name').value.trim() || 'あなた';
+  myName=name; isHost=true; isSolo=true; roomCode=''; fbRoom=''; myId=genId();
+  const players=[{id:myId, name:myName, bot:false}];
+  for(let i=0;i<soloBots;i++) players.push({id:'bot_'+i, name:BOT_NAMES[i], bot:true});
+  fs = initFs(players);
+  setErr(''); setSt('');
+  hostStart();
+}
+function leaveRoom(){
+  if(botTimer) clearTimeout(botTimer);
+  pgClearSession(); fbClose();
+  fs=null; gs=null; isHost=false; isSolo=false; myHand=[]; prevActPid=null; uiMode=null;
+  show('lobby'); pgShowReconnect();
+}
+
+// ============================================================
+// HOST: 状態
+// ============================================================
+function initFs(players){
+  return {
+    phase:'waiting',
+    players: players.map(p=>({id:p.id, name:p.name, bot:!!p.bot, hand:[], pile:[], points:0})),
+    deck: [], turnIdx: 0, startIdx: 0, round: 1,
+    step: 'action',        // 'action' = 行動選択 / 'discard' = 引いた後に捨てる
+    tryState: null,        // トライ中の状態
+    lock: false, winner: null, log: []
+  };
+}
+function addLog(t){ fs.log.push(t); if(fs.log.length>80) fs.log = fs.log.slice(-80); }
+function P(pid){ return fs.players.find(p=>p.id===pid); }
+function newDeck(){
+  const d = [];
+  for(const n of NUMBERS) for(let i=0;i<COPIES;i++) d.push(n);
+  return shuffle(d);
+}
+function dealRound(){
+  fs.deck = newDeck();
+  fs.players.forEach(p=>{ p.hand = fs.deck.splice(0, HAND_SIZE); p.pile = []; });
+  fs.step = 'action'; fs.tryState = null; fs.lock = false;
+}
+function hostStart(){
+  const n = fs.players.length;
+  if(n<2 || n>6){ if(!isSolo) setErr('2〜6人で開始できます'); return; }
+  fs.players.forEach(p=>p.points=0);
+  fs.round = 1;
+  fs.startIdx = Math.floor(Math.random()*n);
+  fs.turnIdx = fs.startIdx;
+  dealRound();
+  fs.phase = 'play';
+  addLog(`ゲーム開始（${n}人・${WIN_POINTS}点先取）`);
+  addLog(`▶ ${fs.players[fs.turnIdx].name} の手番`);
+  sendHands(); bcast();
+}
+function startGame(){ if(isHost) hostStart(); }
+function hostRematch(){
+  fs.startIdx = (fs.startIdx+1) % fs.players.length;
+  fs.players.forEach(p=>p.points=0);
+  fs.round = 1;
+  fs.turnIdx = fs.startIdx;
+  dealRound();
+  fs.phase = 'play';
+  addLog('── もう一度 ──');
+  addLog(`▶ ${fs.players[fs.turnIdx].name} の手番`);
+  sendHands(); bcast();
+}
+function rematch(){ if(isHost) hostRematch(); else g('result-status').textContent='ホストの「もう一度」を待っています'; }
+
+// ============================================================
+// HOST: メッセージ
+// ============================================================
+function onMsg(d, pid){
+  if(!d || !fs) return;
+  switch(d.type){
+    case 'join': {
+      const ex = fs.players.find(p=>p.id===d.id);
+      if(ex){ bcast(); sendHand(ex); return; }
+      if(fs.phase!=='waiting'){ fbSendTo(d.id, {type:'error', msg:'ゲーム開始済み'}); return; }
+      if(fs.players.length>=6){ fbSendTo(d.id, {type:'error', msg:'満員（最大6人）'}); return; }
+      fs.players.push({id:d.id, name:d.name, bot:false, hand:[], pile:[], points:0});
+      bcast(); break;
+    }
+    case 'drawDeck': doDrawDeck(pid); break;
+    case 'drawPile': doDrawPile(pid, d.from); break;
+    case 'discard':  doDiscard(pid, d.idx); break;
+    case 'try':      doTry(pid); break;
+    case 'jack':     doJack(pid, d.target); break;
+    case 'tryResp':  doTryResp(pid, d.act); break;
+  }
+}
+function canAct(pid){ return fs.phase==='play' && !fs.lock && fs.step==='action' && fs.players[fs.turnIdx]?.id===pid; }
+
+// ---------- 引く ----------
+function doDrawDeck(pid){
+  if(!canAct(pid)) return;
+  const p = P(pid);
+  refillDeck();
+  if(!fs.deck.length) return;
+  p.hand.push(fs.deck.pop());
+  fs.step = 'discard';
+  addLog(`${p.name}：山札から1枚引いた`);
+  sendHand(p); bcast();
+}
+function doDrawPile(pid, fromPid){
+  if(!canAct(pid)) return;
+  const p = P(pid), src = P(fromPid);
+  if(!src || !src.pile.length) return;
+  const c = src.pile.pop();
+  p.hand.push(c);
+  fs.step = 'discard';
+  addLog(`${p.name}：${src.id===pid?'自分':src.name} の捨て札から ${c} を取った`);
+  sendHand(p); bcast();
+}
+function doDiscard(pid, idx){
+  if(fs.phase!=='play' || fs.lock || fs.step!=='discard') return;
+  const p = fs.players[fs.turnIdx];
+  if(!p || p.id!==pid) return;
+  if(p.hand.length !== HAND_SIZE+1) return;
+  if(typeof idx!=='number' || idx<0 || idx>=p.hand.length) return;
+  const c = p.hand.splice(idx,1)[0];
+  p.pile.push(c);
+  addLog(`${p.name}：${c} を捨てた`);
+  sendHand(p);
+  nextTurn();
+}
+// 公開した手札を自分の捨て札にして、山札から3枚引き直す
+function redraw(p){
+  if(p.hand.length) p.pile.push(...p.hand);
+  p.hand = [];
+  for(let i=0;i<HAND_SIZE;i++){ refillDeck(); if(fs.deck.length) p.hand.push(fs.deck.pop()); }
+  sendHand(p);
+}
+// 山札が尽きたら、各自の捨て札の一番上を残して集め、混ぜて山札に戻す
+function refillDeck(){
+  if(fs.deck.length > 0) return;
+  const gather = [];
+  fs.players.forEach(p=>{
+    while(p.pile.length > 1) gather.push(p.pile.shift());
+  });
+  if(gather.length){
+    fs.deck = shuffle(gather);
+    addLog('🔄 山札が尽きたので捨て札を混ぜ直した');
+  }
+}
+
+// ---------- トライ ----------
+function doTry(pid){
+  if(!canAct(pid)) return;
+  const p = P(pid);
+  const r = evalHand(p.hand);
+  if(!r) return;                       // 役がないとトライできない
+  fs.tryState = { best:{pid, role:r}, order:[], idx:0, joined:[pid] };
+  const n = fs.players.length;
+  // トライした人の右隣（＝時計回りで最後）まで、全員に順番に尋ねる
+  for(let k=1;k<n;k++) fs.tryState.order.push((fs.turnIdx+k)%n);
+  addLog(`🍸 ${p.name} がトライ！ 手札を公開（${p.hand.slice().sort((a,b)=>a-b).join('・')} ＝ ${r.label}）`);
+  fs.step = 'try';
+  advanceTry();
+}
+function advanceTry(){
+  const ts = fs.tryState;
+  if(ts.idx < ts.order.length){ bcast(); return; }   // 次の人に尋ねる
+  finishTry();
+}
+function doTryResp(pid, act){
+  if(fs.phase!=='play' || fs.step!=='try' || !fs.tryState) return;
+  const ts = fs.tryState;
+  const cur = fs.players[ts.order[ts.idx]];
+  if(!cur || cur.id!==pid) return;
+  if(act==='try'){
+    const r = evalHand(cur.hand);
+    if(!r || r.power <= ts.best.role.power) return;   // 出ている役より強くないとトライできない
+    ts.best = { pid, role:r };
+    ts.joined.push(pid);
+    addLog(`🍸 ${cur.name} がトライ返し！ 手札を公開（${cur.hand.slice().sort((a,b)=>a-b).join('・')} ＝ ${r.label}）`);
+  } else {
+    addLog(`${cur.name}：トライしない`);
+  }
+  ts.idx++;
+  advanceTry();
+}
+function finishTry(){
+  const ts = fs.tryState;
+  const w = P(ts.best.pid);
+  w.points++;
+  addLog(`🏅 ${w.name} のトライ成功（${ts.best.role.label}）→ 1点`);
+  // トライした人全員が、公開した手札を捨てて山札から3枚引く
+  ts.joined.forEach(id=>{ const p=P(id); if(p) redraw(p); });
+  if(ts.joined.length>1) addLog(`トライした${ts.joined.length}人は手札を捨てて引き直し`);
+  fs.tryState = null;
+  fs.step = 'action';
+  fs.lock = true;
+  bcast();
+  setTimeout(()=>{
+    if(!fs) return;
+    fs.lock = false;
+    if(checkWin()) return;
+    nextTurn();
+  }, RESOLVE_MS);
+}
+
+// ---------- ジャック ----------
+function doJack(pid, targetPid){
+  if(!canAct(pid)) return;
+  const p = P(pid), t = P(targetPid);
+  if(!t || t.id===pid) return;
+  const r = evalHand(t.hand);
+  fs.lock = true;
+  addLog(`🎯 ${p.name} が ${t.name} にジャック！`);
+  addLog(`${t.name} が手札を公開：${t.hand.slice().sort((a,b)=>a-b).join('・')}`);
+  if(r){
+    p.points++;
+    addLog(`✅ ${r.label} が揃っていた → ${p.name} に1点`);
+  } else {
+    t.points++;
+    addLog(`❌ 役なし → ${t.name} に1点`);
+  }
+  // どちらであっても、指名された人は手札を捨てて3枚引き直す
+  redraw(t);
+  addLog(`${t.name} は手札を捨てて引き直し`);
+  bcast();
+  setTimeout(()=>{
+    if(!fs) return;
+    fs.lock = false;
+    if(checkWin()) return;
+    nextTurn();
+  }, RESOLVE_MS);
+}
+
+// ---------- 進行 ----------
+function nextTurn(){
+  fs.step = 'action';
+  fs.turnIdx = (fs.turnIdx+1) % fs.players.length;
+  addLog(`▶ ${fs.players[fs.turnIdx].name} の手番`);
+  bcast();
+}
+function checkWin(){
+  const w = fs.players.find(p=>p.points >= WIN_POINTS);
+  if(!w) return false;
+  fs.phase = 'result';
+  fs.winner = { pid:w.id, name:w.name, points:w.points };
+  addLog(`🏆 ${w.name} が${WIN_POINTS}点に到達して勝利！`);
+  bcast();
+  if(!isSolo) fbPut('meta', {host:myId, game:'shadylady', ts:Date.now()});
+  return true;
+}
+
+// ============================================================
+// HOST: 配信
+// ============================================================
+function pubFs(f){
+  const ts = f.tryState;
+  return {
+    phase:f.phase, turnIdx:f.turnIdx, step:f.step, lock:f.lock, winner:f.winner,
+    round:f.round, deckCount:f.deck.length,
+    players: f.players.map(p=>({ id:p.id, name:p.name, bot:p.bot, points:p.points,
+      handCount:p.hand.length, top:(p.pile.length?p.pile[p.pile.length-1]:null), pileCount:p.pile.length })),
+    tryState: ts ? { bestPid: ts.best.pid, bestLabel: ts.best.role.label, bestPower: ts.best.role.power,
+                     askPid: (ts.idx < ts.order.length) ? f.players[ts.order[ts.idx]].id : null } : null,
+    log: f.log.slice(-40)
+  };
+}
+function bcast(){
+  if(!fs) return;
+  gs = pubFs(fs);
+  const msg = {type:'state', s:gs};
+  if(isSolo){ handleBroadcast(msg); }
+  else { fbBroadcast(msg); if(!fs.lock) pgSaveHostState(); handleBroadcast(msg); }
+  maybeBot();
+}
+function sendHand(p){
+  if(p.bot) return;
+  const msg = {type:'hand', hand:p.hand.slice()};
+  if(p.id===myId) handlePrivate(msg);
+  else if(!isSolo) fbSendTo(p.id, msg);
+}
+function sendHands(){ fs.players.forEach(sendHand); }
+
+// ============================================================
+// CLIENT
+// ============================================================
+function handleBroadcast(msg){
+  if(!msg) return;
+  if(msg.type==='state'){
+    gs = msg.s;
+    if(gs.step!=='action') uiMode = null;
+    routeScreen();
+    const act = actorPid();
+    if(gs.phase!=='result' && act===myId && prevActPid!==myId && !gs.lock) notifyTurn();
+    prevActPid = act;
+  }
+}
+function handlePrivate(msg){
+  if(!msg) return;
+  if(msg.type==='hand'){ myHand = msg.hand.slice(); if(gs) renderGame(); }
+  if(msg.type==='error'){ setErr(msg.msg||'エラー'); show('lobby'); fbClose(); pgClearSession(); }
+}
+function actorPid(){
+  if(!gs) return null;
+  if(gs.step==='try') return gs.tryState ? (gs.tryState.askPid || null) : null;
+  return gs.players[gs.turnIdx]?.id;
+}
+function routeScreen(){
+  if(!gs) return;
+  if(gs.phase==='waiting'){ show('waiting'); renderWaiting(); }
+  else if(gs.phase==='result'){ show('result'); renderResult(); }
+  else { show('game'); renderGame(); }
+}
+function send(msg){ if(isHost||isSolo) onMsg(msg, myId); else fbSendToHost(msg); }
+function meP(){ return gs ? gs.players.find(p=>p.id===myId) : null; }
+function myTurn(){ return gs && !gs.lock && actorPid()===myId; }
+
+// ---------- UIアクション ----------
+function uiDrawDeck(){ if(myTurn() && gs.step==='action') send({type:'drawDeck'}); }
+function uiDrawPile(pid){ if(myTurn() && gs.step==='action') send({type:'drawPile', from:pid}); }
+function uiDiscard(i){ if(myTurn() && gs.step==='discard') send({type:'discard', idx:i}); }
+function uiTry(){ if(myTurn() && gs.step==='action') send({type:'try'}); }
+function uiJackStart(){ if(myTurn() && gs.step==='action'){ uiMode='jack'; renderGame(); } }
+function uiJack(pid){ uiMode=null; send({type:'jack', target:pid}); }
+function uiCancel(){ uiMode=null; renderGame(); }
+function uiTryResp(act){ if(myTurn() && gs.step==='try') send({type:'tryResp', act}); }
+
+// ---------- 描画 ----------
+function renderWaiting(){
+  const box = g('wait-players'); box.innerHTML='';
+  gs.players.forEach((p,i)=>{
+    const c = mk('div','player-chip');
+    c.innerHTML = `<span>${i===0?'👑':'🍸'}</span><span style="flex:1;">${esc(p.name)}${p.id===myId?' <span class="tag">(あなた)</span>':''}</span>`;
+    box.appendChild(c);
+  });
+  const n = gs.players.length;
+  if(isHost){
+    g('btn-start').style.display='';
+    g('btn-start').disabled = !(n>=2 && n<=6);
+    g('wait-status').textContent = (n>=2&&n<=6) ? '' : '2〜6人で開始できます';
+  } else {
+    g('btn-start').style.display='none';
+    g('wait-status').textContent = 'ホストの開始を待っています...';
+  }
+}
+function cardEl(n, opt){
+  opt = opt||{};
+  const d = mk('div','card' + (opt.small?' small':'') + (opt.back?' back':'') + (opt.pick?' pick':'') + (opt.dim?' dim':''));
+  d.textContent = opt.back ? '🍸' : n;
+  if(opt.onclick){ d.onclick = opt.onclick; d.style.cursor='pointer'; }
+  return d;
+}
+function renderGame(){
+  if(!gs) return;
+  g('hdr-left').innerHTML = `${isSolo?'練習':(roomCode?'#'+roomCode:'')}／山札<b>${gs.deckCount}</b>／${WIN_POINTS}点先取`;
+
+  const tb = g('turnbar');
+  const actor = gs.players.find(p=>p.id===actorPid());
+  let txt = '', me = myTurn();
+  if(gs.lock) txt = '判定中...';
+  else if(gs.step==='try' && gs.tryState) txt = me ? '▶ トライ返しをしますか？' : `⏳ ${actor?actor.name:''} の応答待ち`;
+  else if(gs.step==='discard') txt = me ? '▶ 捨てるカードを選んでください' : `▶ ${actor?actor.name:''} が捨て札を選択中`;
+  else txt = me ? '▶ あなたの手番：行動を選ぶ' : `▶ ${actor?actor.name:''} の手番`;
+  tb.textContent = txt;
+  tb.className = 'turnbar' + (me && !gs.lock ? ' me' : '');
+
+  renderMain();
+
+  // プレイヤー一覧
+  const pl = g('players'); pl.innerHTML='';
+  const curPid = actorPid();
+  gs.players.forEach(p=>{
+    const row = mk('div','prow' + (p.id===curPid && !gs.lock ? ' turn':''));
+    row.innerHTML = `<span class="pname" style="flex:1;">${esc(p.name)}${p.id===myId?'★':''}</span>`;
+    const top = mk('div');
+    top.style.cssText = 'display:flex; align-items:center; gap:5px;';
+    if(p.top!=null){
+      const c = cardEl(p.top, {small:true});
+      const canTake = myTurn() && gs.step==='action' && !uiMode;
+      if(canTake){ c.style.cursor='pointer'; c.onclick = ()=>uiDrawPile(p.id); c.style.outline='1px dashed var(--sl)'; }
+      top.appendChild(c);
+    } else {
+      const e = mk('div','card small back'); e.textContent='—'; e.style.opacity='0.3'; top.appendChild(e);
+    }
+    const info = mk('span','tag'); info.textContent = `捨${p.pileCount}`;
+    top.appendChild(info);
+    const pts = mk('span','pts'); pts.textContent = '🍸'+p.points;
+    top.appendChild(pts);
+    row.appendChild(top);
+    pl.appendChild(row);
+  });
+
+  // 自分の手札
+  const mh = g('myhand'); mh.innerHTML='';
+  const discarding = gs.step==='discard' && myTurn();
+  myHand.forEach((n,i)=>{
+    mh.appendChild(cardEl(n, { onclick: discarding ? ()=>uiDiscard(i) : null }));
+  });
+  const r = evalHand(myHand);
+  g('hand-hint').innerHTML = discarding ? '（タップして1枚捨てる）'
+    : (myHand.length===HAND_SIZE ? ' ' + roleHtml(r) : '');
+
+  const lg = g('game-log'); lg.innerHTML='';
+  (gs.log||[]).slice().reverse().forEach(t=>{ const d=mk('div'); d.textContent=t; lg.appendChild(d); });
+}
+function renderMain(){
+  const msg = g('main-msg'), sub = g('main-sub'), ui = g('main-ui');
+  msg.textContent=''; sub.textContent=''; ui.innerHTML='';
+  if(!gs) return;
+
+  if(gs.step==='try' && gs.tryState){
+    const best = gs.players.find(p=>p.id===gs.tryState.bestPid);
+    msg.innerHTML = `🍸 ${esc(best?best.name:'')} のトライ<br><span class="role role-set">${gs.tryState.bestLabel}</span>`;
+    if(!myTurn()){ sub.textContent = '時計回りに「トライするか否か」を確認しています'; return; }
+    const r = evalHand(myHand);
+    const stronger = !!r && r.power > gs.tryState.bestPower;
+    sub.textContent = stronger ? `あなたの ${r.label} なら上書きできます`
+      : `あなたは ${r?r.label:'役なし'}。出ている役より強くないとトライできません`;
+    const box = mk('div','acts');
+    const b1 = mk('button','btn btn-sl'); b1.textContent='🍸 トライする';
+    b1.disabled = !stronger;
+    b1.onclick = ()=>uiTryResp('try');
+    const b2 = mk('button','btn'); b2.textContent='トライしない';
+    b2.onclick = ()=>uiTryResp('pass');
+    box.appendChild(b1); box.appendChild(b2);
+    ui.appendChild(box);
+    return;
+  }
+
+  if(gs.step==='discard'){
+    msg.textContent = myTurn() ? '手札から1枚を自分の前に捨てます' : '相手が捨て札を選んでいます';
+    return;
+  }
+
+  if(!myTurn()){ msg.textContent = '相手の行動を待っています'; return; }
+
+  if(uiMode==='jack'){
+    msg.textContent = 'ジャックする相手を選んでください';
+    sub.textContent = '役が揃っていれば1点、外れたら相手に1点';
+    const box = mk('div','acts');
+    gs.players.filter(p=>p.id!==myId).forEach(p=>{
+      const b = mk('button','btn btn-gold');
+      b.innerHTML = `${esc(p.name)} <span class="sub">🍸${p.points}</span>`;
+      b.onclick = ()=>uiJack(p.id);
+      box.appendChild(b);
+    });
+    ui.appendChild(box);
+    const c = mk('button','btn btn-ghost btn-sm'); c.textContent='← 戻る'; c.style.width='100%'; c.style.marginTop='5px';
+    c.onclick = uiCancel; ui.appendChild(c);
+    return;
+  }
+
+  const r = evalHand(myHand);
+  msg.textContent = '行動を選んでください';
+  sub.textContent = '捨て札から取るときは、上のプレイヤー欄の数字をタップ';
+  const box = mk('div','acts');
+  const b1 = mk('button','btn btn-blue'); b1.innerHTML = `🂠 山札から引く <span class="sub">${gs.deckCount}</span>`;
+  b1.onclick = uiDrawDeck; b1.disabled = gs.deckCount===0 && gs.players.every(p=>p.pileCount<=1);
+  box.appendChild(b1);
+  const b2 = mk('button','btn'); b2.textContent = '🗂 捨て札から取る';
+  b2.disabled = true; b2.style.opacity='0.55';
+  box.appendChild(b2);
+  const b3 = mk('button','btn btn-sl'); b3.innerHTML = `🍸 トライ`;
+  b3.onclick = uiTry; b3.disabled = !r;
+  box.appendChild(b3);
+  const b4 = mk('button','btn btn-gold'); b4.textContent = '🎯 ジャック';
+  b4.onclick = uiJackStart; b4.disabled = gs.players.length<2;
+  box.appendChild(b4);
+  ui.appendChild(box);
+  if(!r){
+    const n = mk('div','sub'); n.style.marginTop='5px';
+    n.textContent = 'トライは連番かゾロ目が揃っているときだけ選べます';
+    ui.appendChild(n);
+  }
+}
+function renderResult(){
+  const w = gs.winner || {};
+  g('result-emoji').textContent = w.pid===myId ? '🏆' : '🍸';
+  g('result-title').textContent = `${w.name} の勝利！`;
+  g('result-sub').textContent = `${WIN_POINTS}点先取`;
+  const box = g('result-players'); box.innerHTML='';
+  gs.players.slice().sort((a,b)=>b.points-a.points).forEach(p=>{
+    const c = mk('div','player-chip');
+    c.innerHTML = `<span>${p.id===w.pid?'🏆':'🍸'}</span><span style="flex:1;">${esc(p.name)}${p.id===myId?'★':''}</span><span class="pts">${p.points}点</span>`;
+    box.appendChild(c);
+  });
+  g('btn-rematch').style.display = isHost ? '' : 'none';
+  g('result-status').textContent = isHost ? '' : 'ホストが「もう一度」を押すと再戦できます';
+}
+
+// ============================================================
+// BOT
+// ============================================================
+function maybeBot(){
+  if(botTimer){ clearTimeout(botTimer); botTimer=null; }
+  if(!fs || !(isHost||isSolo)) return;
+  if(fs.lock || fs.phase!=='play') return;
+  let p = null;
+  if(fs.step==='try') p = fs.tryState ? fs.players[fs.tryState.order[fs.tryState.idx]] : null;
+  else p = fs.players[fs.turnIdx];
+  if(!p || !p.bot) return;
+  const pid = p.id, step = fs.step;
+  botTimer = setTimeout(()=>botAct(pid, step), BOT_WAIT + Math.random()*BOT_WAIT_R);
+}
+// 手札4枚から、役に近づく1枚を捨てる
+function bestDiscard(hand){
+  let best = 0, bestScore = -1;
+  for(let i=0;i<hand.length;i++){
+    const rest = hand.slice(); rest.splice(i,1);
+    const r = evalHand(rest);
+    let sc = r ? 1000 + r.power : handPotential(rest);
+    if(sc > bestScore){ bestScore = sc; best = i; }
+  }
+  return best;
+}
+// 3枚の「あと1枚で役になる度合い」
+function handPotential(c){
+  const s = c.slice().sort((a,b)=>a-b);
+  let sc = 0;
+  if(s[0]===s[1] || s[1]===s[2]) sc += 40 + s[1]*2;           // 同じ数字2枚
+  if(s[1]===s[0]+1) sc += 30 + s[1];                           // 隣接
+  if(s[2]===s[1]+1) sc += 30 + s[2];
+  if(s[2]===s[0]+2) sc += 25;                                  // 中抜け
+  return sc;
+}
+function botAct(pid, step){
+  botTimer = null;
+  if(!fs || fs.lock || fs.phase!=='play' || fs.step!==step) return;
+  const bot = P(pid);
+  if(!bot || !bot.bot) return;
+
+  if(fs.step==='try'){
+    const ts = fs.tryState;
+    if(!ts || fs.players[ts.order[ts.idx]].id !== pid) return;
+    const r = evalHand(bot.hand);
+    doTryResp(pid, (r && r.power > ts.best.role.power) ? 'try' : 'pass');
+    return;
+  }
+  if(fs.step==='discard'){
+    if(fs.players[fs.turnIdx].id !== pid) return;
+    doDiscard(pid, bestDiscard(bot.hand));
+    return;
+  }
+  if(fs.players[fs.turnIdx].id !== pid) return;
+
+  // 役が完成していればトライ
+  const r = evalHand(bot.hand);
+  if(r) { doTry(pid); return; }
+
+  // 相手の様子からジャックを狙う（捨て札が少ない＝手札を温存している人ほど怪しい）
+  const others = fs.players.filter(p=>p.id!==pid);
+  if(others.length && Math.random() < 0.22){
+    const t = others.slice().sort((a,b)=>a.pile.length-b.pile.length)[0];
+    doJack(pid, t.id); return;
+  }
+
+  // 捨て札から欲しい数字が取れるなら取る
+  let pick = null, pickScore = -1;
+  for(const o of fs.players){
+    if(!o.pile.length) continue;
+    const c = o.pile[o.pile.length-1];
+    const h = bot.hand.concat([c]);
+    const i = bestDiscard(h);
+    const rest = h.slice(); rest.splice(i,1);
+    const rr = evalHand(rest);
+    const sc = rr ? 1000 + rr.power : handPotential(rest);
+    if(sc > pickScore){ pickScore = sc; pick = o.id; }
+  }
+  const cur = handPotential(bot.hand);
+  if(pick && pickScore > cur + 8){ doDrawPile(pid, pick); return; }
+  doDrawDeck(pid);
+}
+
+// ============================================================
+// SESSION
+// ============================================================
+const PG_SESSION_KEY = 'pgSession_shadylady';
+let pgLastTouch = 0;
+function pgSaveSession(){ if(isSolo) return; pgLastTouch=Date.now(); try{ localStorage.setItem(PG_SESSION_KEY, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); }catch(e){} }
+function pgTouchSession(){ if(isSolo || !fbRoom) return; if(Date.now()-pgLastTouch < 60000) return; pgSaveSession(); }
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && fbRoom && !isSolo) pgSaveSession(); });
+window.addEventListener('pagehide', ()=>{ if(fbRoom && !isSolo) pgSaveSession(); });
+function pgLoadSession(){ try{ const r=localStorage.getItem(PG_SESSION_KEY); if(!r) return null; const s=JSON.parse(r); if(Date.now()-s.ts>3*60*60*1000){ pgClearSession(); return null; } return s; }catch(e){ return null; } }
+function pgClearSession(){ try{ localStorage.removeItem(PG_SESSION_KEY); }catch(e){} }
+function pgShowReconnect(){ const s=pgLoadSession(), b=g('btn-reconnect'); if(!b) return; if(!s||!s.roomCode){ b.style.display='none'; return; } b.style.display=''; b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）'; }
+function pgSaveHostState(){
+  if(!isHost || isSolo || !fbRoom || !fs) return;
+  try{ fbPut('hostState', {ts:Date.now(), fsJson:JSON.stringify(fs), actTs:JSON.stringify(fbLastActTs||{})}); }catch(e){}
+}
+async function pgReconnect(){
+  const s = pgLoadSession(); if(!s) return;
+  myId=s.myId; myName=s.myName; roomCode=s.roomCode; fbRoom=s.fbRoom; isHost=s.isHost; isSolo=false;
+  setSt('再接続中...');
+  try{
+    const meta = await fbGet('meta');
+    if(!meta){ pgClearSession(); pgShowReconnect(); setErr('ルームが見つかりません（終了済みの可能性）'); setSt(''); fbRoom=''; return; }
+    if(isHost){
+      const hs = await fbGet('hostState');
+      if(hs && hs.fsJson){
+        fs = JSON.parse(hs.fsJson);
+        if(fs.lock) fs.lock=false;
+        fbListen();
+        try{ fbLastActTs = JSON.parse(hs.actTs||'{}'); }catch(e){ fbLastActTs={}; }
+        if(g('disp-code')) g('disp-code').textContent = roomCode;
+        pgSaveSession(); sendHands(); bcast();
+      } else { setErr('ルームの状態を復元できませんでした'); setSt(''); return; }
+    } else {
+      fbListen();
+      fbSendToHost({type:'join', name:myName, id:myId});
+      pgSaveSession();
+      if(g('disp-code')) g('disp-code').textContent = roomCode;
+      const bs=g('btn-start'); if(bs) bs.style.display='none';
+      show('waiting');
+    }
+    setErr(''); setSt('');
+  }catch(e){ setErr('再接続に失敗しました'); setSt(''); }
+}
+setTimeout(pgShowReconnect, 300);
+window.addEventListener('pageshow', ()=>pgShowReconnect());
+
+window.__sl = { NUMBERS, COPIES, HAND_SIZE, WIN_POINTS, evalHand };
+</script>
+
+<script>
+/* ================================================================
+   PG共通アドオン v1
+   ① 切断検知 ② 名前保存 ③ 古いルーム掃除 ④ 遊び方モーダル
+   ================================================================ */
+(function(){
+'use strict';
+var HB_MS=15000, WATCH_MS=10000, STALE_MS=40000;
+var ROOM_TTL=24*60*60*1000, CLEAN_EVERY=6*60*60*1000;
+var NAME_KEY='pgPlayerName';
+function db(){
+  try{ if(typeof fbUrl==='string' && fbUrl.indexOf('https://')===0) return fbUrl; }catch(e){}
+  return 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+}
+function room(){ try{ return (typeof fbRoom==='string') ? fbRoom : ''; }catch(e){ return ''; } }
+function me(){ var id='',nm='';
+  try{ if(typeof myId==='string') id=myId; }catch(e){}
+  try{ if(typeof myName==='string') nm=myName; }catch(e){}
+  return {id:id, name:nm};
+}
+function put(url,body){ try{ return fetch(url,{method:'PUT',body:JSON.stringify(body),keepalive:true}); }catch(e){ return null; } }
+function initName(){
+  var saved='';
+  try{ saved = localStorage.getItem(NAME_KEY) || localStorage.getItem('spName') || ''; }catch(e){}
+  ['in-name','my-name'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    if(saved && !el.value) el.value=saved;
+    function save(){ var v=(el.value||'').trim(); if(v){ try{ localStorage.setItem(NAME_KEY,v); }catch(e){} } }
+    el.addEventListener('change',save); el.addEventListener('blur',save);
+  });
+}
+var lastRoom='';
+function syncRoom(){
+  var r=room(), m=me();
+  if(r!==lastRoom){
+    if(lastRoom && m.id){ try{ fetch(db()+'/rooms/'+lastRoom+'/presence/'+m.id+'.json',{method:'DELETE',keepalive:true}); }catch(e){} }
+    lastRoom=r;
+  }
+}
+function beat(){ syncRoom(); var r=room(), m=me(); if(!r||!m.id) return; put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?'}); }
+function markLeft(){ syncRoom(); var r=room(), m=me(); if(!r||!m.id) return; put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?',left:1}); }
+var hideUntil=0;
+function banner(txt){
+  var b=document.getElementById('pga-banner');
+  if(!txt || Date.now()<hideUntil){ if(b) b.style.display='none'; return; }
+  if(!b){
+    b=document.createElement('div'); b.id='pga-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99990;background:rgba(178,34,34,.93);color:#fff;font-size:12px;line-height:1.4;padding:5px 30px 5px 10px;text-align:center;font-family:sans-serif;';
+    var t=document.createElement('span'); t.id='pga-banner-text'; b.appendChild(t);
+    var x=document.createElement('span'); x.textContent='\u2715';
+    x.style.cssText='position:absolute;right:8px;top:4px;cursor:pointer;padding:0 4px;';
+    x.onclick=function(){ hideUntil=Date.now()+60000; b.style.display='none'; };
+    b.appendChild(x); document.body.appendChild(b);
+  }
+  document.getElementById('pga-banner-text').textContent=txt;
+  b.style.display='block';
+}
+function watch(){
+  syncRoom();
+  var r=room(), m=me();
+  if(!r){ banner(''); return; }
+  fetch(db()+'/rooms/'+r+'/presence.json').then(function(res){ return res.json(); }).then(function(d){
+    if(room()!==r) return;
+    if(!d){ banner(''); return; }
+    var now=Date.now(), gone=[];
+    Object.keys(d).forEach(function(pid){
+      if(pid===m.id) return;
+      var p=d[pid]||{};
+      if(p.left || (p.t && now-p.t>STALE_MS)) gone.push(p.n||'?');
+    });
+    banner(gone.length ? ('\u26A0\uFE0F \u901A\u4FE1\u304C\u9014\u5207\u308C\u3066\u3044\u307E\u3059: '+gone.join('\u3001')) : '');
+  }).catch(function(){});
+}
+setInterval(beat,HB_MS); setTimeout(beat,1500);
+setInterval(watch,WATCH_MS); setTimeout(watch,4000);
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'){ beat(); watch(); } });
+window.addEventListener('pagehide',markLeft);
+function tsOf(k,sub){ return fetch(db()+'/rooms/'+k+'/'+sub+'.json').then(function(r){ return r.json(); }).catch(function(){ return null; }); }
+async function cleanup(){
+  try{
+    var last=0; try{ last=+(localStorage.getItem('pgLastCleanup')||0); }catch(e){}
+    if(Date.now()-last < CLEAN_EVERY) return;
+    try{ localStorage.setItem('pgLastCleanup', String(Date.now())); }catch(e){}
+    var res=await fetch(db()+'/rooms.json?shallow=true');
+    var keys=await res.json(); if(!keys) return;
+    var list=Object.keys(keys).filter(function(k){ return /^[A-Za-z0-9_]{1,6}-/.test(k) && k!==room(); });
+    list.sort(function(){ return Math.random()-0.5; });
+    var checked=0, deleted=0;
+    for(var i=0;i<list.length;i++){
+      if(checked>=80 || deleted>=25) break;
+      var k=list[i]; checked++;
+      var ts=0, v;
+      v=await tsOf(k,'meta/ts');      if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'broadcast/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'hostState/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'presence');
+      if(v){ Object.keys(v).forEach(function(pid){ var t=v[pid]&&v[pid].t; if(typeof t==='number') ts=Math.max(ts,t); }); }
+      if(!ts) continue;
+      if(Date.now()-ts > ROOM_TTL){ try{ await fetch(db()+'/rooms/'+k+'.json',{method:'DELETE'}); deleted++; }catch(e){} }
+    }
+  }catch(e){}
+}
+setTimeout(cleanup,5000);
+
+var RULES = [
+'<h3 style="margin:0 0 8px;font-size:16px;">🍸 シェディー・レディー（2〜6人）</h3>',
+'<p style="margin:6px 0;">手札3枚で役を作り、勝負どころで「トライ」。相手の役が完成していると読んだら「ジャック」。先に3点取った人が勝ちです。</p>',
+'<p style="margin:10px 0 4px;"><b>■ カード</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li><b>1・2・3・4・6・7・8・9</b> が各10枚の計80枚。<b>5は入っていません</b></li>',
+'<li>最初に3枚ずつ配り、残りは山札。捨て札は各自の前に自分の列として置きます</li>',
+'<li>山札が0枚になったら、全員の捨て札を<b>一番上の1枚だけ残して</b>回収し、混ぜて新しい山札にします</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ 役（強い順）</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li><b>ゾロ目</b>：同じ数字3枚（数字が大きいほど強い）</li>',
+'<li><b>連番</b>：連続する3枚。5がないので <b>1-2-3 / 2-3-4 / 6-7-8 / 7-8-9</b> の4種類だけ</li>',
+'<li>ゾロ目はどの連番よりも強く、同じ種類なら数字が大きいほうが強いです</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ 手番でできること（4つから1つ）</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li><b>山札から1枚引く</b> → 手札から1枚を自分の前に捨てる</li>',
+'<li><b>誰かの捨て札の一番上を取る</b>（自分のものでもよい）→ 手札から1枚を自分の前に捨てる</li>',
+'<li><b>トライ</b>：役が揃っていることを宣言する</li>',
+'<li><b>ジャック</b>：他の1人を指名し、その人の役が揃っていると宣言する</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ トライ</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>トライする人は<b>手札を公開して場に出します</b></li>',
+'<li>そのあと時計回りに、ほかの人にも「トライするか否か」を尋ねます。<b>すでに出ている役より強くなければトライできません</b></li>',
+'<li>トライした人の<b>右隣の人まで</b>尋ねたら終了。最後にトライできていた人だけが成功で、1点を受け取ります</li>',
+'<li><b>トライした人全員</b>が、公開した手札を捨て札にして山札から3枚引き直します（トライしなかった人の手札はそのまま）</li>',
+'<li>役が揃ってもその手番では宣言できず、次の自分の手番まで待つことになります。その間にジャックされる危険があります</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ ジャック</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>指名された人は<b>手札を公開して場に出します</b></li>',
+'<li>役が揃っていれば、ジャックを宣言したあなたが1点。揃っていなければ、指名された人が1点</li>',
+'<li><b>どちらの場合も</b>、指名された人は手札を捨て札にして山札から3枚引き直します</li>',
+'</ul>',
+'<p style="margin:10px 0 4px;"><b>■ 勝敗</b></p>',
+'<p style="margin:4px 0;">先に<b>3点</b>取った人の勝ちです。</p>'
+].join('');
+
+function initFloatRules(){
+  var opener = RULES ? openRulesPga
+    : (typeof window.openRules === 'function' ? window.openRules : null);
+  if(!opener) return;
+  var b = document.createElement('button');
+  b.id = 'pga-rules-fab';
+  b.type = 'button';
+  b.textContent = '\uD83D\uDCD6';
+  b.setAttribute('aria-label','ルール');
+  b.style.cssText = 'position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:99989;width:40px;height:40px;'
+    + 'border-radius:19px;border:1px solid rgba(255,255,255,.22);background:rgba(10,12,18,.78);'
+    + 'color:#e8e8e8;font-size:17px;line-height:1;cursor:pointer;display:none;'
+    + 'align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent;';
+  b.onclick = opener;
+  document.body.appendChild(b);
+  function upd(){
+    try{
+      var dup = false;
+      var all = document.querySelectorAll('button');
+      for(var i=0;i<all.length;i++){
+        var el = all[i];
+        if(el === b) continue;
+        if(!/遊び方/.test(el.textContent||'')) continue;
+        if(el.offsetParent !== null) { dup = true; break; }
+      }
+      var modalOpen = !!document.querySelector('#pga-rules[style*="flex"]');
+      b.style.display = (dup || modalOpen) ? 'none' : 'inline-flex';
+    }catch(e){}
+  }
+  setInterval(upd, 700);
+  setTimeout(upd, 400);
+}
+function openRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='flex'; }
+window.openRulesPga = openRulesPga;
+function closeRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='none'; }
+function initRules(){
+  var m=document.createElement('div'); m.id='pga-rules';
+  m.style.cssText='display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:14px;';
+  m.innerHTML='<div style="background:#1d222b;color:#e8e8e8;max-width:520px;width:100%;max-height:82vh;overflow-y:auto;border-radius:12px;padding:18px 16px;font-size:13.5px;line-height:1.75;font-family:sans-serif;-webkit-overflow-scrolling:touch;">'+RULES+'<button id="pga-rules-close" style="display:block;width:100%;margin-top:14px;padding:11px;border:none;border-radius:8px;background:#3a4557;color:#fff;font-size:14px;cursor:pointer;">\u9589\u3058\u308B</button></div>';
+  m.addEventListener('click',function(ev){ if(ev.target===m) closeRulesPga(); });
+  document.body.appendChild(m);
+  document.getElementById('pga-rules-close').onclick=closeRulesPga;
+  ['screen-lobby','screen-waiting'].forEach(function(id){
+    var sc=document.getElementById(id); if(!sc) return;
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent='\uD83D\uDCD6 \u904A\u3073\u65B9';
+    btn.style.cssText='display:block;width:100%;margin:10px 0 0;padding:11px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.06);color:inherit;font-size:14px;cursor:pointer;';
+    btn.onclick=openRulesPga;
+    sc.appendChild(btn);
+  });
+}
+initName();
+initRules();
+initFloatRules();
+})();
+</script>
+</body>
+</html>

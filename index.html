@@ -956,6 +956,10 @@ h3 { font-size: 1rem; font-weight: 600; }
         <span class="game-tab-icon">🎩</span>
         <span class="game-tab-name">クー</span>
       </button>
+      <button class="game-tab" id="tab-sl" data-game="shadylady" onclick="selectLobbyGame('shadylady')">
+        <span class="game-tab-icon">🍸</span>
+        <span class="game-tab-name">シェディー<br>レディー</span>
+      </button>
     </div>
 
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
@@ -1374,6 +1378,25 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- SHADY LADY section（別ページ誘導） -->
+    <div id="lobby-sl" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(217,79,112,0.06); border:1px solid rgba(217,79,112,0.35); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">🍸</div>
+          <div style="font-family:var(--mono); color:#e0708c; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">シェディー・レディー</div>
+          <div style="color:var(--muted); font-size:0.72rem;">SHADY LADY · 手札3枚の読み合い</div>
+        </div>
+        <a href="shadylady.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(217,79,112,0.12); color:#e0708c; border:1px solid rgba(217,79,112,0.5);">
+            🍸 シェディー・レディーのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6; padding:8px;">
+          ※ 専用のページで動作します<br>2〜6人で対戦・BOT相手の練習モードつき
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1478,7 +1501,11 @@ h3 { font-size: 1rem; font-weight: 600; }
         カードを買うとボーナス宝石が増え、次回以降のカードが割引で買える。<br>
         条件を満たせば貴族の訪問で追加得点。<br>
         <strong style="color:#ffd84d;">15点（威信ポイント）</strong>に最初に到達した人がそのラウンド終了時に勝利。<br>
-        💎 <strong style="color:#ffd84d;">通常版</strong>と<strong style="color:#ffd84d;">拡張版：都市</strong>を選べます。拡張版では貴族の代わりに都市タイル3枚を使い、条件（威信ポイント＋色ボーナス）を満たして都市を獲得した人が勝ちます。
+        💎 <strong style="color:#ffd84d;">通常版</strong>に加え、拡張「Cities of Splendor」の4モジュールを選べます。<br>
+        <strong style="color:#ffd84d;">都市</strong>＝貴族の代わりに都市タイル3枚、獲得した人が勝ち／
+        <strong style="color:#ffd84d;">交易所</strong>＝条件を満たすと5つの特殊能力／
+        <strong style="color:#ffd84d;">東洋</strong>＝各レベルに特殊カード2枚を追加／
+        <strong style="color:#ffd84d;">城塞</strong>＝城塞3個で場のカードを占拠・制圧。
       </p>
       <p id="rules-mx" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
         <strong style="color:#2fd4b2;">10種目</strong>を切り替えながら遊ぶポーカーのミックスゲーム（2〜8人）。<br>
@@ -1513,7 +1540,14 @@ h3 { font-size: 1rem; font-weight: 600; }
         👑公爵＝3コイン／🗡️暗殺者＝3コインで1枚奪う／⚓船長＝2コイン強奪／🎭大使＝カード交換／🛡️夫人＝暗殺をブロック。<br>
         キャラの行動は<strong style="color:#e0645f;">持っていなくても宣言できる</strong>。怪しければ誰でも「ダウト」。<br>
         嘘がバレた側、または外したダウトをした側がカードを1枚失う。<br>
-        💡 7コインでクーデター（阻止不可）、10コイン以上なら強制。<br>
+        💡 7コインでクーデター（阻止不可）、10コイン以上なら強制。
+      </p>
+      <p id="rules-sl" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        2〜6人。カードは <strong style="color:#e0708c;">1・2・3・4・6・7・8・9 が各10枚</strong>（5はなし）。<br>
+        手番は4択：山札から引く／誰かの捨て札から取る／<strong style="color:#e0708c;">トライ</strong>／<strong style="color:#e0708c;">ジャック</strong>。引いたら1枚捨てる。<br>
+        手札3枚で <strong style="color:#e0708c;">連番</strong> か <strong style="color:#e0708c;">ゾロ目</strong>（連番より強い）を揃えてトライ。より強い役の人がトライ返しできる。<br>
+        ジャックは相手の役が揃っていると読む宣言。当たれば1点、外れたら相手に1点。<br>
+        💡 先に3点取った人の勝ち。<br>
         🎴 <strong style="color:#e0645f;">通常版</strong>と<strong style="color:#e0645f;">拡張版（宗教改革）</strong>を選べます。拡張版では陣営が加わり、同じ陣営は攻撃できず、「改宗」「横領」の2アクションが増えます。
       </p>
     </div>
@@ -3996,13 +4030,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn','np','cp'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana',np:'napoleon',cp:'coup'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn','np','cp','sl'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana',np:'napoleon',cp:'coup',sl:'shadylady'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn',napoleon:'np',coup:'cp'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn',napoleon:'np',coup:'cp',shadylady:'sl'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
