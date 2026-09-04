@@ -960,6 +960,18 @@ h3 { font-size: 1rem; font-weight: 600; }
         <span class="game-tab-icon">🍸</span>
         <span class="game-tab-name">シェディー<br>レディー</span>
       </button>
+      <button class="game-tab" id="tab-sd" data-game="splendorduel" onclick="selectLobbyGame('splendorduel')">
+        <span class="game-tab-icon">💠</span>
+        <span class="game-tab-name">宝石<br>デュエル</span>
+      </button>
+      <button class="game-tab" id="tab-fe" data-game="fastescape" onclick="selectLobbyGame('fastescape')">
+        <span class="game-tab-icon">🚨</span>
+        <span class="game-tab-name">ファスト<br>エスケープ</span>
+      </button>
+      <button class="game-tab" id="tab-pl" data-game="ploring" onclick="selectLobbyGame('ploring')">
+        <span class="game-tab-icon">♠</span>
+        <span class="game-tab-name">PLO<br>リング</span>
+      </button>
     </div>
 
     <input class="input" id="in-name" type="text" placeholder="ニックネームを入力（最大12文字）" maxlength="12" autocomplete="off">
@@ -1397,6 +1409,63 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- SPLENDOR DUEL section（別ページ誘導） -->
+    <div id="lobby-sd" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(79,179,217,0.06); border:1px solid rgba(79,179,217,0.35); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">💠</div>
+          <div style="font-family:var(--mono); color:#4fb3d9; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">宝石の煌き：デュエル</div>
+          <div style="color:var(--muted); font-size:0.72rem;">SPLENDOR DUEL · 2人専用</div>
+        </div>
+        <a href="splendorduel.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(79,179,217,0.12); color:#4fb3d9; border:1px solid rgba(79,179,217,0.5);">
+            💠 宝石の煌き：デュエルのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6;">
+          ※ 専用のページで動作します<br>2人専用・拡張「偽造者」つき・CPU練習モードあり
+        </div>
+      </div>
+    </div>
+
+    <!-- FAST ESCAPE section（別ページ誘導） -->
+    <div id="lobby-fe" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(107,189,79,0.06); border:1px solid rgba(107,189,79,0.35); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">🚨</div>
+          <div style="font-family:var(--mono); color:#7cc95e; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">ファストエスケープ</div>
+          <div style="color:var(--muted); font-size:0.72rem;">FAST ESCAPE · 嘘と見破りの逃走劇</div>
+        </div>
+        <a href="fastescape.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(107,189,79,0.12); color:#7cc95e; border:1px solid rgba(107,189,79,0.5);">
+            🚨 ファストエスケープのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6;">
+          ※ 専用のページで動作します<br>2〜6人で対戦・BOT相手の練習モードつき
+        </div>
+      </div>
+    </div>
+
+    <!-- PLO RING section（別ページ誘導） -->
+    <div id="lobby-pl" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(63,191,114,0.06); border:1px solid rgba(63,191,114,0.35); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">♠</div>
+          <div style="font-family:var(--mono); color:#4fd18a; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">PLOリング</div>
+          <div style="color:var(--muted); font-size:0.72rem;">ポットリミット・オマハ · 出入り自由</div>
+        </div>
+        <a href="ploring.html" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(63,191,114,0.12); color:#4fd18a; border:1px solid rgba(63,191,114,0.5);">
+            ♠ PLOリングのページへ移動する
+          </button>
+        </a>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6;">
+          ※ 専用のページで動作します<br>2〜6人・PLO / PLO8・CPU練習モードあり
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1547,7 +1616,28 @@ h3 { font-size: 1rem; font-weight: 600; }
         手番は4択：山札から引く／誰かの捨て札から取る／<strong style="color:#e0708c;">トライ</strong>／<strong style="color:#e0708c;">ジャック</strong>。引いたら1枚捨てる。<br>
         手札3枚で <strong style="color:#e0708c;">連番</strong> か <strong style="color:#e0708c;">ゾロ目</strong>（連番より強い）を揃えてトライ。より強い役の人がトライ返しできる。<br>
         ジャックは相手の役が揃っていると読む宣言。当たれば1点、外れたら相手に1点。<br>
-        💡 先に3点取った人の勝ち。<br>
+        💡 先に3点取った人の勝ち。
+      </p>
+      <p id="rules-sd" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        2人専用。トークンは<strong style="color:#4fb3d9;">5×5のボード</strong>に並び、縦・横・斜めに直線で連続する最大3個を取ります。<br>
+        手番は「トークンを取る」「黄金を1個取ってカードを予約」「カードを買う」から1つ。<br>
+        カードのボーナスで以後のコストが下がり、王冠が3個・6個で<strong style="color:#4fb3d9;">王侯カード</strong>を獲得。<br>
+        勝利条件は<strong style="color:#4fb3d9;">20点</strong>／<strong style="color:#4fb3d9;">王冠10個</strong>／<strong style="color:#4fb3d9;">同色カードで10点</strong>のいずれか。満たした瞬間に終了。<br>
+        💡 拡張<strong style="color:#4fb3d9;">「偽造者」</strong>を選ぶと、ガラス細工トークンと偽造者カードが加わります。
+      </p>
+      <p id="rules-fe" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        2〜6人。<strong style="color:#7cc95e;">泥棒カード（+3）30枚</strong>と<strong style="color:#e0645f;">警察カード（-1〜-10）25枚</strong>で遊ぶブラフゲーム。<br>
+        手番は手札4枚から1枚を場に置き、<strong style="color:#7cc95e;">「これが一番低い」</strong>と宣言。嘘でも構いません。残り3枚は左隣へ。<br>
+        渡された人は<strong style="color:#7cc95e;">信じて受け取る</strong>か<strong style="color:#e0645f;">見破る</strong>かを選択。<br>
+        見破りで嘘が判明したら宣言者が、本当だったら見破った人が、公開された警察カードをすべて受け取ります。<br>
+        💡 勝った側は自分の重い警察カードを押し付けるか、泥棒カードを1枚もらえます。山札が尽きたら最高得点の勝ち。
+      </p>
+      <p id="rules-pl" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        2〜6人のポットリミット・オマハ。<strong style="color:#4fd18a;">いつでも着席、いつでも離席</strong>できるキャッシュゲームです。<br>
+        手札は<strong style="color:#4fd18a;">4枚</strong>。役を作るときは<strong style="color:#4fd18a;">手札から必ず2枚、ボードから必ず3枚</strong>を使います。<br>
+        ベット・レイズの上限は<strong style="color:#4fd18a;">コール後のポット全額</strong>。ボタンで最小・½ポット・ポットを選べます。<br>
+        <strong style="color:#4fd18a;">PLO8</strong>を選ぶと、8以下5枚（ペアなし）のローが成立していればポットをハイとローで山分けします。<br>
+        💡 オールインのサイドポットも自動で精算します。<br>
         🎴 <strong style="color:#e0645f;">通常版</strong>と<strong style="color:#e0645f;">拡張版（宗教改革）</strong>を選べます。拡張版では陣営が加わり、同じ陣営は攻撃できず、「改宗」「横領」の2アクションが増えます。
       </p>
     </div>
@@ -4030,13 +4120,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn','np','cp','sl'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana',np:'napoleon',cp:'coup',sl:'shadylady'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn','np','cp','sl','sd','fe','pl'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana',np:'napoleon',cp:'coup',sl:'shadylady',sd:'splendorduel',fe:'fastescape',pl:'ploring'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn',napoleon:'np',coup:'cp',shadylady:'sl'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn',napoleon:'np',coup:'cp',shadylady:'sl',splendorduel:'sd',fastescape:'fe',ploring:'pl'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';

@@ -1,0 +1,901 @@
+<!-- FAST ESCAPE v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>🚨 ファストエスケープ</title>
+<style>
+:root{
+  --bg:#0d1108; --surface:#161c11; --surface2:#1e2617; --surface3:#334028;
+  --text:#f0f4ea; --muted:#96a186; --red:#d94b45; --green:#5aa84a; --blue:#4db8ff;
+  --gold:#e8c46a; --fe:#6bbd4f; --fe-dim:rgba(107,189,79,.16);
+  --sans:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;
+  --mono:"SF Mono",Menlo,Monaco,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;
+  overscroll-behavior:none;padding-bottom:env(safe-area-inset-bottom)}
+.app{max-width:480px;margin:0 auto;padding:12px;min-height:100dvh;display:flex;flex-direction:column;gap:10px}
+body.ingame{overflow:hidden;height:100dvh}
+body.ingame .app{height:100dvh;min-height:0;padding:8px 10px}
+.screen{display:none;flex-direction:column;gap:10px}
+.screen.active{display:flex}
+h1{font-size:1.6rem;text-align:center}
+h2{font-size:1.25rem;text-align:center}
+h3{font-size:.72rem;color:var(--muted);font-family:var(--mono);letter-spacing:1.5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:11px 16px;border-radius:10px;
+  border:1px solid var(--surface3);background:var(--surface);color:var(--text);cursor:pointer;
+  font-family:var(--sans);font-size:.92rem;font-weight:600;transition:all .15s;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.32;cursor:not-allowed}
+.btn-fe{background:var(--fe);border-color:var(--fe);color:#0d1a06}
+.btn-blue{background:rgba(77,184,255,.15);border-color:rgba(77,184,255,.5);color:var(--blue)}
+.btn-red{background:rgba(217,75,69,.18);border-color:rgba(217,75,69,.6);color:#ff8b85}
+.btn-ghost{background:transparent}
+.btn-sm{padding:7px 11px;font-size:.74rem;border-radius:8px;min-height:32px}
+.input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--surface3);
+  background:var(--surface2);color:var(--text);font-size:1rem;outline:none}
+.input:focus{border-color:var(--fe)}
+.code-input{font-family:var(--mono);font-size:1.3rem;text-align:center;letter-spacing:6px}
+.row{display:flex;gap:8px;align-items:center}
+.divider{height:1px;background:var(--surface3);margin:4px 0}
+.panel{background:var(--surface);border:1px solid var(--surface3);border-radius:12px;padding:10px}
+.status-txt{text-align:center;font-size:.85rem;color:var(--blue);min-height:1.2em}
+.error{text-align:center;font-size:.85rem;color:var(--red);min-height:1.2em}
+.code-box{text-align:center;background:var(--surface);border:1px dashed var(--surface3);border-radius:12px;padding:10px}
+.code-box .label{font-size:.7rem;color:var(--muted);font-family:var(--mono);letter-spacing:2px}
+.code-box .code{font-size:2rem;font-family:var(--mono);letter-spacing:8px;color:var(--gold);font-weight:700}
+.player-chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:10px;padding:9px 12px;font-size:.92rem}
+.log{font-size:.68rem;color:var(--muted);overflow-y:auto;line-height:1.55;font-family:var(--mono)}
+.log div{border-bottom:1px solid rgba(255,255,255,.04);padding:1px 0}
+.tag{font-size:.66rem;color:var(--muted);font-family:var(--mono)}
+.seg{display:flex;gap:5px}
+.seg .btn{flex:1;padding:8px 1px;font-size:.78rem;min-width:0}
+.seg .btn.on{background:var(--fe-dim);border-color:var(--fe);color:var(--fe)}
+
+/* カード */
+.card{width:clamp(46px,13.5vw,60px);height:clamp(62px,18vw,80px);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.35rem;
+  border:2px solid rgba(0,0,0,.25);user-select:none;flex:0 0 auto;position:relative}
+.card.thief{background:linear-gradient(160deg,#b9d9a4,#8ec173);color:#1d3311}
+.card.cop{background:linear-gradient(160deg,#e6bda8,#c9756a);color:#3d1410}
+.card.back{background:repeating-linear-gradient(135deg,#2a331f 0 7px,#212a18 7px 14px);color:rgba(255,255,255,.3);font-size:1rem}
+.card.small{width:30px;height:40px;font-size:.85rem;border-width:1.5px}
+.card.pick{cursor:pointer}
+.card.pick:active{transform:scale(.96)}
+.card.sel{outline:2.5px solid var(--gold);outline-offset:2px;transform:translateY(-4px)}
+.hand{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.pile{display:flex;gap:2px;flex-wrap:wrap}
+
+/* ゲーム画面 */
+#screen-game{height:100%;gap:5px;overflow:hidden}
+#screen-game>*{flex-shrink:0}
+#screen-game>#panel-log{flex-shrink:1}
+#screen-game .panel{padding:6px 8px}
+.hdr{display:block;font-size:.66rem;font-family:var(--mono);color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr b{color:var(--gold)}
+.turnbar{text-align:center;padding:5px;border-radius:9px;font-weight:700;font-size:.84rem;
+  background:var(--surface);border:1px solid var(--surface3)}
+.turnbar.me{background:var(--fe-dim);border-color:var(--fe);color:var(--fe);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(107,189,79,.4)}50%{box-shadow:0 0 0 7px rgba(107,189,79,0)}}
+.prow{display:flex;align-items:center;gap:6px;background:var(--surface2);border-radius:8px;padding:3px 7px;
+  border:1px solid transparent;font-size:.74rem}
+.prow.turn{border-color:var(--fe);background:var(--fe-dim)}
+.prow .pname{min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.pts{font-family:var(--mono);font-weight:800;color:var(--gold)}
+.acts{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
+.acts .btn{padding:9px 4px;font-size:.84rem}
+.msg{text-align:center;font-size:.82rem;font-weight:700;line-height:1.3}
+.sub{text-align:center;font-size:.68rem;color:var(--muted);line-height:1.3}
+#panel-log{flex:1 1 0;min-height:34px;display:flex;flex-direction:column;overflow:hidden}
+#panel-log .log{flex:1 1 0;min-height:0}
+.btn-exit{padding:6px 10px;font-size:.7rem;border-radius:8px;min-height:32px}
+
+.result-hero{text-align:center;padding:18px 10px}
+.result-emoji{font-size:3rem}
+.result-title{font-size:1.35rem;font-weight:800;margin-top:6px}
+.result-sub{font-size:.86rem;color:var(--muted);margin-top:4px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:500;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--surface);border:1px solid var(--surface3);border-radius:14px;padding:16px;width:100%;max-width:420px}
+
+@media (max-height:760px){
+  #screen-game{gap:3px}
+  #screen-game .panel{padding:4px 7px}
+  .turnbar{padding:3px;font-size:.78rem}
+  .card{width:clamp(38px,11.5vw,52px);height:clamp(52px,15vw,68px);font-size:1.15rem}
+  .card.small{width:24px;height:32px;font-size:.72rem}
+  .prow{padding:2px 6px;font-size:.7rem}
+  .acts .btn{padding:6px 3px;font-size:.78rem}
+  #panel-log{min-height:26px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="screen active">
+    <h1>🚨 ファストエスケープ</h1>
+    <p style="text-align:center;font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:1px">嘘をついて警察カードを押し付ける（2〜6人）</p>
+    <input class="input" id="in-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12" autocomplete="off">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" id="btn-reconnect" style="display:none;background:rgba(45,189,110,.15);color:#2dbd6e;border:1px solid rgba(45,189,110,.5)" onclick="pgReconnect()"></button>
+      <button class="btn btn-fe" onclick="createRoom()">🏠 部屋を作る（ホスト）</button>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" style="flex:1">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+      <div class="divider"></div>
+      <div class="panel">
+        <h3 style="margin-bottom:8px">🤖 練習モード（BOT対戦）</h3>
+        <div class="seg" id="bot-seg">
+          <button class="btn" data-b="1" onclick="setBots(1)">2人</button>
+          <button class="btn" data-b="2" onclick="setBots(2)">3人</button>
+          <button class="btn on" data-b="3" onclick="setBots(3)">4人</button>
+          <button class="btn" data-b="4" onclick="setBots(4)">5人</button>
+          <button class="btn" data-b="5" onclick="setBots(5)">6人</button>
+        </div>
+        <button class="btn" style="width:100%;margin-top:8px" onclick="startSolo()">▶ ひとりで練習する</button>
+      </div>
+    </div>
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+    <p style="text-align:center;font-size:.7rem;color:var(--muted);line-height:1.6">
+      🟩 泥棒カード <b>+3</b>（30枚）<br>
+      🟥 警察カード <b>-1/-2/-4/-6/-8/-10</b>（25枚）
+    </p>
+    <a href="index.html" style="text-decoration:none;margin-top:6px"><button class="btn btn-ghost" style="width:100%">← ホームに戻る</button></a>
+  </div>
+
+  <!-- WAITING -->
+  <div id="screen-waiting" class="screen">
+    <h2>待機ロビー</h2>
+    <div class="code-box">
+      <div class="label">ルームコード</div>
+      <div class="code" id="disp-code">----</div>
+      <button class="btn btn-ghost btn-sm" onclick="copyCode()" style="margin-top:4px">📋 コピー</button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:8px">プレイヤー（2〜6人）</h3>
+      <div id="wait-players" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <button class="btn btn-fe" id="btn-start" onclick="startGame()">▶ ゲーム開始</button>
+    <div id="wait-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- GAME -->
+  <div id="screen-game" class="screen">
+    <div class="row" style="justify-content:space-between">
+      <span class="hdr" id="hdr-left" style="flex:1;min-width:0"></span>
+      <button class="btn btn-ghost btn-exit" onclick="openRules()">📖</button>
+      <button class="btn btn-ghost btn-exit" onclick="leaveRoom()">退出</button>
+    </div>
+    <div class="turnbar" id="turnbar"></div>
+    <div class="panel" id="panel-main">
+      <div class="msg" id="main-msg"></div>
+      <div class="sub" id="main-sub"></div>
+      <div id="main-cards" style="margin-top:5px"></div>
+      <div id="main-ui" style="margin-top:5px"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:5px">獲得したカード</h3>
+      <div id="players" style="display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+    <div class="panel" id="hand-panel">
+      <h3 style="margin-bottom:5px">あなたの手札<span style="letter-spacing:0" id="hand-hint"></span></h3>
+      <div class="hand" id="myhand"></div>
+    </div>
+    <div class="panel" id="panel-log"><div class="log" id="game-log"></div></div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="screen-result" class="screen">
+    <div class="result-hero">
+      <div class="result-emoji" id="result-emoji">🏆</div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+    <div class="panel"><div id="result-players" style="display:flex;flex-direction:column;gap:6px"></div></div>
+    <button class="btn btn-fe" id="btn-rematch" onclick="rematch()" style="display:none">🔄 もう一度</button>
+    <div id="result-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← ロビーへ</button>
+    <a href="index.html" style="text-decoration:none"><button class="btn btn-ghost" style="width:100%">🏠 ハブに戻る</button></a>
+  </div>
+</div>
+
+<div class="modal-bg" id="fb-modal"><div class="modal">
+  <h3 style="margin-bottom:10px">Firebase 設定</h3>
+  <input class="input" id="fb-url" type="url" placeholder="https://xxxx.firebaseio.com">
+  <button class="btn btn-fe" style="width:100%;margin-top:10px" onclick="saveFbConfig()">保存</button>
+</div></div>
+
+<script>
+// ============================================================
+// ファストエスケープ（Fast Escape）
+//  泥棒カード +3 ×30枚 ／ 警察カード -1×10, -2×5, -4×4, -6×3, -8×2, -10×1 ＝計55枚
+//  手番: 手札4枚から「これが一番低い」と宣言して1枚を自分の場に置き、残り3枚を左隣へ渡す（嘘可）
+//  左隣: 信じて受け取る（+1枚引いて4枚）か、見破る（渡された3枚を公開）
+//  終了: 手札を4枚に補充できなくなったら。最高得点が勝ち
+// ============================================================
+const DECK_DEF = [[3,30],[-1,10],[-2,5],[-4,4],[-6,3],[-8,2],[-10,1]];
+const HAND_SIZE = 4;
+let RESOLVE_MS = 1800, BOT_WAIT = 800, BOT_WAIT_R = 600;
+const BOT_NAMES = ['🤖アカ','🤖アオ','🤖キイロ','🤖ミドリ','🤖ムラサキ'];
+
+function isThief(v){ return v > 0; }
+function newDeck(){
+  const d=[];
+  DECK_DEF.forEach(([v,n])=>{ for(let i=0;i<n;i++) d.push(v); });
+  return shuffle(d);
+}
+function scoreOf(cards){ return (cards||[]).reduce((a,v)=>a+v,0); }
+function thiefCount(cards){ return (cards||[]).filter(isThief).length; }
+
+// ============================================================
+// FIREBASE
+// ============================================================
+const FB_KEY='partyGamesFbUrl';
+let fbUrl=localStorage.getItem(FB_KEY)||'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+function saveFbConfig(){const u=g('fb-url').value.trim().replace(/\/$/,'');if(!u)return;fbUrl=u;localStorage.setItem(FB_KEY,u);g('fb-modal').style.display='none';}
+async function checkFbConfig(){
+  if(!fbUrl){g('fb-modal').style.display='flex';return false;}
+  try{const r=await fetch(`${fbUrl}/.json?shallow=true`);if(!r.ok&&r.status!==404){setErr('Firebase接続エラー');return false;}}catch(e){setErr('Firebase接続失敗');return false;}
+  return true;
+}
+let fbRoom='',fbPollTimer=null,fbLastBcastTs=0,fbLastPrvTs=0,fbLastActTs={};
+async function fbPut(s,d){if(!fbRoom)return;try{await fetch(`${fbUrl}/rooms/${fbRoom}/${s}.json`,{method:'PUT',body:JSON.stringify(d)});}catch(e){}}
+async function fbGet(s){if(!fbRoom)return null;try{const r=await fetch(`${fbUrl}/rooms/${fbRoom}/${s}.json`);if(!r.ok)return null;return await r.json();}catch(e){return null;}}
+async function fbDel(s){if(!fbRoom)return;try{await fetch(`${fbUrl}/rooms/${fbRoom}/${s}.json`,{method:'DELETE'});}catch(e){}}
+function fbListen(){if(fbPollTimer)clearInterval(fbPollTimer);fbLastBcastTs=0;fbLastPrvTs=0;fbLastActTs={};fbPollTimer=setInterval(fbPoll,500);}
+function fbClose(){if(fbPollTimer)clearInterval(fbPollTimer);fbPollTimer=null;fbRoom='';}
+async function fbPoll(){
+  if(!fbRoom)return;
+  const bc=await fbGet('broadcast');
+  if(bc&&bc.ts>fbLastBcastTs){fbLastBcastTs=bc.ts;if(!isHost&&bc.msg)handleBroadcast(bc.msg);}
+  const pv=await fbGet(`private/${myId}`);
+  if(pv&&pv.ts>fbLastPrvTs){fbLastPrvTs=pv.ts;if(pv.msg)handlePrivate(pv.msg);}
+  if(isHost){const a=await fbGet('action');
+    if(a)for(const pid in a){const m=a[pid];if(m&&m.ts>(fbLastActTs[pid]||0)){fbLastActTs[pid]=m.ts;if(m.msg)onMsg(m.msg,pid);}}}
+}
+function fbBroadcast(m){fbPut('broadcast',{ts:Date.now(),msg:m});}
+function fbSendTo(p,m){fbPut(`private/${p}`,{ts:Date.now(),msg:m});}
+function fbSendToHost(m){if(isSolo){onMsg(m,myId);return;}fbPut(`action/${myId}`,{ts:Date.now(),msg:m});}
+
+// ============================================================
+// STATE
+// ============================================================
+let myId=genId(),myName='',isHost=false,isSolo=false,roomCode='';
+let fs=null,gs=null,myHand=[],soloBots=3,botTimer=null,prevActPid=null;
+let selIdx=-1;
+
+function g(id){return document.getElementById(id);}
+function mk(t,c){const e=document.createElement(t);if(c)e.className=c;return e;}
+function show(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const e=g('screen-'+n);if(e)e.classList.add('active');document.body.classList.toggle('ingame',n==='game');}
+function setErr(m){const e=g('lobby-error');if(e)e.textContent=m||'';}
+function setSt(m){const s=g('lobby-status');if(s)s.textContent=m||'';}
+function genId(){return 'p_'+Math.random().toString(36).slice(2,10);}
+function shuffle(a){const x=a.slice();for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
+function copyCode(){navigator.clipboard?.writeText(g('disp-code').textContent);}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function openRules(){if(typeof window.openRulesPga==='function')window.openRulesPga();}
+let audioCtx=null;
+document.addEventListener('pointerdown',()=>{if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}},{once:true});
+function notifyTurn(){try{if(navigator.vibrate)navigator.vibrate(110);}catch(e){}
+  try{if(!audioCtx)return;const o=audioCtx.createOscillator(),n=audioCtx.createGain();
+    o.frequency.value=880;n.gain.value=.06;o.connect(n);n.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.09);}catch(e){}}
+
+// ============================================================
+// ROOM
+// ============================================================
+function setBots(n){soloBots=n;document.querySelectorAll('#bot-seg .btn').forEach(b=>b.classList.toggle('on',+b.dataset.b===n));}
+async function createRoom(){
+  if(!(await checkFbConfig()))return;
+  const n=g('in-name').value.trim();if(!n){setErr('名前を入力してください');return;}
+  myName=n;isHost=true;isSolo=false;
+  const code=Array.from({length:4},()=>Math.floor(Math.random()*10)).join('');
+  roomCode=code;fbRoom='FE-'+code;setSt('接続中...');
+  try{myId=genId();await fbDel('');await fbPut('meta',{host:myId,game:'fastescape',ts:Date.now()});
+    fs=initFs([{id:myId,name:myName,bot:false}]);fbListen();pgSaveSession();
+    setErr('');setSt('');g('disp-code').textContent=code;show('waiting');bcast();
+  }catch(e){setErr(e.message||'エラー');setSt('');isHost=false;}
+}
+async function joinRoom(){
+  if(!(await checkFbConfig()))return;
+  const n=g('in-name').value.trim();if(!n){setErr('名前を入力してください');return;}
+  const code=g('in-code').value.trim();if(!/^\d{4}$/.test(code)){setErr('4桁の数字');return;}
+  myName=n;isHost=false;isSolo=false;roomCode=code;fbRoom='FE-'+code;setSt('接続中...');
+  try{myId=genId();const meta=await fbGet('meta');
+    if(!meta){setErr('ルームが見つかりません');setSt('');fbRoom='';return;}
+    if(meta.game!=='fastescape'){setErr('ゲーム種別が違います');setSt('');fbRoom='';return;}
+    fbListen();pgSaveSession();fbSendToHost({type:'join',name:myName,id:myId});
+    setSt('接続しました...');show('waiting');g('disp-code').textContent=code;g('btn-start').style.display='none';
+    let rt=0;const rj=setInterval(()=>{if(!fbRoom||rt>=5){clearInterval(rj);return;}
+      if(gs?.players?.find(p=>p.id===myId)){clearInterval(rj);return;}
+      fbSendToHost({type:'join',name:myName,id:myId});rt++;},2000);
+  }catch(e){setErr(e.message||'エラー');setSt('');}
+}
+function startSolo(){
+  const n=g('in-name').value.trim()||'あなた';
+  myName=n;isHost=true;isSolo=true;roomCode='';fbRoom='';myId=genId();
+  const ps=[{id:myId,name:myName,bot:false}];
+  for(let i=0;i<soloBots;i++)ps.push({id:'bot_'+i,name:BOT_NAMES[i],bot:true});
+  fs=initFs(ps);setErr('');setSt('');hostStart();
+}
+function leaveRoom(){if(botTimer)clearTimeout(botTimer);pgClearSession();fbClose();
+  fs=null;gs=null;isHost=false;isSolo=false;myHand=[];prevActPid=null;selIdx=-1;
+  show('lobby');pgShowReconnect();}
+
+// ============================================================
+// HOST
+// ============================================================
+function initFs(players){
+  return {phase:'waiting',
+    players:players.map(p=>({id:p.id,name:p.name,bot:!!p.bot,hand:[],scored:[]})),
+    deck:[],turnIdx:0,startIdx:0,
+    pending:null,lock:false,winner:null,log:[]};
+}
+function addLog(t){fs.log.push(t);if(fs.log.length>70)fs.log=fs.log.slice(-70);}
+function P(pid){return fs.players.find(p=>p.id===pid);}
+function nextIdx(i){return (i+1)%fs.players.length;}
+function deal(){
+  fs.deck=newDeck();
+  // 各プレイヤーは泥棒カード1枚を自分の場に置いた状態で始める
+  fs.players.forEach(p=>{
+    p.hand=[];
+    const i=fs.deck.findIndex(isThief);
+    p.scored = i>=0 ? [fs.deck.splice(i,1)[0]] : [];
+  });
+  fs.pending=null;fs.lock=false;fs.winner=null;
+}
+function refill(p){
+  while(p.hand.length<HAND_SIZE && fs.deck.length) p.hand.push(fs.deck.pop());
+  return p.hand.length===HAND_SIZE;
+}
+function hostStart(){
+  const n=fs.players.length;
+  if(n<2||n>6){if(!isSolo)setErr('2〜6人で開始できます');return;}
+  fs.startIdx=Math.floor(Math.random()*n);
+  deal();
+  fs.turnIdx=fs.startIdx;
+  const p=fs.players[fs.turnIdx];
+  refill(p);
+  fs.phase='place';
+  addLog(`ゲーム開始（${n}人・山札${fs.deck.length}枚）`);
+  addLog(`全員が泥棒カード（+3）を1枚持って開始`);
+  addLog(`▶ ${p.name} の手番`);
+  sendHands();bcast();
+}
+function startGame(){if(isHost)hostStart();}
+function hostRematch(){
+  fs.startIdx=nextIdx(fs.startIdx);deal();fs.turnIdx=fs.startIdx;
+  refill(fs.players[fs.turnIdx]);fs.phase='place';
+  addLog('── もう一度 ──');addLog(`▶ ${fs.players[fs.turnIdx].name} の手番`);
+  sendHands();bcast();
+}
+function rematch(){if(isHost)hostRematch();else g('result-status').textContent='ホストの「もう一度」を待っています';}
+
+function onMsg(d,pid){
+  if(!d||!fs)return;
+  switch(d.type){
+    case 'join':{
+      const ex=fs.players.find(p=>p.id===d.id);
+      if(ex){bcast();sendHand(ex);return;}
+      if(fs.phase!=='waiting'){fbSendTo(d.id,{type:'error',msg:'ゲーム開始済み'});return;}
+      if(fs.players.length>=6){fbSendTo(d.id,{type:'error',msg:'満員（最大6人）'});return;}
+      fs.players.push({id:d.id,name:d.name,bot:false,hand:[],scored:[]});
+      bcast();break;
+    }
+    case 'place':    doPlace(pid,d.idx); break;
+    case 'believe':  doBelieve(pid); break;
+    case 'doubt':    doDoubt(pid); break;
+    case 'reward':   doReward(pid,d.choice); break;
+  }
+}
+// 手番プレイヤーが1枚を場に置き、残り3枚を左隣へ渡す
+function doPlace(pid,idx){
+  if(fs.phase!=='place'||fs.lock)return;
+  const p=fs.players[fs.turnIdx];
+  if(!p||p.id!==pid)return;
+  if(p.hand.length!==HAND_SIZE)return;
+  if(typeof idx!=='number'||idx<0||idx>=p.hand.length)return;
+  const placed=p.hand.splice(idx,1)[0];
+  const passed=p.hand.slice();
+  p.hand=[];
+  p.scored.push(placed);
+  const ti=nextIdx(fs.turnIdx);
+  const target=fs.players[ti];
+  fs.pending={actor:p.id,placed,passed,target:target.id};
+  addLog(`${p.name}：${cardTxt(placed)} を置いて「これが一番低い」と宣言`);
+  fs.phase='respond';
+  sendHand(p);bcast();
+}
+// 信じて受け取る
+function doBelieve(pid){
+  if(fs.phase!=='respond'||fs.lock)return;
+  const pd=fs.pending;
+  if(!pd||pd.target!==pid)return;
+  const t=P(pid);
+  t.hand=pd.passed.slice();
+  addLog(`${t.name}：信じて3枚を受け取った`);
+  fs.pending=null;
+  fs.turnIdx=fs.players.findIndex(p=>p.id===pid);
+  if(!refill(t)){ endGame(t); return; }
+  fs.phase='place';
+  addLog(`▶ ${t.name} の手番`);
+  sendHand(t);bcast();
+}
+// 見破る（3枚を公開）
+function doDoubt(pid){
+  if(fs.phase!=='respond'||fs.lock)return;
+  const pd=fs.pending;
+  if(!pd||pd.target!==pid)return;
+  const actor=P(pd.actor), t=P(pid);
+  const lied = pd.passed.some(v=>v<pd.placed);
+  const loser = lied ? actor : t;
+  const winner = lied ? t : actor;
+  const cops = pd.passed.filter(v=>!isThief(v));
+  addLog(`🔍 ${t.name} が見破りを宣言！ 渡された3枚は ${pd.passed.map(cardTxt).join(' ')}`);
+  addLog(lied ? `❌ ${actor.name} の嘘だった` : `✅ ${actor.name} は本当だった`);
+  if(cops.length){ loser.scored.push(...cops); addLog(`→ ${loser.name} が警察カード ${cops.map(cardTxt).join(' ')} を受け取る`); }
+  else addLog(`→ 3枚に警察カードはなし`);
+  fs.pending={actor:pd.actor,placed:pd.placed,passed:pd.passed,target:pd.target,
+              revealed:true,lied,winner:winner.id,loser:loser.id,nextIdx:fs.players.findIndex(p=>p.id===pid)};
+  fs.phase='reward';
+  fs.lock=false;
+  bcast();
+}
+// 勝った側は「自分の場の最も重い警察カードを押し付ける」か「泥棒カードを1枚もらう」
+function doReward(pid,choice){
+  if(fs.phase!=='reward')return;
+  const pd=fs.pending;
+  if(!pd||pd.winner!==pid)return;
+  const w=P(pid), l=P(pd.loser);
+  const worst=Math.min(...w.scored.filter(v=>!isThief(v)), 0);
+  if(choice==='push' && worst<0){
+    const i=w.scored.indexOf(worst);
+    w.scored.splice(i,1); l.scored.push(worst);
+    addLog(`→ ${w.name} が ${cardTxt(worst)} を ${l.name} に押し付けた`);
+  } else {
+    // 山札から泥棒カードを1枚受け取る
+    const i=fs.deck.findIndex(isThief);
+    if(i>=0){ const c=fs.deck.splice(i,1)[0]; w.scored.push(c); addLog(`→ ${w.name} が泥棒カード（+3）を受け取った`); }
+    else addLog(`→ 山札に泥棒カードが残っていない`);
+  }
+  const nx=fs.players[pd.nextIdx];
+  fs.pending=null;
+  fs.turnIdx=pd.nextIdx;
+  nx.hand=[];
+  if(!refill(nx)){ endGame(nx); return; }
+  fs.phase='place';
+  addLog(`▶ ${nx.name} の手番（新たに4枚）`);
+  sendHands();bcast();
+}
+// 山札が尽きて4枚に補充できなくなったら終了
+function endGame(p){
+  if(p.hand.length){
+    const low=Math.min(...p.hand);
+    p.scored.push(low);
+    addLog(`山札が尽きた。${p.name} は残りから ${cardTxt(low)} を受け取る`);
+    p.hand=[];
+  } else addLog('山札が尽きた');
+  const ranked=fs.players.slice().sort((a,b)=>{
+    const d=scoreOf(b.scored)-scoreOf(a.scored);
+    if(d)return d;
+    return thiefCount(b.scored)-thiefCount(a.scored);
+  });
+  const w=ranked[0];
+  fs.phase='result';
+  fs.winner={pid:w.id,name:w.name,score:scoreOf(w.scored),thieves:thiefCount(w.scored)};
+  addLog(`🏆 ${w.name} の勝利！（${scoreOf(w.scored)}点）`);
+  sendHands();bcast();
+  if(!isSolo)fbPut('meta',{host:myId,game:'fastescape',ts:Date.now()});
+}
+function cardTxt(v){ return v>0?`+${v}`:`${v}`; }
+
+// ============================================================
+// 配信
+// ============================================================
+function pubFs(f){
+  const pd=f.pending;
+  return {phase:f.phase,turnIdx:f.turnIdx,lock:f.lock,winner:f.winner,deckCount:f.deck.length,
+    players:f.players.map(p=>({id:p.id,name:p.name,bot:p.bot,handCount:p.hand.length,
+      scored:p.scored.slice(),score:scoreOf(p.scored),thieves:thiefCount(p.scored)})),
+    pending: pd ? {actor:pd.actor,placed:pd.placed,target:pd.target,
+      revealed:!!pd.revealed, passed: pd.revealed?pd.passed.slice():null,
+      lied:pd.lied, winner:pd.winner, loser:pd.loser} : null,
+    log:f.log.slice(-30)};
+}
+function bcast(){
+  if(!fs)return;
+  gs=pubFs(fs);
+  const msg={type:'state',s:gs};
+  if(isSolo)handleBroadcast(msg);
+  else{fbBroadcast(msg);if(!fs.lock)pgSaveHostState();handleBroadcast(msg);}
+  maybeBot();
+}
+function sendHand(p){
+  if(p.bot)return;
+  const msg={type:'hand',hand:p.hand.slice()};
+  if(p.id===myId)handlePrivate(msg);
+  else if(!isSolo)fbSendTo(p.id,msg);
+}
+function sendHands(){fs.players.forEach(sendHand);}
+
+// ============================================================
+// CLIENT
+// ============================================================
+function handleBroadcast(m){
+  if(!m)return;
+  if(m.type==='state'){
+    gs=m.s;selIdx=-1;routeScreen();
+    const a=actorPid();
+    if(gs.phase!=='result'&&a===myId&&prevActPid!==myId&&!gs.lock)notifyTurn();
+    prevActPid=a;
+  }
+}
+function handlePrivate(m){
+  if(!m)return;
+  if(m.type==='hand'){myHand=m.hand.slice();if(gs)renderGame();}
+  if(m.type==='error'){setErr(m.msg||'エラー');show('lobby');fbClose();pgClearSession();}
+}
+function actorPid(){
+  if(!gs)return null;
+  if(gs.phase==='respond')return gs.pending?gs.pending.target:null;
+  if(gs.phase==='reward')return gs.pending?gs.pending.winner:null;
+  return gs.players[gs.turnIdx]?.id;
+}
+function routeScreen(){
+  if(!gs)return;
+  if(gs.phase==='waiting'){show('waiting');renderWaiting();}
+  else if(gs.phase==='result'){show('result');renderResult();}
+  else{show('game');renderGame();}
+}
+function send(m){if(isHost||isSolo)onMsg(m,myId);else fbSendToHost(m);}
+function myTurn(){return gs&&!gs.lock&&actorPid()===myId;}
+
+function uiSelect(i){ if(!myTurn()||gs.phase!=='place')return; selIdx=(selIdx===i?-1:i); renderGame(); }
+function uiPlace(){ if(selIdx>=0) send({type:'place',idx:selIdx}); }
+function uiBelieve(){ send({type:'believe'}); }
+function uiDoubt(){ send({type:'doubt'}); }
+function uiReward(c){ send({type:'reward',choice:c}); }
+
+// ---------- 描画 ----------
+function renderWaiting(){
+  const b=g('wait-players');b.innerHTML='';
+  gs.players.forEach((p,i)=>{const c=mk('div','player-chip');
+    c.innerHTML=`<span>${i===0?'👑':'🚨'}</span><span style="flex:1">${esc(p.name)}${p.id===myId?' <span class="tag">(あなた)</span>':''}</span>`;b.appendChild(c);});
+  const n=gs.players.length;
+  if(isHost){g('btn-start').style.display='';g('btn-start').disabled=!(n>=2&&n<=6);
+    g('wait-status').textContent=(n>=2&&n<=6)?'':'2〜6人で開始できます';}
+  else{g('btn-start').style.display='none';g('wait-status').textContent='ホストの開始を待っています...';}
+}
+function cardEl(v,opt){
+  opt=opt||{};
+  const d=mk('div','card'+(opt.small?' small':'')+(opt.back?' back':(isThief(v)?' thief':' cop'))+(opt.sel?' sel':''));
+  d.textContent=opt.back?'🚨':cardTxt(v);
+  if(opt.onclick){d.classList.add('pick');d.onclick=opt.onclick;}
+  return d;
+}
+function renderGame(){
+  if(!gs)return;
+  g('hdr-left').innerHTML=`${isSolo?'練習':(roomCode?'#'+roomCode:'')}／山札<b>${gs.deckCount}</b>枚`;
+  const tb=g('turnbar');
+  const act=gs.players.find(p=>p.id===actorPid());
+  let txt='',mine=myTurn();
+  if(gs.phase==='place')txt=mine?'▶ 場に置くカードを選ぶ':`▶ ${act?act.name:''} が選択中`;
+  else if(gs.phase==='respond')txt=mine?'▶ 信じる？ 見破る？':`⏳ ${act?act.name:''} の判断待ち`;
+  else if(gs.phase==='reward')txt=mine?'▶ ごほうびを選ぶ':`⏳ ${act?act.name:''} が選択中`;
+  tb.textContent=txt;tb.className='turnbar'+(mine?' me':'');
+
+  // プレイヤー
+  const pl=g('players');pl.innerHTML='';
+  gs.players.forEach((p,i)=>{
+    const row=mk('div','prow'+(p.id===actorPid()?' turn':''));
+    const cards=p.scored.slice().sort((a,b)=>a-b);
+    const pile=mk('span','pile');
+    cards.forEach(v=>pile.appendChild(cardEl(v,{small:true})));
+    row.innerHTML=`<span class="pname">${esc(p.name)}${p.id===myId?'★':''}</span>`;
+    row.appendChild(pile);
+    const sp=mk('span','pts');sp.style.marginLeft='auto';sp.textContent=`${p.score>0?'+':''}${p.score}`;
+    row.appendChild(sp);
+    pl.appendChild(row);
+  });
+
+  // 自分の手札
+  const mh=g('myhand');mh.innerHTML='';
+  const canPlace=gs.phase==='place'&&myTurn();
+  myHand.forEach((v,i)=>mh.appendChild(cardEl(v,{sel:selIdx===i,onclick:canPlace?()=>uiSelect(i):null})));
+  g('hand-hint').textContent=canPlace?'（1枚選んで場に置く）':(myHand.length?'':'（手札なし）');
+
+  renderMain();
+  const lg=g('game-log');lg.innerHTML='';
+  (gs.log||[]).slice().reverse().forEach(t=>{const d=mk('div');d.textContent=t;lg.appendChild(d);});
+}
+function renderMain(){
+  const msg=g('main-msg'),sub=g('main-sub'),cds=g('main-cards'),ui=g('main-ui');
+  msg.textContent='';sub.textContent='';cds.innerHTML='';ui.innerHTML='';
+  if(!gs)return;
+  const pd=gs.pending;
+
+  if(gs.phase==='place'){
+    if(!myTurn()){msg.textContent='相手がカードを選んでいます';return;}
+    msg.textContent='「これが一番低い」と宣言して1枚を置く';
+    sub.textContent='本当でも嘘でもかまいません。残り3枚は左隣に渡ります';
+    const b=mk('button','btn btn-fe');b.style.width='100%';
+    b.textContent=selIdx>=0?`${cardTxt(myHand[selIdx])} を置いて宣言する`:'カードを選んでください';
+    b.disabled=selIdx<0;b.onclick=uiPlace;ui.appendChild(b);
+    return;
+  }
+  if(gs.phase==='respond'){
+    const a=gs.players.find(p=>p.id===pd.actor);
+    msg.innerHTML=`${esc(a?a.name:'')} は <b>${cardTxt(pd.placed)}</b> を置いて<br>「これが一番低い」と宣言`;
+    const row=mk('div','hand');
+    row.appendChild(cardEl(pd.placed,{}));
+    for(let i=0;i<3;i++)row.appendChild(cardEl(0,{back:true}));
+    cds.appendChild(row);
+    if(!myTurn()){sub.textContent='渡された人が判断しています';return;}
+    sub.textContent='信じれば3枚を受け取って自分の手番。見破れば3枚を公開します';
+    const box=mk('div','acts');
+    const b1=mk('button','btn btn-blue');b1.textContent='🤝 信じる';b1.onclick=uiBelieve;
+    const b2=mk('button','btn btn-red');b2.textContent='🔍 見破る';b2.onclick=uiDoubt;
+    box.appendChild(b1);box.appendChild(b2);ui.appendChild(box);
+    return;
+  }
+  if(gs.phase==='reward'){
+    const w=gs.players.find(p=>p.id===pd.winner), l=gs.players.find(p=>p.id===pd.loser);
+    msg.innerHTML=pd.lied?`❌ 嘘だった！ ${esc(l?l.name:'')} が警察カードを受け取る`
+      :`✅ 本当だった！ ${esc(l?l.name:'')} が警察カードを受け取る`;
+    const row=mk('div','hand');
+    (pd.passed||[]).forEach(v=>row.appendChild(cardEl(v,{})));
+    cds.appendChild(row);
+    if(!myTurn()){sub.textContent=`${w?w.name:''} がごほうびを選んでいます`;return;}
+    const me=gs.players.find(p=>p.id===myId);
+    const worst=Math.min(...me.scored.filter(v=>!isThief(v)),0);
+    sub.textContent='どちらかを選びます';
+    const box=mk('div','acts');
+    const b1=mk('button','btn btn-red');
+    b1.innerHTML=worst<0?`🙅 ${cardTxt(worst)} を押し付ける`:'押し付けられる札なし';
+    b1.disabled=!(worst<0);b1.onclick=()=>uiReward('push');
+    const b2=mk('button','btn btn-fe');b2.textContent='🟩 泥棒カード +3';b2.onclick=()=>uiReward('take');
+    box.appendChild(b1);box.appendChild(b2);ui.appendChild(box);
+    return;
+  }
+}
+function renderResult(){
+  const w=gs.winner||{};
+  g('result-emoji').textContent=w.pid===myId?'🏆':'🚨';
+  g('result-title').textContent=`${w.name} の勝利！`;
+  g('result-sub').textContent=`${w.score}点（泥棒カード${w.thieves}枚）`;
+  const b=g('result-players');b.innerHTML='';
+  gs.players.slice().sort((a,b2)=>b2.score-a.score).forEach(p=>{
+    const c=mk('div','player-chip');
+    c.innerHTML=`<span>${p.id===w.pid?'🏆':'🚨'}</span><span style="flex:1">${esc(p.name)}${p.id===myId?'★':''}</span>`
+      +`<span class="pts">${p.score>0?'+':''}${p.score}点</span><span class="tag">🟩${p.thieves}</span>`;
+    b.appendChild(c);});
+  g('btn-rematch').style.display=isHost?'':'none';
+  g('result-status').textContent=isHost?'':'ホストが「もう一度」を押すと再戦できます';
+}
+
+// ============================================================
+// BOT
+// ============================================================
+function maybeBot(){
+  if(botTimer){clearTimeout(botTimer);botTimer=null;}
+  if(!fs||!(isHost||isSolo)||fs.lock)return;
+  if(fs.phase==='waiting'||fs.phase==='result')return;
+  let p=null;
+  if(fs.phase==='place')p=fs.players[fs.turnIdx];
+  else if(fs.phase==='respond')p=fs.pending?P(fs.pending.target):null;
+  else if(fs.phase==='reward')p=fs.pending?P(fs.pending.winner):null;
+  if(!p||!p.bot)return;
+  const pid=p.id,ph=fs.phase;
+  botTimer=setTimeout(()=>botAct(pid,ph),BOT_WAIT+Math.random()*BOT_WAIT_R);
+}
+function botAct(pid,ph){
+  botTimer=null;
+  if(!fs||fs.lock||fs.phase!==ph)return;
+  const bot=P(pid);
+  if(!bot||!bot.bot)return;
+
+  if(fs.phase==='place'){
+    if(fs.players[fs.turnIdx].id!==pid)return;
+    const h=bot.hand;
+    const low=Math.min(...h), lowIdx=h.indexOf(low);
+    // 正直に一番低いカードを置くのが基本。損が大きいときだけ嘘をつく
+    if(low>=-1){ doPlace(pid,lowIdx); return; }
+    const bluffIdx=h.map((v,i)=>({v,i})).filter(x=>x.v>low).sort((a,b)=>b.v-a.v)[0];
+    const risk = low<=-6 ? 0.72 : (low<=-4 ? 0.5 : 0.3);
+    if(bluffIdx && Math.random()<risk){ doPlace(pid,bluffIdx.i); return; }
+    doPlace(pid,lowIdx); return;
+  }
+  if(fs.phase==='respond'){
+    const pd=fs.pending;
+    if(!pd||pd.target!==pid)return;
+    // 置かれたカードが高いほど嘘くさい
+    const placed=pd.placed;
+    let pr = placed>0 ? 0.45 : (placed>=-2 ? 0.3 : 0.1);
+    if(fs.deck.length<10) pr+=0.1;
+    if(Math.random()<pr) doDoubt(pid); else doBelieve(pid);
+    return;
+  }
+  if(fs.phase==='reward'){
+    const pd=fs.pending;
+    if(!pd||pd.winner!==pid)return;
+    const worst=Math.min(...bot.scored.filter(v=>!isThief(v)),0);
+    doReward(pid, worst<=-4 ? 'push' : 'take');
+  }
+}
+
+// ============================================================
+// SESSION
+// ============================================================
+const PG_SESSION_KEY='pgSession_fastescape';
+let pgLastTouch=0;
+function pgSaveSession(){if(isSolo)return;pgLastTouch=Date.now();try{localStorage.setItem(PG_SESSION_KEY,JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()}));}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&fbRoom&&!isSolo)pgSaveSession();});
+window.addEventListener('pagehide',()=>{if(fbRoom&&!isSolo)pgSaveSession();});
+function pgLoadSession(){try{const r=localStorage.getItem(PG_SESSION_KEY);if(!r)return null;const s=JSON.parse(r);
+  if(Date.now()-s.ts>3*60*60*1000){pgClearSession();return null;}return s;}catch(e){return null;}}
+function pgClearSession(){try{localStorage.removeItem(PG_SESSION_KEY);}catch(e){}}
+function pgShowReconnect(){const s=pgLoadSession(),b=g('btn-reconnect');if(!b)return;
+  if(!s||!s.roomCode){b.style.display='none';return;}b.style.display='';b.textContent='🔄 前のルームに戻る（#'+s.roomCode+'）';}
+function pgSaveHostState(){if(!isHost||isSolo||!fbRoom||!fs)return;
+  try{fbPut('hostState',{ts:Date.now(),fsJson:JSON.stringify(fs),actTs:JSON.stringify(fbLastActTs||{})});}catch(e){}}
+async function pgReconnect(){
+  const s=pgLoadSession();if(!s)return;
+  myId=s.myId;myName=s.myName;roomCode=s.roomCode;fbRoom=s.fbRoom;isHost=s.isHost;isSolo=false;
+  setSt('再接続中...');
+  try{const meta=await fbGet('meta');
+    if(!meta){pgClearSession();pgShowReconnect();setErr('ルームが見つかりません');setSt('');fbRoom='';return;}
+    if(isHost){const hs=await fbGet('hostState');
+      if(hs&&hs.fsJson){fs=JSON.parse(hs.fsJson);if(fs.lock)fs.lock=false;fbListen();
+        try{fbLastActTs=JSON.parse(hs.actTs||'{}');}catch(e){fbLastActTs={};}
+        if(g('disp-code'))g('disp-code').textContent=roomCode;pgSaveSession();sendHands();bcast();}
+      else{setErr('ルームの状態を復元できませんでした');setSt('');return;}
+    }else{fbListen();fbSendToHost({type:'join',name:myName,id:myId});pgSaveSession();
+      if(g('disp-code'))g('disp-code').textContent=roomCode;
+      const bs=g('btn-start');if(bs)bs.style.display='none';show('waiting');}
+    setErr('');setSt('');
+  }catch(e){setErr('再接続に失敗しました');setSt('');}
+}
+setTimeout(pgShowReconnect,300);
+window.addEventListener('pageshow',()=>pgShowReconnect());
+window.__fe={DECK_DEF,HAND_SIZE,newDeck,scoreOf,thiefCount,isThief};
+</script>
+
+<script>
+/* PG共通アドオン v1 */
+(function(){
+'use strict';
+var HB_MS=15000,WATCH_MS=10000,STALE_MS=40000,ROOM_TTL=86400000,CLEAN_EVERY=21600000,NAME_KEY='pgPlayerName';
+function db(){try{if(typeof fbUrl==='string'&&fbUrl.indexOf('https://')===0)return fbUrl;}catch(e){}
+  return 'https://playgame-3e7ba-default-rtdb.firebaseio.com';}
+function room(){try{return (typeof fbRoom==='string')?fbRoom:'';}catch(e){return '';}}
+function me(){var id='',nm='';try{if(typeof myId==='string')id=myId;}catch(e){}try{if(typeof myName==='string')nm=myName;}catch(e){}return{id:id,name:nm};}
+function put(u,b){try{return fetch(u,{method:'PUT',body:JSON.stringify(b),keepalive:true});}catch(e){return null;}}
+function initName(){var s='';try{s=localStorage.getItem(NAME_KEY)||'';}catch(e){}
+  ['in-name'].forEach(function(id){var el=document.getElementById(id);if(!el)return;
+    if(s&&!el.value)el.value=s;
+    function sv(){var v=(el.value||'').trim();if(v){try{localStorage.setItem(NAME_KEY,v);}catch(e){}}}
+    el.addEventListener('change',sv);el.addEventListener('blur',sv);});}
+var lastRoom='';
+function syncRoom(){var r=room(),m=me();if(r!==lastRoom){if(lastRoom&&m.id){try{fetch(db()+'/rooms/'+lastRoom+'/presence/'+m.id+'.json',{method:'DELETE',keepalive:true});}catch(e){}}lastRoom=r;}}
+function beat(){syncRoom();var r=room(),m=me();if(!r||!m.id)return;put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?'});}
+function markLeft(){syncRoom();var r=room(),m=me();if(!r||!m.id)return;put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?',left:1});}
+var hideUntil=0;
+function banner(t){var b=document.getElementById('pga-banner');
+  if(!t||Date.now()<hideUntil){if(b)b.style.display='none';return;}
+  if(!b){b=document.createElement('div');b.id='pga-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99990;background:rgba(178,34,34,.93);color:#fff;font-size:12px;line-height:1.4;padding:5px 30px 5px 10px;text-align:center;font-family:sans-serif;';
+    var s=document.createElement('span');s.id='pga-banner-text';b.appendChild(s);
+    var x=document.createElement('span');x.textContent='\u2715';
+    x.style.cssText='position:absolute;right:8px;top:4px;cursor:pointer;padding:0 4px;';
+    x.onclick=function(){hideUntil=Date.now()+60000;b.style.display='none';};b.appendChild(x);document.body.appendChild(b);}
+  document.getElementById('pga-banner-text').textContent=t;b.style.display='block';}
+function watch(){syncRoom();var r=room(),m=me();if(!r){banner('');return;}
+  fetch(db()+'/rooms/'+r+'/presence.json').then(function(x){return x.json();}).then(function(d){
+    if(room()!==r)return;if(!d){banner('');return;}
+    var now=Date.now(),gone=[];
+    Object.keys(d).forEach(function(pid){if(pid===m.id)return;var p=d[pid]||{};
+      if(p.left||(p.t&&now-p.t>STALE_MS))gone.push(p.n||'?');});
+    banner(gone.length?('\u26A0\uFE0F \u901A\u4FE1\u304C\u9014\u5207\u308C\u3066\u3044\u307E\u3059: '+gone.join('\u3001')):'');
+  }).catch(function(){});}
+setInterval(beat,HB_MS);setTimeout(beat,1500);setInterval(watch,WATCH_MS);setTimeout(watch,4000);
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){beat();watch();}});
+window.addEventListener('pagehide',markLeft);
+function tsOf(k,s){return fetch(db()+'/rooms/'+k+'/'+s+'.json').then(function(r){return r.json();}).catch(function(){return null;});}
+async function cleanup(){try{
+  var last=0;try{last=+(localStorage.getItem('pgLastCleanup')||0);}catch(e){}
+  if(Date.now()-last<CLEAN_EVERY)return;
+  try{localStorage.setItem('pgLastCleanup',String(Date.now()));}catch(e){}
+  var res=await fetch(db()+'/rooms.json?shallow=true');var keys=await res.json();if(!keys)return;
+  var list=Object.keys(keys).filter(function(k){return /^[A-Za-z0-9_]{1,6}-/.test(k)&&k!==room();});
+  list.sort(function(){return Math.random()-0.5;});
+  var checked=0,deleted=0;
+  for(var i=0;i<list.length;i++){if(checked>=80||deleted>=25)break;var k=list[i];checked++;
+    var ts=0,v;
+    v=await tsOf(k,'meta/ts');if(typeof v==='number')ts=Math.max(ts,v);
+    v=await tsOf(k,'broadcast/ts');if(typeof v==='number')ts=Math.max(ts,v);
+    v=await tsOf(k,'hostState/ts');if(typeof v==='number')ts=Math.max(ts,v);
+    v=await tsOf(k,'presence');
+    if(v)Object.keys(v).forEach(function(pid){var t=v[pid]&&v[pid].t;if(typeof t==='number')ts=Math.max(ts,t);});
+    if(!ts)continue;
+    if(Date.now()-ts>ROOM_TTL){try{await fetch(db()+'/rooms/'+k+'.json',{method:'DELETE'});deleted++;}catch(e){}}}
+}catch(e){}}
+setTimeout(cleanup,5000);
+
+var RULES=[
+'<h3 style="margin:0 0 8px;font-size:16px;">🚨 ファストエスケープ（2〜6人）</h3>',
+'<p style="margin:6px 0;">得点になる<b>泥棒カード</b>を集めつつ、失点になる<b>警察カード</b>を押し付け合うブラフゲームです。</p>',
+'<p style="margin:10px 0 4px;"><b>■ カード（全55枚）</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>🟩 泥棒カード <b>+3点</b>：30枚</li>',
+'<li>🟥 警察カード：<b>-1</b>が10枚、<b>-2</b>が5枚、<b>-4</b>が4枚、<b>-6</b>が3枚、<b>-8</b>が2枚、<b>-10</b>が1枚</li>',
+'<li>全員が泥棒カード1枚を自分の場に置いた状態で始めます</li></ul>',
+'<p style="margin:10px 0 4px;"><b>■ 手番</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>手番の人は手札4枚から1枚を選んで自分の場に表向きで置き、<b>「これが一番低い点のカードだ」</b>と宣言します</li>',
+'<li>本当に一番低いカードを出しても、<b>嘘をついても構いません</b></li>',
+'<li>残りの3枚は左隣のプレイヤーに渡します</li></ul>',
+'<p style="margin:10px 0 4px;"><b>■ 渡された人の選択</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li><b>信じる</b>：3枚をそのまま受け取り、山札から1枚引いて4枚にして自分の手番になります</li>',
+'<li><b>見破る</b>：渡された3枚を公開します</li></ul>',
+'<p style="margin:10px 0 4px;"><b>■ 見破りの結果</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li><b>嘘だった場合</b>（3枚の中に、置かれたカードより低いカードがある）：宣言した人が、公開された3枚の警察カードを<b>すべて</b>受け取ります</li>',
+'<li><b>本当だった場合</b>：見破ろうとした人が、その警察カードをすべて受け取ります</li>',
+'<li>勝った側はさらに、<b>自分の場でいちばん重い警察カードを相手に押し付ける</b>か、<b>泥棒カードを1枚もらう</b>かを選べます</li>',
+'<li>どちらの場合も、見破りを宣言した人が次の手番になり、<b>新たに4枚</b>引きます</li></ul>',
+'<p style="margin:10px 0 4px;"><b>■ 終了と勝敗</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>山札が尽きて<b>手札を4枚に補充できなくなったら</b>ゲーム終了です</li>',
+'<li>そのプレイヤーは、残っているカードの中で<b>いちばん低いカード</b>を受け取ります</li>',
+'<li>合計得点が最も高い人の勝ち。同点なら泥棒カードの枚数で決めます</li></ul>',
+'<p style="margin:10px 0 4px;"><b>💡 コツ</b></p>',
+'<p style="margin:4px 0;">追加のマイナス点は「渡した3枚」から来ます。ゲーム後半は山札に泥棒カードが多く残りやすく、渡された3枚が全部プラスということも起こります。大きなマイナスを抱えていても、見破りに成功すれば押し付けて逆転できます。</p>'
+].join('');
+function initFloatRules(){
+  var opener=RULES?openRulesPga:(typeof window.openRules==='function'?window.openRules:null);
+  if(!opener)return;
+  var b=document.createElement('button');b.id='pga-rules-fab';b.type='button';b.textContent='\uD83D\uDCD6';
+  b.setAttribute('aria-label','ルール');
+  b.style.cssText='position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:99989;width:40px;height:40px;'
+    +'border-radius:19px;border:1px solid rgba(255,255,255,.22);background:rgba(10,12,18,.78);'
+    +'color:#e8e8e8;font-size:17px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;padding:0;';
+  b.onclick=opener;document.body.appendChild(b);
+  function upd(){try{
+    var dup=false,all=document.querySelectorAll('button');
+    for(var i=0;i<all.length;i++){var el=all[i];if(el===b)continue;
+      if(!/遊び方/.test(el.textContent||''))continue;if(el.offsetParent!==null){dup=true;break;}}
+    var open=!!document.querySelector('#pga-rules[style*="flex"]');
+    b.style.display=(dup||open)?'none':'inline-flex';}catch(e){}}
+  setInterval(upd,700);setTimeout(upd,400);
+}
+function openRulesPga(){var m=document.getElementById('pga-rules');if(m)m.style.display='flex';}
+window.openRulesPga=openRulesPga;
+function closeRulesPga(){var m=document.getElementById('pga-rules');if(m)m.style.display='none';}
+function initRules(){
+  var m=document.createElement('div');m.id='pga-rules';
+  m.style.cssText='display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:14px;';
+  m.innerHTML='<div style="background:#1d222b;color:#e8e8e8;max-width:520px;width:100%;max-height:82vh;overflow-y:auto;border-radius:12px;padding:18px 16px;font-size:13.5px;line-height:1.75;font-family:sans-serif;">'+RULES+'<button id="pga-rules-close" style="display:block;width:100%;margin-top:14px;padding:11px;border:none;border-radius:8px;background:#3a4557;color:#fff;font-size:14px;cursor:pointer;">\u9589\u3058\u308B</button></div>';
+  m.addEventListener('click',function(e){if(e.target===m)closeRulesPga();});
+  document.body.appendChild(m);
+  document.getElementById('pga-rules-close').onclick=closeRulesPga;
+  ['screen-lobby','screen-waiting'].forEach(function(id){
+    var sc=document.getElementById(id);if(!sc)return;
+    var btn=document.createElement('button');btn.type='button';btn.textContent='\uD83D\uDCD6 \u904A\u3073\u65B9';
+    btn.style.cssText='display:block;width:100%;margin:10px 0 0;padding:11px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.06);color:inherit;font-size:14px;cursor:pointer;';
+    btn.onclick=openRulesPga;sc.appendChild(btn);});
+}
+initName();initRules();initFloatRules();
+})();
+</script>
+</body>
+</html>

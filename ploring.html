@@ -1,0 +1,1048 @@
+<!-- PLO RING v1 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>♠ PLOリング</title>
+<style>
+:root{
+  --bg:#0a1410; --surface:#12201a; --surface2:#1a2b23; --surface3:#2b4438;
+  --text:#eef6f1; --muted:#8ba396; --red:#e2564f; --green:#3fbf72; --blue:#4db8ff;
+  --gold:#e8c46a; --felt:#14503a; --plo:#3fbf72; --plo-dim:rgba(63,191,114,.16);
+  --sans:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic UI",sans-serif;
+  --mono:"SF Mono",Menlo,Monaco,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;
+  overscroll-behavior:none;padding-bottom:env(safe-area-inset-bottom)}
+.app{max-width:480px;margin:0 auto;padding:12px;min-height:100dvh;display:flex;flex-direction:column;gap:10px}
+body.ingame{overflow:hidden;height:100dvh}
+body.ingame .app{height:100dvh;min-height:0;padding:8px 10px}
+.screen{display:none;flex-direction:column;gap:10px}
+.screen.active{display:flex}
+h1{font-size:1.55rem;text-align:center}
+h2{font-size:1.2rem;text-align:center}
+h3{font-size:.7rem;color:var(--muted);font-family:var(--mono);letter-spacing:1.5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:11px 16px;border-radius:10px;
+  border:1px solid var(--surface3);background:var(--surface);color:var(--text);cursor:pointer;
+  font-family:var(--sans);font-size:.92rem;font-weight:600;transition:all .15s;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.32;cursor:not-allowed}
+.btn-plo{background:var(--plo);border-color:var(--plo);color:#062616}
+.btn-blue{background:rgba(77,184,255,.15);border-color:rgba(77,184,255,.5);color:var(--blue)}
+.btn-red{background:rgba(226,86,79,.18);border-color:rgba(226,86,79,.6);color:#ff8f89}
+.btn-gold{background:rgba(232,196,106,.16);border-color:rgba(232,196,106,.55);color:var(--gold)}
+.btn-ghost{background:transparent}
+.btn-sm{padding:7px 11px;font-size:.74rem;border-radius:8px;min-height:32px}
+.input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--surface3);
+  background:var(--surface2);color:var(--text);font-size:1rem;outline:none}
+.input:focus{border-color:var(--plo)}
+.code-input{font-family:var(--mono);font-size:1.3rem;text-align:center;letter-spacing:6px}
+.row{display:flex;gap:8px;align-items:center}
+.divider{height:1px;background:var(--surface3);margin:4px 0}
+.panel{background:var(--surface);border:1px solid var(--surface3);border-radius:12px;padding:10px}
+.status-txt{text-align:center;font-size:.85rem;color:var(--blue);min-height:1.2em}
+.error{text-align:center;font-size:.85rem;color:var(--red);min-height:1.2em}
+.code-box{text-align:center;background:var(--surface);border:1px dashed var(--surface3);border-radius:12px;padding:10px}
+.code-box .label{font-size:.7rem;color:var(--muted);font-family:var(--mono);letter-spacing:2px}
+.code-box .code{font-size:2rem;font-family:var(--mono);letter-spacing:8px;color:var(--gold);font-weight:700}
+.log{font-size:.66rem;color:var(--muted);overflow-y:auto;line-height:1.5;font-family:var(--mono)}
+.log div{border-bottom:1px solid rgba(255,255,255,.04);padding:1px 0}
+.tag{font-size:.64rem;color:var(--muted);font-family:var(--mono)}
+.seg{display:flex;gap:5px}
+.seg .btn{flex:1;padding:8px 1px;font-size:.78rem;min-width:0}
+.seg .btn.on{background:var(--plo-dim);border-color:var(--plo);color:var(--plo)}
+
+/* カード */
+.c{width:clamp(26px,7.6vw,36px);height:clamp(37px,10.6vw,50px);border-radius:5px;background:#f6f3ec;
+  color:#1a1a1a;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-weight:800;line-height:1;border:1px solid #cdc7bb;flex:0 0 auto;font-size:.8rem}
+.c .s{font-size:.66rem}
+.c.rd{color:#c62b3d}
+.c.bk{background:repeating-linear-gradient(135deg,#20372c 0 6px,#1a2d24 6px 12px);border-color:#2b4438;color:rgba(255,255,255,.25)}
+.c.sm{width:clamp(20px,5.6vw,26px);height:clamp(28px,8vw,36px);font-size:.62rem}
+.c.sm .s{font-size:.5rem}
+.cards{display:flex;gap:3px;justify-content:center}
+.board{background:linear-gradient(180deg,#14503a,#0f3d2c);border-radius:12px;padding:8px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid #1d6b4c}
+
+/* ゲーム画面 */
+#screen-game{height:100%;gap:5px;overflow:hidden}
+#screen-game>*{flex-shrink:0}
+#screen-game>#panel-log{flex-shrink:1}
+#screen-game .panel{padding:6px 8px}
+.hdr{display:block;font-size:.64rem;font-family:var(--mono);color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr b{color:var(--gold)}
+.turnbar{text-align:center;padding:4px;border-radius:9px;font-weight:700;font-size:.8rem;
+  background:var(--surface);border:1px solid var(--surface3)}
+.turnbar.me{background:var(--plo-dim);border-color:var(--plo);color:var(--plo);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(63,191,114,.4)}50%{box-shadow:0 0 0 7px rgba(63,191,114,0)}}
+.seat{display:flex;align-items:center;gap:5px;background:var(--surface2);border-radius:8px;padding:3px 6px;
+  border:1px solid transparent;font-size:.7rem}
+.seat.act{border-color:var(--plo);background:var(--plo-dim)}
+.seat.fold{opacity:.4}
+.seat.me{border-color:var(--gold)}
+.seat .nm{min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px}
+.chips{font-family:var(--mono);color:var(--gold);white-space:nowrap}
+.bet{font-family:var(--mono);color:var(--blue);white-space:nowrap}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.acts .btn{padding:9px 2px;font-size:.8rem}
+.msg{text-align:center;font-size:.78rem;font-weight:700;line-height:1.25}
+.sub{text-align:center;font-size:.64rem;color:var(--muted);line-height:1.25}
+#panel-log{flex:1 1 0;min-height:30px;display:flex;flex-direction:column;overflow:hidden}
+#panel-log .log{flex:1 1 0;min-height:0}
+.btn-exit{padding:6px 10px;font-size:.7rem;border-radius:8px;min-height:32px}
+input[type=range]{width:100%;accent-color:var(--plo)}
+.result-hero{text-align:center;padding:16px 10px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:500;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--surface);border:1px solid var(--surface3);border-radius:14px;padding:16px;width:100%;max-width:420px}
+@media (max-height:760px){
+  #screen-game{gap:3px}
+  #screen-game .panel{padding:4px 7px}
+  .turnbar{padding:3px;font-size:.74rem}
+  .board{padding:5px 4px;gap:3px}
+  .seat{padding:2px 5px;font-size:.66rem}
+  .acts .btn{padding:7px 2px;font-size:.76rem}
+  #panel-log{min-height:24px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="screen active">
+    <h1>♠ PLOリング</h1>
+    <p style="text-align:center;font-family:var(--mono);font-size:.68rem;color:var(--muted);letter-spacing:1px">いつでも着席、いつでも離席。ポットリミット・オマハ</p>
+    <input class="input" id="in-name" type="text" placeholder="ニックネーム（最大12文字）" maxlength="12" autocomplete="off">
+    <div class="panel">
+      <h3 style="margin-bottom:6px">ゲーム</h3>
+      <div class="seg" id="var-seg">
+        <button class="btn on" data-v="plo4" onclick="setVariant('plo4')">PLO（4枚）</button>
+        <button class="btn" data-v="plo8" onclick="setVariant('plo8')">PLO8（Hi-Lo）</button>
+      </div>
+      <h3 style="margin:8px 0 6px">ブラインド</h3>
+      <div class="seg" id="bl-seg">
+        <button class="btn on" data-b="1" onclick="setBlind(1)">1/2</button>
+        <button class="btn" data-b="2" onclick="setBlind(2)">2/5</button>
+        <button class="btn" data-b="5" onclick="setBlind(5)">5/10</button>
+      </div>
+      <div class="tag" id="var-desc" style="margin-top:6px;line-height:1.5"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" id="btn-reconnect" style="display:none;background:rgba(45,189,110,.15);color:#2dbd6e;border:1px solid rgba(45,189,110,.5)" onclick="pgReconnect()"></button>
+      <button class="btn btn-plo" onclick="createRoom()">🏠 テーブルを立てる（ホスト）</button>
+      <div class="row">
+        <input class="input code-input" id="in-code" type="number" placeholder="0000" maxlength="4" style="flex:1">
+        <button class="btn btn-blue" onclick="joinRoom()">参加</button>
+      </div>
+      <div class="divider"></div>
+      <div class="panel">
+        <h3 style="margin-bottom:8px">🤖 練習モード（BOT対戦）</h3>
+        <div class="seg" id="bot-seg">
+          <button class="btn" data-b="1" onclick="setBots(1)">2人</button>
+          <button class="btn" data-b="2" onclick="setBots(2)">3人</button>
+          <button class="btn on" data-b="3" onclick="setBots(3)">4人</button>
+          <button class="btn" data-b="4" onclick="setBots(4)">5人</button>
+          <button class="btn" data-b="5" onclick="setBots(5)">6人</button>
+        </div>
+        <button class="btn" style="width:100%;margin-top:8px" onclick="startSolo()">▶ ひとりで練習する</button>
+      </div>
+    </div>
+    <div id="lobby-status" class="status-txt"></div>
+    <div id="lobby-error" class="error"></div>
+    <a href="index.html" style="text-decoration:none;margin-top:6px"><button class="btn btn-ghost" style="width:100%">← ホームに戻る</button></a>
+  </div>
+
+  <!-- WAITING -->
+  <div id="screen-waiting" class="screen">
+    <h2>テーブル待機</h2>
+    <div class="code-box">
+      <div class="label">テーブルコード</div>
+      <div class="code" id="disp-code">----</div>
+      <button class="btn btn-ghost btn-sm" onclick="copyCode()" style="margin-top:4px">📋 コピー</button>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:8px">着席中（最大6人）</h3>
+      <div id="wait-players" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <div class="panel"><div class="tag" id="wait-info"></div></div>
+    <button class="btn btn-plo" id="btn-start" onclick="startGame()">▶ ゲーム開始</button>
+    <div id="wait-status" class="status-txt"></div>
+    <button class="btn btn-ghost" onclick="leaveRoom()">← 退出</button>
+  </div>
+
+  <!-- GAME -->
+  <div id="screen-game" class="screen">
+    <div class="row" style="justify-content:space-between">
+      <span class="hdr" id="hdr-left" style="flex:1;min-width:0"></span>
+      <button class="btn btn-ghost btn-exit" onclick="openRules()">📖</button>
+      <button class="btn btn-ghost btn-exit" onclick="leaveRoom()">退出</button>
+    </div>
+    <div class="turnbar" id="turnbar"></div>
+    <div class="board" id="board"></div>
+    <div class="panel"><div id="seats" style="display:flex;flex-direction:column;gap:3px"></div></div>
+    <div class="panel" id="me-panel">
+      <div class="cards" id="myhole" style="margin-bottom:4px"></div>
+      <div class="sub" id="my-hint"></div>
+    </div>
+    <div class="panel" id="panel-main">
+      <div class="msg" id="main-msg"></div>
+      <div id="main-ui" style="margin-top:5px"></div>
+    </div>
+    <div class="panel" id="panel-log"><div class="log" id="game-log"></div></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="fb-modal"><div class="modal">
+  <h3 style="margin-bottom:10px">Firebase 設定</h3>
+  <input class="input" id="fb-url" type="url" placeholder="https://xxxx.firebaseio.com">
+  <button class="btn btn-plo" style="width:100%;margin-top:10px" onclick="saveFbConfig()">保存</button>
+</div></div>
+
+<script>
+// ============================================================
+// PLOリング（第1段階）
+//  ポットリミット・オマハ。手札4枚のうち必ず2枚＋ボード3枚で役を作る
+//  PLO8 では 8以下のローが成立していればポットを Hi/Lo で山分けする
+// ============================================================
+const RANKS='23456789TJQKA', SUITS='shdc';
+const SUIT_MARK={s:'♠',h:'♥',d:'♦',c:'♣'};
+function rk(c){return Math.floor(c/4);}          // 0=2 ... 12=A
+function st(c){return c%4;}
+function cardTxt(c){return RANKS[rk(c)]+SUIT_MARK[SUITS[st(c)]];}
+function isRed(c){return st(c)===1||st(c)===2;}
+
+// ---- 5枚の役を数値化（大きいほど強い） ----
+function evalHigh5(cs){
+  const r=cs.map(rk).sort((a,b)=>b-a), s=cs.map(st);
+  const flush=s.every(x=>x===s[0]);
+  const cnt={}; r.forEach(x=>cnt[x]=(cnt[x]||0)+1);
+  const groups=Object.keys(cnt).map(Number)
+    .sort((a,b)=>cnt[b]-cnt[a]||b-a);
+  const counts=groups.map(x=>cnt[x]);
+  // ストレート（A-5含む）
+  const uniq=[...new Set(r)];
+  let straightTop=-1;
+  if(uniq.length===5){
+    if(uniq[0]-uniq[4]===4) straightTop=uniq[0];
+    else if(uniq[0]===12&&uniq[1]===3&&uniq[4]===0) straightTop=3;  // A2345
+  }
+  let cat,tie;
+  if(flush&&straightTop>=0){cat=8;tie=[straightTop];}
+  else if(counts[0]===4){cat=7;tie=[groups[0],groups[1]];}
+  else if(counts[0]===3&&counts[1]===2){cat=6;tie=[groups[0],groups[1]];}
+  else if(flush){cat=5;tie=r;}
+  else if(straightTop>=0){cat=4;tie=[straightTop];}
+  else if(counts[0]===3){cat=3;tie=groups;}
+  else if(counts[0]===2&&counts[1]===2){cat=2;tie=groups;}
+  else if(counts[0]===2){cat=1;tie=groups;}
+  else {cat=0;tie=r;}
+  let v=cat;
+  for(let i=0;i<5;i++) v=v*16+(tie[i]!==undefined?tie[i]+1:0);
+  return v;
+}
+const HIGH_NAME=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート','フラッシュ','フルハウス','フォーカード','ストレートフラッシュ'];
+function highName(v){ let c=v; for(let i=0;i<5;i++)c=Math.floor(c/16); return HIGH_NAME[c]||'?'; }
+
+// ---- ローの判定（8以下・A-5・ペアなし。小さいほど強い。成立しなければ null） ----
+function evalLow5(cs){
+  const lr=cs.map(c=>{const r=rk(c);return r===12?1:r+2;});
+  if(lr.some(x=>x>8))return null;
+  if(new Set(lr).size!==5)return null;
+  const d=lr.slice().sort((a,b)=>b-a);
+  let v=0; d.forEach(x=>v=v*16+x);
+  return v;
+}
+const COMB2=[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+function comb2(n){const o=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)o.push([i,j]);return o;}
+const COMB3_5=[[0,1,2],[0,1,3],[0,1,4],[0,2,3],[0,2,4],[0,3,4],[1,2,3],[1,2,4],[1,3,4],[2,3,4]];
+// ---- PLO: 手札から必ず2枚、ボードから必ず3枚 ----
+function bestPLO(hole,board){
+  if(board.length<5) return {hi:-1,lo:null};
+  let hi=-1,hiCards=null,lo=null,loCards=null;
+  const pairs=hole.length===4?COMB2:comb2(hole.length);
+  for(const [a,b] of pairs) for(const t of COMB3_5){
+    const cs=[hole[a],hole[b],board[t[0]],board[t[1]],board[t[2]]];
+    const h=evalHigh5(cs);
+    if(h>hi){hi=h;hiCards=cs.slice();}
+    const l=evalLow5(cs);
+    if(l!==null&&(lo===null||l<lo)){lo=l;loCards=cs.slice();}
+  }
+  return {hi,hiCards,lo,loCards};
+}
+// ---- ポットリミットの上限 ----
+// コール後のポット全体が上限。maxRaiseTo = 現在の最高ベット + （ポット + 場のベット合計 + コール額）
+function potLimitMax(pot, bets, myBet, maxBet){
+  const toCall=Math.max(0,maxBet-myBet);
+  const potAfterCall=pot+bets+toCall;
+  return maxBet+potAfterCall;
+}
+// ---- サイドポットの構築 ----
+function buildPots(contrib, live){
+  // contrib: {pid: amount}, live: 勝負に残っている（フォールドしていない）pidの配列
+  const entries=Object.keys(contrib).filter(p=>contrib[p]>0);
+  const levels=[...new Set(entries.map(p=>contrib[p]))].sort((a,b)=>a-b);
+  const pots=[]; let prev=0;
+  for(const lv of levels){
+    let amount=0; const elig=[];
+    entries.forEach(p=>{
+      const c=Math.min(contrib[p],lv)-Math.min(contrib[p],prev);
+      if(c>0) amount+=c;
+      if(contrib[p]>=lv && live.includes(p)) elig.push(p);
+    });
+    if(amount>0) pots.push({amount,elig});
+    prev=lv;
+  }
+  // 同じ参加者のポットはまとめる
+  const merged=[];
+  pots.forEach(p=>{
+    const last=merged[merged.length-1];
+    if(last && last.elig.length===p.elig.length && last.elig.every(x=>p.elig.includes(x))) last.amount+=p.amount;
+    else merged.push(p);
+  });
+  return merged;
+}
+
+let RESOLVE_MS=1200, BOT_WAIT=700, BOT_WAIT_R=500;
+const BOT_NAMES=['🤖アカ','🤖アオ','🤖キイロ','🤖ミドリ','🤖ムラサキ'];
+const START_STACK=200;   // BB×100
+
+// ============================================================
+// FIREBASE
+// ============================================================
+const FB_KEY='partyGamesFbUrl';
+let fbUrl=localStorage.getItem(FB_KEY)||'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+function saveFbConfig(){const u=g('fb-url').value.trim().replace(/\/$/,'');if(!u)return;fbUrl=u;localStorage.setItem(FB_KEY,u);g('fb-modal').style.display='none';}
+async function checkFbConfig(){
+  if(!fbUrl){g('fb-modal').style.display='flex';return false;}
+  try{const r=await fetch(`${fbUrl}/.json?shallow=true`);if(!r.ok&&r.status!==404){setErr('Firebase接続エラー');return false;}}catch(e){setErr('Firebase接続失敗');return false;}
+  return true;
+}
+let fbRoom='',fbPollTimer=null,fbLastBcastTs=0,fbLastPrvTs=0,fbLastActTs={};
+async function fbPut(s,d){if(!fbRoom)return;try{await fetch(`${fbUrl}/rooms/${fbRoom}/${s}.json`,{method:'PUT',body:JSON.stringify(d)});}catch(e){}}
+async function fbGet(s){if(!fbRoom)return null;try{const r=await fetch(`${fbUrl}/rooms/${fbRoom}/${s}.json`);if(!r.ok)return null;return await r.json();}catch(e){return null;}}
+async function fbDel(s){if(!fbRoom)return;try{await fetch(`${fbUrl}/rooms/${fbRoom}/${s}.json`,{method:'DELETE'});}catch(e){}}
+function fbListen(){if(fbPollTimer)clearInterval(fbPollTimer);fbLastBcastTs=0;fbLastPrvTs=0;fbLastActTs={};fbPollTimer=setInterval(fbPoll,500);}
+function fbClose(){if(fbPollTimer)clearInterval(fbPollTimer);fbPollTimer=null;fbRoom='';}
+async function fbPoll(){
+  if(!fbRoom)return;
+  const bc=await fbGet('broadcast');
+  if(bc&&bc.ts>fbLastBcastTs){fbLastBcastTs=bc.ts;if(!isHost&&bc.msg)handleBroadcast(bc.msg);}
+  const pv=await fbGet(`private/${myId}`);
+  if(pv&&pv.ts>fbLastPrvTs){fbLastPrvTs=pv.ts;if(pv.msg)handlePrivate(pv.msg);}
+  if(isHost){const a=await fbGet('action');
+    if(a)for(const pid in a){const m=a[pid];if(m&&m.ts>(fbLastActTs[pid]||0)){fbLastActTs[pid]=m.ts;if(m.msg)onMsg(m.msg,pid);}}}
+}
+function fbBroadcast(m){fbPut('broadcast',{ts:Date.now(),msg:m});}
+function fbSendTo(p,m){fbPut(`private/${p}`,{ts:Date.now(),msg:m});}
+function fbSendToHost(m){if(isSolo){onMsg(m,myId);return;}fbPut(`action/${myId}`,{ts:Date.now(),msg:m});}
+
+// ============================================================
+// STATE
+// ============================================================
+let myId=genId(),myName='',isHost=false,isSolo=false,roomCode='';
+let fs=null,gs=null,myHole=[],soloBots=3,botTimer=null,prevActPid=null;
+let uiVariant='plo4', uiBlind=1, uiRaise=0;
+
+function g(id){return document.getElementById(id);}
+function mk(t,c){const e=document.createElement(t);if(c)e.className=c;return e;}
+function show(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const e=g('screen-'+n);if(e)e.classList.add('active');document.body.classList.toggle('ingame',n==='game');}
+function setErr(m){const e=g('lobby-error');if(e)e.textContent=m||'';}
+function setSt(m){const s=g('lobby-status');if(s)s.textContent=m||'';}
+function genId(){return 'p_'+Math.random().toString(36).slice(2,10);}
+function shuffle(a){const x=a.slice();for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
+function copyCode(){navigator.clipboard?.writeText(g('disp-code').textContent);}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function openRules(){if(typeof window.openRulesPga==='function')window.openRulesPga();}
+const VAR_DESC={plo4:'手札4枚。必ず2枚＋ボード3枚で役を作ります',
+  plo8:'PLOに加えて、8以下のローが成立していればポットを山分けします'};
+function setVariant(v){uiVariant=v;document.querySelectorAll('#var-seg .btn').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  const d=g('var-desc');if(d)d.textContent=VAR_DESC[v];}
+function setBlind(b){uiBlind=b;document.querySelectorAll('#bl-seg .btn').forEach(x=>x.classList.toggle('on',+x.dataset.b===b));}
+function setBots(n){soloBots=n;document.querySelectorAll('#bot-seg .btn').forEach(b=>b.classList.toggle('on',+b.dataset.b===n));}
+setTimeout(()=>setVariant('plo4'),0);
+let audioCtx=null;
+document.addEventListener('pointerdown',()=>{if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}},{once:true});
+function notifyTurn(){try{if(navigator.vibrate)navigator.vibrate(110);}catch(e){}
+  try{if(!audioCtx)return;const o=audioCtx.createOscillator(),n=audioCtx.createGain();
+    o.frequency.value=880;n.gain.value=.06;o.connect(n);n.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.09);}catch(e){}}
+
+// ============================================================
+// ROOM
+// ============================================================
+async function createRoom(){
+  if(!(await checkFbConfig()))return;
+  const n=g('in-name').value.trim();if(!n){setErr('名前を入力してください');return;}
+  myName=n;isHost=true;isSolo=false;
+  const code=Array.from({length:4},()=>Math.floor(Math.random()*10)).join('');
+  roomCode=code;fbRoom='PL-'+code;setSt('接続中...');
+  try{myId=genId();await fbDel('');await fbPut('meta',{host:myId,game:'ploring',ts:Date.now()});
+    fs=initFs([{id:myId,name:myName,bot:false}],uiVariant,uiBlind);fbListen();pgSaveSession();
+    setErr('');setSt('');g('disp-code').textContent=code;show('waiting');bcast();
+  }catch(e){setErr(e.message||'エラー');setSt('');isHost=false;}
+}
+async function joinRoom(){
+  if(!(await checkFbConfig()))return;
+  const n=g('in-name').value.trim();if(!n){setErr('名前を入力してください');return;}
+  const code=g('in-code').value.trim();if(!/^\d{4}$/.test(code)){setErr('4桁の数字');return;}
+  myName=n;isHost=false;isSolo=false;roomCode=code;fbRoom='PL-'+code;setSt('接続中...');
+  try{myId=genId();const meta=await fbGet('meta');
+    if(!meta){setErr('テーブルが見つかりません');setSt('');fbRoom='';return;}
+    if(meta.game!=='ploring'){setErr('ゲーム種別が違います');setSt('');fbRoom='';return;}
+    fbListen();pgSaveSession();fbSendToHost({type:'join',name:myName,id:myId});
+    setSt('接続しました...');show('waiting');g('disp-code').textContent=code;g('btn-start').style.display='none';
+    let rt=0;const rj=setInterval(()=>{if(!fbRoom||rt>=5){clearInterval(rj);return;}
+      if(gs?.seats?.find(p=>p&&p.id===myId)){clearInterval(rj);return;}
+      fbSendToHost({type:'join',name:myName,id:myId});rt++;},2000);
+  }catch(e){setErr(e.message||'エラー');setSt('');}
+}
+function startSolo(){
+  const n=g('in-name').value.trim()||'あなた';
+  myName=n;isHost=true;isSolo=true;roomCode='';fbRoom='';myId=genId();
+  const ps=[{id:myId,name:myName,bot:false}];
+  for(let i=0;i<soloBots;i++)ps.push({id:'bot_'+i,name:BOT_NAMES[i],bot:true});
+  fs=initFs(ps,uiVariant,uiBlind);setErr('');setSt('');hostStart();
+}
+function leaveRoom(){if(botTimer)clearTimeout(botTimer);pgClearSession();fbClose();
+  fs=null;gs=null;isHost=false;isSolo=false;myHole=[];prevActPid=null;
+  show('lobby');pgShowReconnect();}
+
+// ============================================================
+// HOST
+// ============================================================
+function initFs(players,variant,blind){
+  const sb=blind, bb=blind*2;
+  return {phase:'waiting',variant:variant||'plo4',sb,bb,
+    seats:players.map(p=>({id:p.id,name:p.name,bot:!!p.bot,chips:START_STACK*blind,
+      sitOut:false,joinPending:false,hole:[],bet:0,contrib:0,folded:false,allin:false,acted:false})),
+    btn:0,street:'',board:[],deck:[],pot:0,maxBet:0,lastRaise:0,turn:-1,
+    handNo:0,lock:false,log:[],lastResult:null};
+}
+function addLog(t){fs.log.push(t);if(fs.log.length>80)fs.log=fs.log.slice(-80);}
+function S(pid){return fs.seats.find(s=>s&&s.id===pid);}
+function active(){return fs.seats.filter(s=>s&&!s.sitOut&&s.chips>0);}
+function inHand(){return fs.seats.filter(s=>s&&s.hole.length&&!s.folded);}
+function canAct(s){return s&&s.hole.length&&!s.folded&&!s.allin&&s.chips>0;}
+
+function hostStart(){
+  const n=fs.seats.filter(Boolean).length;
+  if(n<2||n>6){if(!isSolo)setErr('2〜6人で開始できます');return;}
+  fs.phase='play';fs.handNo=0;fs.btn=Math.floor(Math.random()*n);
+  addLog(`テーブル開始（${fs.variant==='plo8'?'PLO8':'PLO'} ${fs.sb}/${fs.bb}）`);
+  newHand();
+}
+function startGame(){if(isHost)hostStart();}
+function rematch(){if(isHost){fs.phase='play';newHand();}}
+
+function newHand(){
+  // 着席待ちを参加させ、チップ切れは離席に
+  fs.seats.forEach(s=>{ if(!s)return; if(s.joinPending){s.joinPending=false;s.sitOut=false;addLog(`${s.name} が着席`);}
+    if(s.chips<=0&&!s.sitOut){s.sitOut=true;addLog(`${s.name} はチップ切れで離席`);} });
+  const act=active();
+  if(act.length<2){ fs.phase='waiting_players'; fs.street=''; fs.board=[]; bcast(); return; }
+  fs.handNo++;
+  fs.deck=shuffle(Array.from({length:52},(_,i)=>i));
+  fs.board=[];fs.pot=0;fs.maxBet=0;fs.lastRaise=fs.bb;fs.street='preflop';fs.lastResult=null;
+  fs.seats.forEach(s=>{ if(!s)return; s.hole=[];s.bet=0;s.contrib=0;s.folded=false;s.allin=false;s.acted=false; });
+  // ボタンを次の着席者へ
+  const idxs=fs.seats.map((s,i)=>s&&!s.sitOut&&s.chips>0?i:-1).filter(i=>i>=0);
+  let bi=idxs.find(i=>i>fs.btn); if(bi===undefined)bi=idxs[0];
+  fs.btn=bi;
+  const order=seatOrderFrom(fs.btn);
+  const heads=order.length===2;
+  const sbSeat=heads?fs.seats[fs.btn]:fs.seats[order[1]];
+  const bbSeat=heads?fs.seats[order[1]]:fs.seats[order[2]];
+  postBlind(sbSeat,fs.sb);postBlind(bbSeat,fs.bb);
+  fs.maxBet=fs.bb;fs.lastRaise=fs.bb;
+  const nHole=4;
+  order.forEach(i=>{ const s=fs.seats[i]; for(let k=0;k<nHole;k++) s.hole.push(fs.deck.pop()); });
+  addLog(`── ハンド${fs.handNo}（ボタン：${fs.seats[fs.btn].name}）`);
+  // プリフロップの最初の行動者
+  fs.turn = heads ? fs.btn : nextActive(fs.seats.indexOf(bbSeat));
+  fs.lock=false;
+  sendHands();bcast();
+}
+function seatOrderFrom(b){
+  const idxs=[];const n=fs.seats.length;
+  for(let k=1;k<=n;k++){const i=(b+k)%n;const s=fs.seats[i];if(s&&!s.sitOut&&s.chips>0)idxs.push(i);}
+  // ボタン自身を先頭に
+  const bi=idxs.indexOf(b);
+  const withBtn=fs.seats[b]&&!fs.seats[b].sitOut&&fs.seats[b].chips>0?[b].concat(idxs.filter(i=>i!==b)):idxs;
+  return withBtn;
+}
+function postBlind(s,amt){
+  const a=Math.min(amt,s.chips);
+  s.chips-=a;s.bet+=a;s.contrib+=a;
+  if(s.chips===0)s.allin=true;
+  addLog(`${s.name}：ブラインド ${a}`);
+}
+function nextActive(from){
+  const n=fs.seats.length;
+  for(let k=1;k<=n;k++){const i=(from+k)%n;const s=fs.seats[i];if(canAct(s))return i;}
+  return -1;
+}
+function onMsg(d,pid){
+  if(!d||!fs)return;
+  switch(d.type){
+    case 'join':{
+      const ex=fs.seats.find(s=>s&&s.id===d.id);
+      if(ex){bcast();sendHand(ex);return;}
+      if(fs.seats.filter(Boolean).length>=6){fbSendTo(d.id,{type:'error',msg:'満席（6人）'});return;}
+      const seat={id:d.id,name:d.name,bot:false,chips:START_STACK*fs.blind||START_STACK*fs.sb,
+        sitOut:true,joinPending:fs.phase==='play',hole:[],bet:0,contrib:0,folded:false,allin:false,acted:false};
+      seat.chips=START_STACK*fs.sb;
+      if(fs.phase!=='play'){seat.sitOut=false;seat.joinPending=false;}
+      fs.seats.push(seat);
+      addLog(`${d.name} がテーブルに参加${fs.phase==='play'?'（次のハンドから）':''}`);
+      bcast();
+      if(fs.phase==='waiting_players') newHand();
+      break;
+    }
+    case 'act': doAct(pid,d.act,d.amount); break;
+    case 'sit': doSit(pid,d.on); break;
+  }
+}
+function doSit(pid,on){
+  const s=S(pid); if(!s)return;
+  if(on){ if(s.chips<=0)s.chips=START_STACK*fs.sb; s.joinPending=true; addLog(`${s.name} が次のハンドから着席`); }
+  else { s.sitOut=true; if(s.hole.length&&!s.folded){ s.folded=true; addLog(`${s.name} は離席（フォールド扱い）`); } else addLog(`${s.name} が離席`); }
+  bcast();
+  if(!on && fs.phase==='play' && fs.turn>=0 && fs.seats[fs.turn]&&fs.seats[fs.turn].id===pid) advance();
+  if(on && fs.phase==='waiting_players') newHand();
+}
+function doAct(pid,act,amount){
+  if(fs.phase!=='play'||fs.lock)return;
+  if(fs.turn<0)return;
+  const s=fs.seats[fs.turn];
+  if(!s||s.id!==pid||!canAct(s))return;
+  const toCall=Math.max(0,fs.maxBet-s.bet);
+  if(act==='fold'){ s.folded=true; addLog(`${s.name}：フォールド`); }
+  else if(act==='check'){ if(toCall>0)return; addLog(`${s.name}：チェック`); }
+  else if(act==='call'){
+    const a=Math.min(toCall,s.chips);
+    s.chips-=a;s.bet+=a;s.contrib+=a;
+    if(s.chips===0)s.allin=true;
+    addLog(`${s.name}：${toCall>0?'コール '+a:'チェック'}${s.allin?'（オールイン）':''}`);
+  }
+  else if(act==='raise'){
+    const bets=fs.seats.reduce((a,x)=>a+(x?x.bet:0),0);
+    const maxTo=Math.min(potLimitMax(fs.pot,bets,s.bet,fs.maxBet), s.bet+s.chips);
+    const minTo=Math.min(fs.maxBet+Math.max(fs.lastRaise,fs.bb), s.bet+s.chips);
+    let to=Math.floor(amount);
+    if(!(to>fs.maxBet))return;
+    if(to<minTo)to=minTo;
+    if(to>maxTo)to=maxTo;
+    const a=to-s.bet;
+    if(a>s.chips)return;
+    s.chips-=a;s.bet=to;s.contrib+=a;
+    if(s.chips===0)s.allin=true;
+    fs.lastRaise=to-fs.maxBet;
+    fs.maxBet=to;
+    fs.seats.forEach(x=>{if(x&&x!==s)x.acted=false;});
+    addLog(`${s.name}：${toCall>0?'レイズ':'ベット'} ${to}${s.allin?'（オールイン）':''}`);
+  }
+  else return;
+  s.acted=true;
+  advance();
+}
+function advance(){
+  const live=inHand();
+  if(live.length<=1){ endHand(); return; }
+  const canStill=fs.seats.filter(s=>canAct(s));
+  const allMatched=canStill.every(s=>s.acted&&s.bet===fs.maxBet);
+  if(canStill.length===0 || allMatched){ nextStreet(); return; }
+  let t=nextActive(fs.turn);
+  // まだ行動していない、または額が足りない人を探す
+  let guard=0;
+  while(t>=0&&guard++<12){
+    const s=fs.seats[t];
+    if(!s.acted||s.bet<fs.maxBet)break;
+    t=nextActive(t);
+  }
+  if(t<0){ nextStreet(); return; }
+  fs.turn=t; bcast();
+}
+function collectBets(){
+  fs.seats.forEach(s=>{ if(!s)return; fs.pot+=s.bet; s.bet=0; s.acted=false; });
+  fs.maxBet=0; fs.lastRaise=fs.bb;
+}
+function nextStreet(){
+  collectBets();
+  const live=inHand();
+  if(live.length<=1){ endHand(); return; }
+  const canStill=fs.seats.filter(s=>canAct(s));
+  if(fs.street==='preflop'){ fs.street='flop'; fs.board.push(fs.deck.pop(),fs.deck.pop(),fs.deck.pop()); }
+  else if(fs.street==='flop'){ fs.street='turn'; fs.board.push(fs.deck.pop()); }
+  else if(fs.street==='turn'){ fs.street='river'; fs.board.push(fs.deck.pop()); }
+  else { endHand(); return; }
+  addLog(`── ${({flop:'フロップ',turn:'ターン',river:'リバー'})[fs.street]}：${fs.board.map(cardTxt).join(' ')}`);
+  if(canStill.length<=1){ // 全員オールイン → 最後まで配る
+    while(fs.board.length<5) fs.board.push(fs.deck.pop());
+    fs.street='river';
+    addLog(`ボード：${fs.board.map(cardTxt).join(' ')}`);
+    endHand(); return;
+  }
+  fs.turn=nextActive(fs.btn);
+  bcast();
+}
+function endHand(){
+  collectBets();
+  const live=inHand();
+  const contrib={}; fs.seats.forEach(s=>{if(s&&s.contrib>0)contrib[s.id]=s.contrib;});
+  const pots=buildPots(contrib, live.map(s=>s.id));
+  const results=[];
+  if(live.length===1){
+    const w=live[0];
+    const total=pots.reduce((a,p)=>a+p.amount,0);
+    w.chips+=total;
+    addLog(`🏆 ${w.name} が ${total} を獲得（他全員フォールド）`);
+    results.push({pid:w.id,amount:total,why:'全員フォールド'});
+  } else {
+    while(fs.board.length<5) fs.board.push(fs.deck.pop());
+    const ev={};
+    live.forEach(s=>{ ev[s.id]=bestPLO(s.hole,fs.board); });
+    live.forEach(s=>{ const e=ev[s.id];
+      addLog(`${s.name}：${s.hole.map(cardTxt).join(' ')} → ${highName(e.hi)}${fs.variant==='plo8'&&e.lo!==null?' ／ ロー成立':''}`); });
+    pots.forEach(p=>{
+      const cand=p.elig.filter(id=>ev[id]);
+      if(!cand.length)return;
+      const hiBest=Math.max(...cand.map(id=>ev[id].hi));
+      const hiWin=cand.filter(id=>ev[id].hi===hiBest);
+      let hiAmt=p.amount, loWin=[];
+      if(fs.variant==='plo8'){
+        const los=cand.filter(id=>ev[id].lo!==null);
+        if(los.length){
+          const loBest=Math.min(...los.map(id=>ev[id].lo));
+          loWin=los.filter(id=>ev[id].lo===loBest);
+          hiAmt=Math.floor(p.amount/2);
+        }
+      }
+      const loAmt=p.amount-hiAmt;
+      share(hiWin,hiAmt,'ハイ',results);
+      if(loWin.length) share(loWin,loAmt,'ロー',results);
+    });
+  }
+  // 配当し終えたのでポットと拠出をクリアする（チップ総量を常に一定に保つ）
+  const potShown=fs.pot;
+  fs.pot=0;
+  fs.seats.forEach(s=>{ if(s) s.contrib=0; });
+  fs.lastResult={board:fs.board.slice(),pot:potShown,
+    shown:live.map(s=>({pid:s.id,name:s.name,hole:s.hole.slice()})),results};
+  fs.lock=true;
+  fs.turn=-1;
+  bcast();
+  setTimeout(()=>{ if(!fs)return; fs.lock=false; newHand(); }, RESOLVE_MS);
+}
+function share(ids,amount,label,results){
+  if(!ids.length||amount<=0)return;
+  const each=Math.floor(amount/ids.length);
+  let rest=amount-each*ids.length;
+  ids.forEach((id,i)=>{
+    const s=S(id); const add=each+(i<rest?1:0);
+    s.chips+=add;
+    addLog(`🏆 ${s.name} が ${add} を獲得（${label}${ids.length>1?'・山分け':''}）`);
+    results.push({pid:id,amount:add,why:label});
+  });
+}
+
+// ============================================================
+// 配信
+// ============================================================
+function pubFs(f){
+  return {phase:f.phase,variant:f.variant,sb:f.sb,bb:f.bb,btn:f.btn,street:f.street,
+    board:f.board.slice(),pot:f.pot,maxBet:f.maxBet,lastRaise:f.lastRaise,turn:f.turn,
+    handNo:f.handNo,lock:f.lock,
+    seats:f.seats.map(s=>s?({id:s.id,name:s.name,bot:s.bot,chips:s.chips,sitOut:s.sitOut,
+      joinPending:s.joinPending,inHand:s.hole.length>0,folded:s.folded,allin:s.allin,bet:s.bet}):null),
+    lastResult:f.lastResult,log:f.log.slice(-30)};
+}
+function bcast(){
+  if(!fs)return;
+  gs=pubFs(fs);
+  const msg={type:'state',s:gs};
+  if(isSolo)handleBroadcast(msg);
+  else{fbBroadcast(msg);if(!fs.lock)pgSaveHostState();handleBroadcast(msg);}
+  maybeBot();
+}
+function sendHand(s){
+  if(!s||s.bot)return;
+  const msg={type:'hole',hole:s.hole.slice()};
+  if(s.id===myId)handlePrivate(msg);
+  else if(!isSolo)fbSendTo(s.id,msg);
+}
+function sendHands(){fs.seats.forEach(sendHand);}
+
+// ============================================================
+// CLIENT
+// ============================================================
+function handleBroadcast(m){
+  if(!m)return;
+  if(m.type==='state'){
+    gs=m.s;routeScreen();
+    const a=actorPid();
+    if(a===myId&&prevActPid!==myId&&!gs.lock)notifyTurn();
+    prevActPid=a;
+  }
+}
+function handlePrivate(m){
+  if(!m)return;
+  if(m.type==='hole'){myHole=m.hole.slice();if(gs)renderGame();}
+  if(m.type==='error'){setErr(m.msg||'エラー');show('lobby');fbClose();pgClearSession();}
+}
+function actorPid(){ if(!gs||gs.turn<0)return null; const s=gs.seats[gs.turn]; return s?s.id:null; }
+function routeScreen(){
+  if(!gs)return;
+  if(gs.phase==='waiting'){show('waiting');renderWaiting();}
+  else{show('game');renderGame();}
+}
+function send(m){if(isHost||isSolo)onMsg(m,myId);else fbSendToHost(m);}
+function meS(){return gs?gs.seats.find(s=>s&&s.id===myId):null;}
+function myTurn(){return gs&&!gs.lock&&actorPid()===myId;}
+function uiAct(a,amt){ if(myTurn()) send({type:'act',act:a,amount:amt}); }
+function uiSit(on){ send({type:'sit',on}); }
+
+// ---------- 描画 ----------
+function renderWaiting(){
+  const b=g('wait-players');b.innerHTML='';
+  gs.seats.filter(Boolean).forEach((p,i)=>{const c=mk('div','seat');
+    c.innerHTML=`<span>${i===0?'👑':'♠'}</span><span class="nm" style="flex:1">${esc(p.name)}${p.id===myId?'（あなた）':''}</span><span class="chips">${p.chips}</span>`;b.appendChild(c);});
+  g('wait-info').textContent=`${gs.variant==='plo8'?'PLO8（Hi-Lo）':'PLO'} ／ ブラインド ${gs.sb}/${gs.bb} ／ 持ち点 ${START_STACK*gs.sb}`;
+  const n=gs.seats.filter(Boolean).length;
+  if(isHost){g('btn-start').style.display='';g('btn-start').disabled=!(n>=2&&n<=6);
+    g('wait-status').textContent=(n>=2&&n<=6)?'':'2人以上で開始できます';}
+  else{g('btn-start').style.display='none';g('wait-status').textContent='ホストの開始を待っています...';}
+}
+function cardEl(c,opt){
+  opt=opt||{};
+  const d=mk('div','c'+(opt.sm?' sm':'')+(c==null?' bk':(isRed(c)?' rd':'')));
+  if(c==null)d.textContent='♠';
+  else d.innerHTML=`<div>${RANKS[rk(c)]}</div><div class="s">${SUIT_MARK[SUITS[st(c)]]}</div>`;
+  return d;
+}
+function renderGame(){
+  if(!gs)return;
+  const me=meS();
+  g('hdr-left').innerHTML=`${isSolo?'練習':(roomCode?'#'+roomCode:'')}／${gs.variant==='plo8'?'PLO8':'PLO'} <b>${gs.sb}/${gs.bb}</b>／#${gs.handNo}`;
+  const tb=g('turnbar');
+  const act=gs.turn>=0?gs.seats[gs.turn]:null;
+  let txt='';
+  if(gs.phase==='waiting_players')txt='プレイヤーを待っています';
+  else if(gs.lock)txt='ハンド終了';
+  else if(myTurn())txt='▶ あなたのアクション';
+  else txt=act?`▶ ${act.name} のアクション`:'…';
+  tb.textContent=txt;tb.className='turnbar'+(myTurn()?' me':'');
+
+  // ボード
+  const bd=g('board');bd.innerHTML='';
+  const row=mk('div','cards');
+  for(let i=0;i<5;i++) row.appendChild(cardEl(gs.board[i]!=null?gs.board[i]:null,{}));
+  bd.appendChild(row);
+  const pt=mk('div');pt.className='chips';pt.style.fontSize='.95rem';
+  const liveBets=gs.seats.reduce((a,s)=>a+(s?s.bet:0),0);
+  pt.textContent = (gs.lock&&gs.lastResult) ? `POT ${gs.lastResult.pot}` : `POT ${gs.pot}${liveBets?` (+${liveBets})`:''}`;
+  bd.appendChild(pt);
+  if(gs.street){const st2=mk('div','tag');st2.textContent=({preflop:'プリフロップ',flop:'フロップ',turn:'ターン',river:'リバー'})[gs.street]||'';bd.appendChild(st2);}
+
+  // 席
+  const ss=g('seats');ss.innerHTML='';
+  gs.seats.forEach((s,i)=>{
+    if(!s)return;
+    const r=mk('div','seat'+(i===gs.turn?' act':'')+(s.folded?' fold':'')+(s.id===myId?' me':''));
+    const mark=i===gs.btn?'<span class="tag">Ⓑ</span>':'';
+    const state=s.sitOut?'<span class="tag">離席</span>':(s.allin?'<span class="tag" style="color:#ff8f89">ALLIN</span>':(s.folded?'<span class="tag">FOLD</span>':''));
+    r.innerHTML=`${mark}<span class="nm" style="flex:1">${esc(s.name)}${s.id===myId?'★':''}</span>${state}`
+      +`<span class="bet">${s.bet?('bet '+s.bet):''}</span><span class="chips">${s.chips}</span>`;
+    // 相手の手札（ショーダウンで公開）
+    if(gs.lastResult&&gs.lock){
+      const sh=gs.lastResult.shown.find(x=>x.pid===s.id);
+      if(sh&&s.id!==myId){ const cw=mk('span','cards');sh.hole.forEach(c=>cw.appendChild(cardEl(c,{sm:true})));r.appendChild(cw); }
+    }
+    ss.appendChild(r);
+  });
+
+  // 自分の手札
+  const mh=g('myhole');mh.innerHTML='';
+  myHole.forEach(c=>mh.appendChild(cardEl(c,{})));
+  const hint=g('my-hint');
+  if(myHole.length&&gs.board.length>=5){
+    const e=bestPLO(myHole,gs.board);
+    hint.textContent=`いまの役：${highName(e.hi)}${gs.variant==='plo8'&&e.lo!==null?'／ロー成立':''}`;
+  } else if(myHole.length) hint.textContent='手札4枚のうち必ず2枚＋ボード3枚で役を作ります';
+  else hint.textContent = me&&me.sitOut ? '離席中です' : '';
+
+  renderMain();
+  const lg=g('game-log');lg.innerHTML='';
+  (gs.log||[]).slice().reverse().forEach(t=>{const d=mk('div');d.textContent=t;lg.appendChild(d);});
+}
+function renderMain(){
+  const msg=g('main-msg'),ui=g('main-ui');
+  msg.textContent='';ui.innerHTML='';
+  if(!gs)return;
+  const me=meS();
+  if(!me){msg.textContent='観戦中';return;}
+  if(me.sitOut&&!me.joinPending){
+    msg.textContent='離席中';
+    const b=mk('button','btn btn-plo');b.style.width='100%';b.textContent='着席する（次のハンドから）';
+    b.onclick=()=>uiSit(true);ui.appendChild(b);return;
+  }
+  if(me.joinPending){msg.textContent='次のハンドから参加します';return;}
+  if(!myTurn()){
+    msg.textContent=gs.lock?'ハンド終了':'待機中';
+    const b=mk('button','btn btn-ghost btn-sm');b.style.width='100%';b.textContent='離席する';
+    b.onclick=()=>uiSit(false);ui.appendChild(b);return;
+  }
+  const toCall=Math.max(0,gs.maxBet-me.bet);
+  const bets=gs.seats.reduce((a,s)=>a+(s?s.bet:0),0);
+  const maxTo=Math.min(potLimitMax(gs.pot,bets,me.bet,gs.maxBet), me.bet+me.chips);
+  const minTo=Math.min(gs.maxBet+Math.max(gs.lastRaise,gs.bb), me.bet+me.chips);
+  msg.textContent=toCall>0?`コールに ${toCall}`:'チェックできます';
+  const box=mk('div','acts');
+  const bf=mk('button','btn btn-red');bf.textContent='フォールド';bf.onclick=()=>uiAct('fold');
+  const bc=mk('button','btn btn-blue');bc.textContent=toCall>0?`コール ${Math.min(toCall,me.chips)}`:'チェック';
+  bc.onclick=()=>uiAct(toCall>0?'call':'check');
+  const br=mk('button','btn btn-plo');br.textContent=toCall>0?'レイズ':'ベット';
+  br.disabled=!(maxTo>gs.maxBet);
+  br.onclick=()=>uiAct('raise',uiRaise||minTo);
+  box.appendChild(bf);box.appendChild(bc);box.appendChild(br);
+  ui.appendChild(box);
+  if(maxTo>gs.maxBet){
+    if(!uiRaise||uiRaise<minTo||uiRaise>maxTo)uiRaise=minTo;
+    const wrap=mk('div');wrap.style.marginTop='5px';
+    const lab=mk('div','sub');lab.textContent=`レイズ額 ${uiRaise}（最小${minTo} / ポット上限${maxTo}）`;
+    const sl=mk('input');sl.type='range';sl.min=minTo;sl.max=maxTo;sl.value=uiRaise;sl.step=1;
+    sl.oninput=()=>{uiRaise=+sl.value;lab.textContent=`レイズ額 ${uiRaise}（最小${minTo} / ポット上限${maxTo}）`;};
+    wrap.appendChild(lab);wrap.appendChild(sl);
+    const qb=mk('div','acts');qb.style.marginTop='4px';
+    [['½ポット',Math.min(maxTo,Math.max(minTo,Math.round(gs.maxBet+(gs.pot+bets+toCall)/2)))],
+     ['ポット',maxTo],['最小',minTo]].forEach(([t,v])=>{
+      const b=mk('button','btn btn-sm');b.textContent=t;b.onclick=()=>{uiRaise=v;renderGame();};qb.appendChild(b);});
+    wrap.appendChild(qb);
+    ui.appendChild(wrap);
+  }
+}
+
+// ============================================================
+// BOT
+// ============================================================
+function maybeBot(){
+  if(botTimer){clearTimeout(botTimer);botTimer=null;}
+  if(!fs||!(isHost||isSolo)||fs.lock||fs.phase!=='play')return;
+  if(fs.turn<0)return;
+  const s=fs.seats[fs.turn];
+  if(!s||!s.bot)return;
+  const pid=s.id;
+  botTimer=setTimeout(()=>botAct(pid),BOT_WAIT+Math.random()*BOT_WAIT_R);
+}
+// 手札の粗い評価（プリフロップ）
+function preflopScore(hole){
+  const r=hole.map(rk).sort((a,b)=>b-a), s=hole.map(st);
+  let sc=0;
+  sc+=r[0]+r[1];
+  const cnt={};r.forEach(x=>cnt[x]=(cnt[x]||0)+1);
+  const pairs=Object.values(cnt).filter(v=>v>=2).length;
+  sc+=pairs*4;
+  if(Object.values(cnt).some(v=>v>=3))sc-=4;          // トリップスは弱い
+  const sc2={};s.forEach(x=>sc2[x]=(sc2[x]||0)+1);
+  if(Object.values(sc2).some(v=>v===2))sc+=4;         // スーテッド
+  if(Object.values(sc2).some(v=>v>=3))sc-=3;
+  const gaps=Math.abs(r[0]-r[1])+Math.abs(r[1]-r[2])+Math.abs(r[2]-r[3]);
+  if(gaps<=6)sc+=5;                                   // コネクト
+  return sc;
+}
+function botAct(pid){
+  botTimer=null;
+  if(!fs||fs.lock||fs.phase!=='play')return;
+  if(fs.turn<0)return;
+  const s=fs.seats[fs.turn];
+  if(!s||s.id!==pid||!s.bot)return;
+  const toCall=Math.max(0,fs.maxBet-s.bet);
+  const bets=fs.seats.reduce((a,x)=>a+(x?x.bet:0),0);
+  const potNow=fs.pot+bets;
+  const maxTo=Math.min(potLimitMax(fs.pot,bets,s.bet,fs.maxBet), s.bet+s.chips);
+  const minTo=Math.min(fs.maxBet+Math.max(fs.lastRaise,fs.bb), s.bet+s.chips);
+  let strength;
+  if(fs.street==='preflop'){
+    strength=Math.min(1,Math.max(0,(preflopScore(s.hole)-14)/22));
+  } else {
+    const b=fs.board.length>=5?fs.board:fs.board.concat(fs.deck.slice(-(5-fs.board.length)));
+    const e=bestPLO(s.hole,b);
+    let cat=e.hi; for(let i=0;i<5;i++)cat=Math.floor(cat/16);
+    strength=Math.min(1,cat/6);
+  }
+  const r=Math.random();
+  if(toCall===0){
+    if(strength>0.55&&r<0.55&&maxTo>fs.maxBet){ doAct(pid,'raise',Math.min(maxTo,Math.round(fs.maxBet+potNow*(0.5+r*0.5)))); return; }
+    doAct(pid,'check'); return;
+  }
+  const odds=toCall/(potNow+toCall);
+  if(strength<odds*0.8 && r<0.75){ doAct(pid,'fold'); return; }
+  if(strength>0.7 && r<0.45 && maxTo>fs.maxBet){ doAct(pid,'raise',Math.min(maxTo,Math.max(minTo,Math.round(fs.maxBet+potNow*0.7)))); return; }
+  doAct(pid,'call');
+}
+
+// ============================================================
+// SESSION
+// ============================================================
+const PG_SESSION_KEY='pgSession_ploring';
+function pgSaveSession(){if(isSolo)return;try{localStorage.setItem(PG_SESSION_KEY,JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()}));}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&fbRoom&&!isSolo)pgSaveSession();});
+window.addEventListener('pagehide',()=>{if(fbRoom&&!isSolo)pgSaveSession();});
+function pgLoadSession(){try{const r=localStorage.getItem(PG_SESSION_KEY);if(!r)return null;const s=JSON.parse(r);
+  if(Date.now()-s.ts>3*60*60*1000){pgClearSession();return null;}return s;}catch(e){return null;}}
+function pgClearSession(){try{localStorage.removeItem(PG_SESSION_KEY);}catch(e){}}
+function pgShowReconnect(){const s=pgLoadSession(),b=g('btn-reconnect');if(!b)return;
+  if(!s||!s.roomCode){b.style.display='none';return;}b.style.display='';b.textContent='🔄 前のテーブルに戻る（#'+s.roomCode+'）';}
+function pgSaveHostState(){if(!isHost||isSolo||!fbRoom||!fs)return;
+  try{fbPut('hostState',{ts:Date.now(),fsJson:JSON.stringify(fs),actTs:JSON.stringify(fbLastActTs||{})});}catch(e){}}
+async function pgReconnect(){
+  const s=pgLoadSession();if(!s)return;
+  myId=s.myId;myName=s.myName;roomCode=s.roomCode;fbRoom=s.fbRoom;isHost=s.isHost;isSolo=false;
+  setSt('再接続中...');
+  try{const meta=await fbGet('meta');
+    if(!meta){pgClearSession();pgShowReconnect();setErr('テーブルが見つかりません');setSt('');fbRoom='';return;}
+    if(isHost){const hs=await fbGet('hostState');
+      if(hs&&hs.fsJson){fs=JSON.parse(hs.fsJson);if(fs.lock)fs.lock=false;fbListen();
+        try{fbLastActTs=JSON.parse(hs.actTs||'{}');}catch(e){fbLastActTs={};}
+        if(g('disp-code'))g('disp-code').textContent=roomCode;pgSaveSession();sendHands();bcast();}
+      else{setErr('状態を復元できませんでした');setSt('');return;}
+    }else{fbListen();fbSendToHost({type:'join',name:myName,id:myId});pgSaveSession();
+      if(g('disp-code'))g('disp-code').textContent=roomCode;
+      const bs=g('btn-start');if(bs)bs.style.display='none';show('waiting');}
+    setErr('');setSt('');
+  }catch(e){setErr('再接続に失敗しました');setSt('');}
+}
+setTimeout(pgShowReconnect,300);
+window.addEventListener('pageshow',()=>pgShowReconnect());
+window.__plo={evalHigh5,evalLow5,bestPLO,potLimitMax,buildPots,highName,rk,st,cardTxt,RANKS,SUITS};
+</script>
+
+<script>
+/* PG共通アドオン v1 */
+(function(){
+'use strict';
+var HB_MS=15000,WATCH_MS=10000,STALE_MS=40000,ROOM_TTL=86400000,CLEAN_EVERY=21600000,NAME_KEY='pgPlayerName';
+function db(){try{if(typeof fbUrl==='string'&&fbUrl.indexOf('https://')===0)return fbUrl;}catch(e){}
+  return 'https://playgame-3e7ba-default-rtdb.firebaseio.com';}
+function room(){try{return (typeof fbRoom==='string')?fbRoom:'';}catch(e){return '';}}
+function me(){var id='',nm='';try{if(typeof myId==='string')id=myId;}catch(e){}try{if(typeof myName==='string')nm=myName;}catch(e){}return{id:id,name:nm};}
+function put(u,b){try{return fetch(u,{method:'PUT',body:JSON.stringify(b),keepalive:true});}catch(e){return null;}}
+function initName(){var s='';try{s=localStorage.getItem(NAME_KEY)||'';}catch(e){}
+  ['in-name'].forEach(function(id){var el=document.getElementById(id);if(!el)return;
+    if(s&&!el.value)el.value=s;
+    function sv(){var v=(el.value||'').trim();if(v){try{localStorage.setItem(NAME_KEY,v);}catch(e){}}}
+    el.addEventListener('change',sv);el.addEventListener('blur',sv);});}
+var lastRoom='';
+function syncRoom(){var r=room(),m=me();if(r!==lastRoom){if(lastRoom&&m.id){try{fetch(db()+'/rooms/'+lastRoom+'/presence/'+m.id+'.json',{method:'DELETE',keepalive:true});}catch(e){}}lastRoom=r;}}
+function beat(){syncRoom();var r=room(),m=me();if(!r||!m.id)return;put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?'});}
+function markLeft(){syncRoom();var r=room(),m=me();if(!r||!m.id)return;put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?',left:1});}
+var hideUntil=0;
+function banner(t){var b=document.getElementById('pga-banner');
+  if(!t||Date.now()<hideUntil){if(b)b.style.display='none';return;}
+  if(!b){b=document.createElement('div');b.id='pga-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99990;background:rgba(178,34,34,.93);color:#fff;font-size:12px;line-height:1.4;padding:5px 30px 5px 10px;text-align:center;font-family:sans-serif;';
+    var s=document.createElement('span');s.id='pga-banner-text';b.appendChild(s);
+    var x=document.createElement('span');x.textContent='\u2715';
+    x.style.cssText='position:absolute;right:8px;top:4px;cursor:pointer;padding:0 4px;';
+    x.onclick=function(){hideUntil=Date.now()+60000;b.style.display='none';};b.appendChild(x);document.body.appendChild(b);}
+  document.getElementById('pga-banner-text').textContent=t;b.style.display='block';}
+function watch(){syncRoom();var r=room(),m=me();if(!r){banner('');return;}
+  fetch(db()+'/rooms/'+r+'/presence.json').then(function(x){return x.json();}).then(function(d){
+    if(room()!==r)return;if(!d){banner('');return;}
+    var now=Date.now(),gone=[];
+    Object.keys(d).forEach(function(pid){if(pid===m.id)return;var p=d[pid]||{};
+      if(p.left||(p.t&&now-p.t>STALE_MS))gone.push(p.n||'?');});
+    banner(gone.length?('\u26A0\uFE0F \u901A\u4FE1\u304C\u9014\u5207\u308C\u3066\u3044\u307E\u3059: '+gone.join('\u3001')):'');
+  }).catch(function(){});}
+setInterval(beat,HB_MS);setTimeout(beat,1500);setInterval(watch,WATCH_MS);setTimeout(watch,4000);
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){beat();watch();}});
+window.addEventListener('pagehide',markLeft);
+function tsOf(k,s){return fetch(db()+'/rooms/'+k+'/'+s+'.json').then(function(r){return r.json();}).catch(function(){return null;});}
+async function cleanup(){try{
+  var last=0;try{last=+(localStorage.getItem('pgLastCleanup')||0);}catch(e){}
+  if(Date.now()-last<CLEAN_EVERY)return;
+  try{localStorage.setItem('pgLastCleanup',String(Date.now()));}catch(e){}
+  var res=await fetch(db()+'/rooms.json?shallow=true');var keys=await res.json();if(!keys)return;
+  var list=Object.keys(keys).filter(function(k){return /^[A-Za-z0-9_]{1,6}-/.test(k)&&k!==room();});
+  list.sort(function(){return Math.random()-0.5;});
+  var checked=0,deleted=0;
+  for(var i=0;i<list.length;i++){if(checked>=80||deleted>=25)break;var k=list[i];checked++;
+    var ts=0,v;
+    v=await tsOf(k,'meta/ts');if(typeof v==='number')ts=Math.max(ts,v);
+    v=await tsOf(k,'broadcast/ts');if(typeof v==='number')ts=Math.max(ts,v);
+    v=await tsOf(k,'hostState/ts');if(typeof v==='number')ts=Math.max(ts,v);
+    v=await tsOf(k,'presence');
+    if(v)Object.keys(v).forEach(function(pid){var t=v[pid]&&v[pid].t;if(typeof t==='number')ts=Math.max(ts,t);});
+    if(!ts)continue;
+    if(Date.now()-ts>ROOM_TTL){try{await fetch(db()+'/rooms/'+k+'.json',{method:'DELETE'});deleted++;}catch(e){}}}
+}catch(e){}}
+setTimeout(cleanup,5000);
+
+var RULES=[
+'<h3 style="margin:0 0 8px;font-size:16px;">♠ PLOリング（2〜6人）</h3>',
+'<p style="margin:6px 0;">ポットリミット・オマハのキャッシュゲームです。いつでも着席・離席ができます。</p>',
+'<p style="margin:10px 0 4px;"><b>■ 基本</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>手札は<b>4枚</b>。役を作るときは<b>手札から必ず2枚、ボードから必ず3枚</b>を使います</li>',
+'<li>プリフロップ → フロップ（3枚）→ ターン（1枚）→ リバー（1枚）と進み、各段階でベットします</li>',
+'<li>持ち点はブラインドの100BB分から始まります</li></ul>',
+'<p style="margin:10px 0 4px;"><b>■ ポットリミット</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>ベット・レイズの上限は<b>コールした後のポット全額</b>です</li>',
+'<li>「ポット」ボタンで上限額、「½ポット」で半分の額が入ります</li></ul>',
+'<p style="margin:10px 0 4px;"><b>■ PLO8（Hi-Lo）</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>ハイの役に加えて、<b>8以下のカード5枚（ペアなし）</b>でローが成立します。ローもハイと同じく手札2枚＋ボード3枚です</li>',
+'<li>ローが1人でも成立していれば、ポットはハイとローで<b>山分け</b>になります。誰も成立しなければハイが総取りです</li>',
+'<li>ローではA は 1 として扱い、ストレートやフラッシュは無視します</li></ul>',
+'<p style="margin:10px 0 4px;"><b>■ 着席と離席</b></p>',
+'<ul style="margin:4px 0;padding-left:18px;">',
+'<li>「離席する」を押すと、そのハンドはフォールド扱いになり以後配られません</li>',
+'<li>「着席する」を押すと<b>次のハンドから</b>参加します</li>',
+'<li>チップが尽きた人は自動で離席になります</li></ul>',
+'<p style="margin:10px 0 4px;"><b>■ オールインとサイドポット</b></p>',
+'<p style="margin:4px 0;">持ち点が足りない人がオールインした場合、その人が受け取れる分（メインポット）と、それ以外で争う分（サイドポット）に自動で分けて精算します。</p>'
+].join('');
+function initFloatRules(){
+  var opener=RULES?openRulesPga:(typeof window.openRules==='function'?window.openRules:null);
+  if(!opener)return;
+  var b=document.createElement('button');b.id='pga-rules-fab';b.type='button';b.textContent='\uD83D\uDCD6';
+  b.setAttribute('aria-label','ルール');
+  b.style.cssText='position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:99989;width:40px;height:40px;'
+    +'border-radius:19px;border:1px solid rgba(255,255,255,.22);background:rgba(10,12,18,.78);'
+    +'color:#e8e8e8;font-size:17px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;padding:0;';
+  b.onclick=opener;document.body.appendChild(b);
+  function upd(){try{
+    var dup=false,all=document.querySelectorAll('button');
+    for(var i=0;i<all.length;i++){var el=all[i];if(el===b)continue;
+      if(!/遊び方/.test(el.textContent||''))continue;if(el.offsetParent!==null){dup=true;break;}}
+    var open=!!document.querySelector('#pga-rules[style*="flex"]');
+    b.style.display=(dup||open)?'none':'inline-flex';}catch(e){}}
+  setInterval(upd,700);setTimeout(upd,400);
+}
+function openRulesPga(){var m=document.getElementById('pga-rules');if(m)m.style.display='flex';}
+window.openRulesPga=openRulesPga;
+function closeRulesPga(){var m=document.getElementById('pga-rules');if(m)m.style.display='none';}
+function initRules(){
+  var m=document.createElement('div');m.id='pga-rules';
+  m.style.cssText='display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:14px;';
+  m.innerHTML='<div style="background:#1d222b;color:#e8e8e8;max-width:520px;width:100%;max-height:82vh;overflow-y:auto;border-radius:12px;padding:18px 16px;font-size:13.5px;line-height:1.75;font-family:sans-serif;">'+RULES+'<button id="pga-rules-close" style="display:block;width:100%;margin-top:14px;padding:11px;border:none;border-radius:8px;background:#3a4557;color:#fff;font-size:14px;cursor:pointer;">\u9589\u3058\u308B</button></div>';
+  m.addEventListener('click',function(e){if(e.target===m)closeRulesPga();});
+  document.body.appendChild(m);
+  document.getElementById('pga-rules-close').onclick=closeRulesPga;
+  ['screen-lobby','screen-waiting'].forEach(function(id){
+    var sc=document.getElementById(id);if(!sc)return;
+    var btn=document.createElement('button');btn.type='button';btn.textContent='\uD83D\uDCD6 \u904A\u3073\u65B9';
+    btn.style.cssText='display:block;width:100%;margin:10px 0 0;padding:11px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.06);color:inherit;font-size:14px;cursor:pointer;';
+    btn.onclick=openRulesPga;sc.appendChild(btn);});
+}
+initName();initRules();initFloatRules();
+})();
+</script>
+</body>
+</html>
