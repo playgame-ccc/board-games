@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🃏 MIX ポーカー</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&family=M+PLUS+1+Code:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;0,700;0,800;1,600;1,700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
   /* JOPT風: 茶色木目×濃緑フェルト×金アクセント */
@@ -46,7 +46,7 @@ body {
     repeating-linear-gradient(92deg, rgba(0,0,0,0.10) 0 2px, transparent 2px 7px),
     linear-gradient(180deg, #3a2417 0%, #2a1810 45%, #1f120b 100%);
   color: var(--text);
-  font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100vh;
   line-height: 1.5;
 }
@@ -54,7 +54,7 @@ body {
 .wrap { max-width: 520px; margin: 0 auto; padding: 16px 14px 40px; }
 /* ゲーム画面表示中はwrapの余白を消し、1画面に固定 */
 .wrap:has(#screen-game.active) { padding: 0; max-width: none; height: 100dvh; overflow: hidden; }
-.mono { font-family: 'M PLUS 1 Code', monospace; }
+.mono { font-family: 'Share Tech Mono', monospace; }
 .center { text-align: center; }
 .small { font-size: 0.85rem; }
 .muted { color: var(--muted); }
@@ -122,7 +122,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .btn-ghost:hover { color: var(--text); }
 .btn-red { background: var(--red); color: #fff; }
-.btn-sm { padding: 10px; font-size: 0.88rem; }
+.btn-sm { padding: 10px; font-size: 0.88rem; min-height: 32px; }
 /* アクション専用ボタン（Ten-Four配色） */
 .btn-raise { background: var(--red); color: #fff; }
 .btn-call  { background: var(--green); color: #fff; }
@@ -153,6 +153,108 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .count-btn.selected {
   color: #fff;
   background: var(--green);
+}
+
+/* ===== PLOリング風レイアウト ===== */
+body.ingame{overflow:hidden;height:100dvh}
+body.ingame .app,body.ingame .wrap,body.ingame .container{height:100dvh;min-height:0;overflow:hidden;padding-top:8px;padding-bottom:8px}
+body.ingame #screen-game.active{height:100%;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+body.ingame #screen-game>*{flex-shrink:0}
+body.ingame #screen-game>#log{flex:1 1 0;min-height:30px;overflow-y:auto}
+.pl-topbar{display:flex;align-items:center;gap:6px}
+.pl-hdr{flex:1;min-width:0;display:block;font-size:.64rem;font-family:var(--mono,monospace);color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-hdr b{color:var(--gold,#e8c46a)}
+.pl-tb{padding:6px 10px;font-size:.7rem;border-radius:8px;min-height:32px;background:transparent;
+  border:1px solid var(--surface3);color:var(--muted);cursor:pointer;font-family:inherit}
+.pl-turnbar{text-align:center;padding:4px;border-radius:9px;font-weight:700;font-size:.8rem;
+  background:var(--surface);border:1px solid var(--surface3)}
+.pl-turnbar.me{background:rgba(63,191,114,.16);border-color:#3fbf72;color:#4fd18a;animation:plPulse 1.6s infinite}
+@keyframes plPulse{0%,100%{box-shadow:0 0 0 0 rgba(63,191,114,.4)}50%{box-shadow:0 0 0 7px rgba(63,191,114,0)}}
+.pl-board{background:linear-gradient(180deg,#14503a,#0f3d2c);border-radius:12px;padding:8px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid #1d6b4c}
+.pl-board .board-area{margin:0;display:flex;gap:3px;justify-content:center;flex-wrap:wrap}
+.pl-board .pot-display{font-family:var(--mono,monospace);color:var(--gold,#e8c46a);font-size:.95rem;font-weight:800}
+.pl-street{font-size:.64rem;color:rgba(255,255,255,.55);font-family:var(--mono,monospace)}
+.pl-panel{background:var(--surface);border:1px solid var(--surface3);border-radius:12px;padding:6px 8px}
+/* 相手・自分を1人1行に */
+body.ingame #opponents{display:flex;flex-direction:column;gap:3px}
+/* 楕円テーブル用の絶対配置を解除して縦のリストにする */
+body.ingame #my-seat{position:static !important;transform:none !important;left:auto !important;
+  bottom:auto !important;width:auto !important;display:block !important}
+body.ingame .opp{position:static !important;transform:none !important;width:auto !important;
+  left:auto !important;top:auto !important;margin:0 !important}
+body.ingame .opp-panel,body.ingame .my-seat{position:relative;display:flex;align-items:center;gap:5px;
+  background:var(--surface2);border-radius:8px;padding:3px 6px;border:1px solid transparent;
+  font-size:.72rem;width:auto;min-width:0;transform:none !important;left:auto !important;top:auto !important;
+  margin:0 !important;box-shadow:none}
+body.ingame .opp-panel.active,body.ingame .my-seat.active{border-color:#3fbf72;background:rgba(63,191,114,.14)}
+body.ingame .opp-panel.folded{opacity:.42}
+body.ingame .my-seat{border-color:rgba(232,196,106,.55)}
+body.ingame .opp-name,body.ingame .my-name{min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:96px;font-size:.72rem}
+body.ingame .opp-meta,body.ingame .my-top{display:flex;align-items:center;gap:4px;margin:0}
+body.ingame .opp-stack,body.ingame .my-stack{font-family:var(--mono,monospace);color:var(--gold,#e8c46a);font-size:.72rem}
+/* 席（.opp）ごと横1行にする */
+body.ingame .opp{display:flex !important;align-items:center;gap:5px;
+  background:var(--surface2);border-radius:8px;padding:3px 6px;border:1px solid transparent}
+body.ingame .opp:has(.opp-panel.active){border-color:#3fbf72;background:rgba(63,191,114,.14)}
+body.ingame .opp-panel{flex:1;min-width:0;background:transparent !important;border:none !important;
+  padding:0 !important;flex-wrap:nowrap;justify-content:flex-start}
+body.ingame .opp-cards{order:9;flex:0 0 auto;margin:0 !important;justify-content:flex-end}
+body.ingame .opp .show-pill,body.ingame .opp .fold-pill,body.ingame .opp .draw-pill,
+body.ingame .opp .pnl-pill,body.ingame .opp .opp-hand-name{order:8;flex:0 0 auto}
+body.ingame #my-seat-wrap{padding:4px 8px}
+body.ingame .my-seat{padding:3px 6px;flex-wrap:nowrap;background:var(--surface2);border-radius:8px;
+  display:flex !important;flex-direction:row !important;align-items:center;gap:5px;
+  border:1px solid rgba(232,196,106,.55);max-width:none}
+body.ingame .my-seat .act-bar{display:none}
+/* 自分のカードは少し大きめのまま右端に置く */
+body.ingame #my-seat .my-cards{order:9;flex:0 0 auto;margin:0 !important;display:flex;gap:3px}
+body.ingame .my-top{flex:1;min-width:0;justify-content:flex-start;flex-wrap:nowrap}
+body.ingame .my-cards{order:9;flex:0 0 auto;margin:0 !important;justify-content:flex-end}
+body.ingame .opp-dealer{order:-1;position:static !important}
+body.ingame .my-bet,body.ingame .opp-bet{position:static !important;margin:0 !important;
+  font-size:.6rem;padding:0 4px;transform:none !important;left:auto !important;top:auto !important;
+  right:auto !important;bottom:auto !important;order:7;flex:0 0 auto}
+body.ingame .opp-badge,body.ingame .pos-badge{font-size:.55rem;padding:0 3px}
+/* 全体をもう少し詰める */
+body.ingame .pl-board{padding:6px 5px;gap:3px}
+body.ingame #action-area{margin:0}
+body.ingame .opp-cards.stacked .card{margin-left:-6px}
+body.ingame .opp-cards .card,body.ingame .my-cards .card{width:20px;height:28px;border-radius:3px;font-size:.5rem}
+body.ingame .opp-cards .card .corner,body.ingame .my-cards .card .corner{font-size:.5rem}
+body.ingame .opp-hand-name,body.ingame .my-hand-name{font-size:.58rem}
+body.ingame .fold-pill,body.ingame .draw-pill,body.ingame .pnl-pill,body.ingame .show-pill{
+  position:static;margin:0;font-size:.55rem;padding:0 4px}
+body.ingame .act-bar{display:none}
+body.ingame .opp-dealer{position:static;font-size:.55rem;width:auto;height:auto;padding:0 3px}
+body.ingame #my-seat .my-cards .card{width:clamp(26px,7.6vw,36px);height:clamp(37px,10.6vw,50px);font-size:.8rem}
+body.ingame #my-seat .my-cards .card .corner{font-size:.66rem}
+body.ingame .pl-board .board-area .card{width:clamp(26px,7.6vw,36px);height:clamp(37px,10.6vw,50px);border-radius:5px;font-size:.8rem}
+body.ingame .pl-board .board-area .card .corner{font-size:.66rem}
+body.ingame #action-area .btn{padding:9px 4px;font-size:.82rem;min-height:34px}
+body.ingame #log{font-size:.64rem}
+body.ingame #phase-label{display:none}
+@media (max-height:760px){
+  body.ingame #screen-game.active{gap:3px}
+  .pl-panel{padding:4px 7px}
+  .pl-turnbar{padding:3px;font-size:.74rem}
+  .pl-board{padding:5px 4px;gap:3px}
+  body.ingame #action-area .btn{padding:7px 3px;font-size:.78rem;min-height:32px}
+  body.ingame #log{min-height:24px}
+  body.ingame .pl-board .board-area .card,body.ingame #my-seat .my-cards .card{
+    width:clamp(22px,6.6vw,30px);height:clamp(31px,9.2vw,42px);font-size:.68rem}
+}
+@media (max-height:690px){
+  body.ingame #screen-game.active{gap:2px}
+  .pl-panel{padding:3px 6px}
+  body.ingame .opp{padding:2px 5px}
+  body.ingame .my-seat{padding:2px 5px}
+  body.ingame #action-area .btn{padding:5px 2px;font-size:.72rem;min-height:30px}
+  body.ingame #action-area .btn-row,body.ingame #action-area .row{gap:3px}
+  body.ingame #log{min-height:20px;font-size:.6rem}
+  body.ingame .pl-board{padding:4px 3px;gap:2px}
 }
 
 /* ===== ポーカーテーブル（エメラルド縦長楕円） ===== */
@@ -266,7 +368,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   box-shadow: 0 1px 4px rgba(212,98,26,0.5);
 }
 .opp-stack {
-  font-family: 'M PLUS 1 Code', monospace;
+  font-family: 'Share Tech Mono', monospace;
   color: #eef2f8; font-size: 0.82rem; font-weight: 700;
   background: rgba(0,0,0,0.35);
   padding: 1px 7px;
@@ -314,7 +416,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 /* ベットピル（グレー） */
 .opp-bet {
   position: absolute;
-  font-family: 'M PLUS 1 Code', monospace;
+  font-family: 'Share Tech Mono', monospace;
   background: var(--pill);
   color: #1a2334;
   font-weight: 700;
@@ -349,7 +451,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 /* ハンド収支ピル */
 .pnl-pill {
   display: inline-block;
-  font-family: 'M PLUS 1 Code', monospace;
+  font-family: 'Share Tech Mono', monospace;
   font-weight: 700;
   font-size: 0.72rem;
   padding: 1px 10px;
@@ -357,32 +459,6 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   margin-top: 3px;
   white-space: nowrap;
 }
-/* ランアウト中の勝率%表示 */
-.eq-pill {
-  display: inline-block;
-  font-family: 'M PLUS 1 Code', monospace;
-  font-weight: 800;
-  font-size: 0.74rem;
-  padding: 1px 10px;
-  border-radius: 12px;
-  margin-top: 3px;
-  color: var(--gold-bright);
-  background: rgba(201,150,47,0.16);
-  border: 1px solid rgba(201,150,47,0.55);
-}
-/* 切断中プレイヤーのバッジ */
-.disc-pill {
-  display: inline-block;
-  font-weight: 700;
-  font-size: 0.66rem;
-  padding: 1px 9px;
-  border-radius: 12px;
-  margin-top: 3px;
-  color: #ffb020;
-  background: rgba(255,176,32,0.12);
-  border: 1px solid rgba(255,176,32,0.5);
-}
-
 .pnl-plus  { background: var(--green); color: #fff; }
 .pnl-minus { background: var(--red); color: #fff; }
 .pnl-zero  { background: var(--surface3); color: var(--muted); }
@@ -448,7 +524,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   white-space: nowrap;
 }
 .my-stack {
-  font-family:'M PLUS 1 Code',monospace;
+  font-family:'Share Tech Mono',monospace;
   color: #6fd6ff; font-size: 0.86rem; font-weight: 700; white-space: nowrap;
 }
 .my-seat.active .my-stack { color: #8fe0ff; }
@@ -462,7 +538,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .my-cards { display: flex; gap: 4px; justify-content: center; flex-wrap: nowrap; }
 .my-bet {
-  font-family:'M PLUS 1 Code',monospace;
+  font-family:'Share Tech Mono',monospace;
   background: var(--pill);
   color: #1a2334;
   font-weight: 700;
@@ -570,17 +646,6 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 
 /* ===== アクションバー（JOPT風: 画面最下部） ===== */
-/* 手番外に空きスペースへ流すミニログ */
-.mini-log {
-  font-family: 'M PLUS 1 Code', monospace;
-  font-size: 0.66rem;
-  line-height: 1.5;
-  color: var(--muted);
-  text-align: center;
-  padding: 4px 10px calc(6px + env(safe-area-inset-bottom, 0px));
-  overflow: hidden;
-  pointer-events: none;
-}
 #action-area:not(:empty) {
   flex: 0 0 auto;
   width: 100%;
@@ -697,7 +762,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .jopt-bet { display: flex; gap: 8px; align-items: stretch; }
 .jopt-left { flex: 1 1 auto; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
 .jopt-left > .btn { margin: 0; padding: 11px 4px; border-radius: 12px; font-size: 0.96rem; line-height: 1.15; }
-.jopt-amt { font-family:'M PLUS 1 Code',monospace; font-size: 0.82rem; font-weight: 700; opacity: 0.95; }
+.jopt-amt { font-family:'Share Tech Mono',monospace; font-size: 0.82rem; font-weight: 700; opacity: 0.95; }
 .jopt-slider-row { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
 .jopt-slider-row input[type=range], .jopt2-slider {
   width: calc(100% - 8px);
@@ -724,7 +789,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .jopt-amt-btn:hover { background: linear-gradient(180deg, rgba(54,43,29,0.98), rgba(30,23,15,0.98)); border-color: var(--gold-bright); }
 .jopt-amt-btn:active { transform: translateY(1px); }
 .jopt-amt-lbl { font-size: 0.74rem; font-weight: 700; color: var(--muted); }
-.jopt-amt-val { font-family:'M PLUS 1 Code',monospace; font-size: 0.92rem; font-weight: 800; color: var(--gold-bright); }
+.jopt-amt-val { font-family:'Share Tech Mono',monospace; font-size: 0.92rem; font-weight: 800; color: var(--gold-bright); }
 /* ===== コンパクト版アクションバー(jopt2): プリセット行 / スライダー / 3ボタン横並び ===== */
 .jopt2 { display: flex; flex-direction: column; gap: 7px; }
 .jopt2-presets { display: flex; gap: 5px; }
@@ -736,7 +801,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .jopt2-chip:active { transform: translateY(1px); }
 .jopt2-lbl { font-size: 0.66rem; font-weight: 700; color: var(--muted); line-height: 1; }
-.jopt2-val { font-family:'M PLUS 1 Code',monospace; font-size: 0.86rem; font-weight: 800; color: var(--gold-bright); line-height: 1.1; }
+.jopt2-val { font-family:'Share Tech Mono',monospace; font-size: 0.86rem; font-weight: 800; color: var(--gold-bright); line-height: 1.1; }
 .jopt2-slider { width: 100%; margin: 0; }
 .jopt2-actions { display: flex; gap: 6px; align-items: stretch; }
 .jopt2-actions .btn {
@@ -744,7 +809,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   font-size: 0.98rem; font-weight: 700; line-height: 1.1; white-space: nowrap;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
 }
-.jopt2-amt { font-family:'M PLUS 1 Code',monospace; font-size: 0.8rem; font-weight: 800; opacity: 0.95; }
+.jopt2-amt { font-family:'Share Tech Mono',monospace; font-size: 0.8rem; font-weight: 800; opacity: 0.95; }
 
 
 /* ===== ログ ===== */
@@ -805,13 +870,13 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 }
 .tbar-row {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; font-family: 'M PLUS 1 Code', monospace;
+  gap: 8px; font-family: 'Share Tech Mono', monospace;
 }
 .tbar-lv { font-weight: 800; color: var(--gold-bright); font-size: 0.78rem; letter-spacing: 0.03em; }
 .tbar-blinds { color: var(--text); font-size: 0.78rem; }
 .tbar-meta { display: flex; gap: 10px; margin-top: 3px; font-size: 0.64rem; color: var(--muted); align-items: center; }
 .tbar-meta b { color: var(--text); font-weight: 700; }
-.tbar-meta .tbar-next-inline { margin-left: auto; color: var(--felt-rim); font-family: 'M PLUS 1 Code', monospace; }
+.tbar-meta .tbar-next-inline { margin-left: auto; color: var(--felt-rim); font-family: 'Share Tech Mono', monospace; }
 .tbar-clock { font-size: 0.78rem; font-weight: 700; color: var(--text); }
 .tbar-clock.warn { color: var(--gold-bright); }
 .tbar-clock.urgent { color: var(--red); animation: tclock-blink 1s steps(2) infinite; }
@@ -828,7 +893,7 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 .tbar-progress.urgent > span { background: var(--red); }
 .tbar-next {
   text-align: center; font-size: 0.66rem; color: var(--felt-rim);
-  margin-top: 6px; font-family: 'M PLUS 1 Code', monospace;
+  margin-top: 6px; font-family: 'Share Tech Mono', monospace;
 }
 @media (prefers-reduced-motion: reduce){
   .tbar-clock.urgent { animation: none; }
@@ -916,8 +981,8 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 </style>
 </head>
 <body>
-<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
-<button id="global-stats-btn" onclick="openStatsScreen()" style="position:fixed;top:8px;right:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;cursor:pointer;">📊 成績</button>
+<a href="index.html" id="global-home-btn" style="position:fixed;top:8px;left:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;text-decoration:none;font-size:0.72rem;font-weight:700;padding:9px 14px;min-height:34px;display:inline-flex;align-items:center;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;">🏠 ホーム</a>
+<button id="global-stats-btn" onclick="openStatsScreen()" style="position:fixed;top:8px;right:8px;z-index:99999;background:rgba(10,12,18,0.72);color:#9aa5b8;font-size:0.72rem;font-weight:700;padding:6px 12px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);font-family:sans-serif;-webkit-tap-highlight-color:transparent;cursor:pointer;min-height:34px;display:inline-flex;align-items:center;">📊 成績</button>
 
 <!-- 種目チェンジ ポップアウト演出 -->
 <div id="game-change-popout" aria-hidden="true">
@@ -1015,21 +1080,12 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
     </div>
 
     <div class="panel">
-      <h3 class="center">通知音・バイブ</h3>
-      <div class="count-selector" id="sound-select">
-        <button class="count-btn selected" data-snd="on" onclick="setSound(true)" style="width:auto;padding:0 16px;">🔔 ON</button>
-        <button class="count-btn" data-snd="off" onclick="setSound(false)" style="width:auto;padding:0 16px;">OFF</button>
-      </div>
-      <div class="center muted small" style="margin-top:8px;">自分の手番と勝利時に音とバイブでお知らせ</div>
-    </div>
-
-    <div class="panel">
       <h3 class="center">種目ローテーション</h3>
       <div class="count-selector" id="rotation-select" style="flex-wrap:wrap; gap:6px;">
         <button class="count-btn selected" data-r="manual" onclick="setRotationMode('manual')" style="width:auto;padding:0 12px;">手動</button>
         <button class="count-btn" data-r="horse" onclick="setRotationMode('horse')" style="width:auto;padding:0 12px;">HORSE</button>
         <button class="count-btn" data-r="8game" onclick="setRotationMode('8game')" style="width:auto;padding:0 12px;">8-Game</button>
-        <button class="count-btn" data-r="all" onclick="setRotationMode('all')" style="width:auto;padding:0 12px;">全種目</button>
+        <button class="count-btn" data-r="all" onclick="setRotationMode('all')" style="width:auto;padding:0 12px;">全10種</button>
       </div>
       <div id="rotation-every-row" style="display:none; margin-top:10px;">
         <div class="center muted small">切替間隔（ハンド数）</div>
@@ -1119,28 +1175,29 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
 
   <!-- ===== ゲーム ===== -->
   <div id="screen-game" class="screen">
-    <div id="game-type-bar" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
+    <div class="pl-topbar">
+      <span class="pl-hdr" id="pl-hdr"></span>
+      <button class="pl-tb" onclick="openGamePicker()" id="pl-change">種目</button>
+      <button class="pl-tb" onclick="backToLobby()">退出</button>
+    </div>
+    <div id="game-type-bar" style="display:none; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
       <span id="current-game-label" style="font-weight:700; font-style:italic; color:var(--felt-rim); font-size:0.92rem; letter-spacing:0.04em; padding:5px 16px; border-radius:10px; background:var(--surface);">テキサスホールデム</span>
-      <button id="btn-change-game" class="btn-ghost" style="display:none; width:auto; padding:5px 12px; margin:0; font-size:0.76rem; border-radius:8px; background:transparent; border:1px solid var(--surface3); color:var(--muted); cursor:pointer; font-family:inherit;" onclick="openGamePicker()">変更 ▼</button>
+      <button id="btn-change-game" class="btn-ghost" style="display:none; width:auto; padding:5px 12px; margin:0; font-size:0.76rem; border-radius:8px; background:transparent; border:1px solid var(--surface3); color:var(--muted); cursor:pointer; font-family:inherit;min-height:34px;display:inline-flex;align-items:center;" onclick="openGamePicker()">変更 ▼</button>
     </div>
     <div class="phase-label" id="phase-label">PREFLOP</div>
-    <div id="turn-timer" style="display:none; text-align:center; font-family:'M PLUS 1 Code',monospace; font-size:0.72rem; color:var(--gold); margin-top:-2px;"></div>
-    <div id="host-stale-banner" style="display:none; text-align:center; font-size:0.72rem; font-weight:700; color:#ffb020; background:rgba(255,176,32,0.1); border:1px solid rgba(255,176,32,0.4); border-radius:10px; padding:3px 10px; margin:2px auto 0; max-width:320px;">📡 ホストの接続が切れています。復帰を待っています…</div>
     <div id="tourney-bar" style="display:none;"></div>
 
-    <div class="poker-table" id="poker-table">
-      <!-- 相手プレイヤー（楕円周囲に配置） -->
-      <div id="opponents"></div>
-      <!-- 中央: ポット + コミュニティカード -->
-      <div class="table-center">
-        <div class="pot-display" id="pot-display">POT: 0</div>
-        <div class="board-area" id="board-area"></div>
-      </div>
-      <!-- 自分（テーブル下部・カードをフェルト上に載せる） -->
-      <div id="my-seat"></div>
+    <div class="pl-turnbar" id="pl-turnbar"></div>
+
+    <div class="pl-board">
+      <div class="board-area" id="board-area"></div>
+      <div class="pot-display" id="pot-display">POT: 0</div>
+      <div class="pl-street" id="pl-street"></div>
     </div>
 
-    <div id="action-area"></div>
+    <div class="pl-panel"><div id="opponents"></div></div>
+    <div class="pl-panel" id="my-seat-wrap"><div id="my-seat"></div></div>
+    <div class="pl-panel" id="pl-actions"><div id="action-area"></div></div>
 
     <div class="log" id="log"></div>
   </div>
@@ -1152,15 +1209,6 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <div class="center muted small" style="margin-bottom:12px;">次のハンドから適用されます</div>
       <div id="game-picker-list"></div>
       <button class="btn btn-ghost" style="margin-top:10px;" onclick="closeGamePicker()">キャンセル</button>
-    </div>
-  </div>
-
-  <!-- ハンド詳細（リプレイ）モーダル -->
-  <div id="hand-detail-modal" style="display:none; position:fixed; inset:0; background:rgba(5,5,8,0.82); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:110; align-items:center; justify-content:center;" onclick="if(event.target===this)closeHandDetail()">
-    <div style="background:linear-gradient(180deg, var(--surface2), var(--surface)); border:1px solid var(--surface3); border-radius:16px; padding:18px; max-width:360px; width:92%; max-height:82vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,162,39,0.15);">
-      <h3 class="center" style="font-style:italic; font-weight:800; letter-spacing:0.06em; color:var(--felt-rim); margin-bottom:8px;">HAND REPLAY</h3>
-      <div id="hand-detail-body"></div>
-      <button class="btn btn-ghost" style="margin-top:12px;" onclick="closeHandDetail()">閉じる</button>
     </div>
   </div>
 
@@ -1178,15 +1226,9 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
   <!-- ===== 成績・ハンド履歴 ===== -->
   <div id="screen-stats" class="screen">
     <h2>📊 成績</h2>
-    <div id="stats-filter" class="count-selector" style="flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
     <div id="stats-session-panel" class="panel">
       <h3 class="center">今回のセッション</h3>
       <div id="stats-session-body" class="center muted small">まだプレイしていません</div>
-    </div>
-    <div class="panel">
-      <h3 class="center">通算スタッツ（NLH指標）</h3>
-      <div class="center muted small" style="margin-bottom:8px;">このブラウザに自動保存されます</div>
-      <div id="stats-lifetime-nlh" class="center muted small">まだ記録がありません</div>
     </div>
     <div class="panel">
       <h3 class="center">ゲーム別 収支（bb/100）</h3>
@@ -1197,7 +1239,6 @@ h3 { font-size: 0.92rem; margin-bottom: 10px; font-weight: 700; }
       <h3 class="center">最近のハンド</h3>
       <div id="stats-history" style="max-height:340px; overflow-y:auto;"></div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="exportHistoryCSV()">📄 履歴をCSVで保存</button>
     <button class="btn btn-ghost btn-sm" onclick="clearAllStats()" style="color:var(--red); border-color:var(--red);">通算記録を消去</button>
     <button class="btn btn-felt" onclick="closeStatsScreen()">戻る</button>
   </div>
@@ -1731,9 +1772,6 @@ let hostSelectedGame = 'holdem';  // マルチの現在種目（ホストが切�
 // ===== 新機能の状態 =====
 // CPU難易度（ロビー設定。ゲーム開始時に各CPUへプロファイル割当）
 let cpuLevel = 'normal';   // 'easy' | 'normal' | 'hard'
-// マルチの手番タイマー（ホスト権威で自動チェック/フォールド）
-let turnTimer = null;
-const TURN_TIMEOUT_MS = 30000;
 // 種目ローテーション（ロビー設定）
 let rotationMode = 'manual'; // 'manual' | 'horse' | '8game' | 'all'
 let rotationEvery = 3;       // 何ハンドごとに切替（ローテーション時）
@@ -1745,10 +1783,19 @@ let handHistory = [];        // 直近ハンドの詳細（リプレイ用、最
 
 function g(id){ return document.getElementById(id); }
 function show(name){
-  const el = g('screen-'+name);
-  if(!el){ console.warn('show: 画面が見つかりません:', name); return; }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  el.classList.add('active');
+  g('screen-'+name).classList.add('active');
+  document.body.classList.toggle('ingame', name==='game');
+}
+// PLOリング風のヘッダーと手番バーを更新する
+function plHeader(o){
+  const hd=g('pl-hdr');
+  if(hd) hd.innerHTML=[o.room, o.game?`<b>${o.game}</b>`:'', o.blind?`ブラインド <b>${o.blind}</b>`:'', o.extra||'']
+    .filter(Boolean).join('／');
+  const cg=g('pl-change'); if(cg) cg.style.display = o.canChange ? '' : 'none';
+  const st=g('pl-street'); if(st) st.textContent = o.street||'';
+  const tb=g('pl-turnbar');
+  if(tb){ tb.textContent=o.turn||''; tb.className='pl-turnbar'+(o.myTurn?' me':''); }
 }
 
 // ===== ロビー設定 =====
@@ -1884,7 +1931,7 @@ const ROTATION_LABELS = {
   manual:'手動で種目を切り替えます（ゲーム中の変更ボタン）',
   horse: 'H→O8→Razz→Stud→Stud8 を順番に自動切替',
   '8game':'8種目を順番に自動切替',
-  all:   '全12種を順番に自動切替',
+  all:   '全10種を順番に自動切替',
 };
 function setRotationMode(m){
   rotationMode = m;
@@ -2038,12 +2085,6 @@ function initSession(mode){
     net: 0,                 // 自分の通算収支（チップ）
     byGame: {},             // gameKey -> {hands, net, bbSum}
     bb: soloBB || 20,
-    vpipN: 0, pfrN: 0,      // プリフロップ自発参加 / プリフロップレイズ
-    sdN: 0, sdWinN: 0,      // ショーダウン到達 / うち勝利
-    tbN: 0, tbOppN: 0,      // 3ベット / その機会
-    afAggN: 0, afCallN: 0,  // AF素材: ベット・レイズ / コール
-    cbN: 0, cbOppN: 0,      // CBet / その機会
-    wwsfN: 0, wwsfWinN: 0,  // フロップを見た / うち勝利
   };
 }
 // ハンド確定時に自分の収支を記録（logHandPnlからフック）
@@ -2052,28 +2093,12 @@ function recordHandResult(h){
   const me = h.players.find(p=>p.id===myId);
   if(!me) return;
   const delta = (me.stack||0) - (me.startStack||0);
-  if(delta > 0) notifyWin();
   const gk = G.currentGame || 'holdem';
   const bb = h.bbAmount || sessionStats.bb || 20;
   sessionStats.hands++;
   sessionStats.net += delta;
-  const wentSD = (h.phase==='showdown' && !me.folded && notFolded().length>=2);
-  // All-in EV精算: 期待獲得(勝率×最終ポット) と 実獲得(収支+自分の投入額) の差
-  const aiPot = (h.results||[]).reduce((a,r)=>a+(r.amount||0),0);
-  const aiOn = (h._aiEq!=null && !me.folded && aiPot>0) ? 1 : 0;
-  const aiEv = aiOn ? Math.round((delta + (me.totalBet||0)) - (h._aiEq/100)*aiPot) : 0;
-  // このハンドの指標フラグ(セッション/種目別/通算/履歴で共用)
-  const fl = { v:h._meVPIP?1:0, p:h._mePFR?1:0, tbo:h._me3bOpp?1:0, tb:h._me3b?1:0,
-    cbo:h._meCbOpp?1:0, cb:h._meCb?1:0, agg:h._meAgg||0, call:h._meCall||0,
-    fcbo:h._meFcbOpp?1:0, fcb:h._meFcb?1:0, cro:h._meCrOpp?1:0, cr:h._meCr?1:0,
-    dko:h._meDkOpp?1:0, dk:h._meDk?1:0,
-    sf:h._meSawFlop?1:0, wwsfw:(h._meSawFlop&&delta>0)?1:0,
-    sd:wentSD?1:0, sdw:(wentSD&&delta>0)?1:0, sdf:(wentSD&&h._meSawFlop)?1:0,
-    ai:aiOn, aiev:aiEv };
-  accumStatCounters(sessionStats, fl);
   const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0});
   bg.hands++; bg.net += delta; bg.bbSum += delta / bb;
-  accumStatCounters(bg, fl);
   // 履歴（リプレイ用・軽量）
   handHistory.unshift({
     ts: Date.now(),
@@ -2084,185 +2109,50 @@ function recordHandResult(h){
     bb,
     myCards: (me.hole||[]).map(c=>rankStr(c.r)+SUIT_SYM[c.s]),
     board: (h.board||[]).map(c=>rankStr(c.r)+SUIT_SYM[c.s]),
-    myCardsRaw: (me.hole||[]).map(c=>({r:c.r,s:c.s})),
-    boardRaw: (h.board||[]).map(c=>({r:c.r,s:c.s})),
     myHandName: (h.handNames && h.handNames[me.id]) || '',
     won: delta>0,
     results: (h.results||[]).map(r=>({names:r.winnerNames, amount:r.amount})),
-    // リプレイ: このハンドのアクションログ（時系列順）と、ショーダウンで公開された手
-    log: (function(){
-      const mark = G._handLogMark||0;
-      const added = Math.max(0, G.log.length - mark);
-      return G.log.slice(0, Math.min(added, 90)).slice().reverse();
-    })(),
-    shown: h.players.filter(p=>p.id!==myId && !p.folded && h.phase==='showdown')
-      .map(p=>({name:p.name, cards:(p.hole||[]).map(c=>({r:c.r,s:c.s})), hand:(h.handNames&&h.handNames[p.id])||''})),
-    st: fl,
   });
   if(handHistory.length>200) handHistory.length=200;
   // localStorageへ通算を加算保存
   const persist = loadPersistStats() || {lifetimeHands:0, lifetimeNet:0, byGame:{}};
   persist.lifetimeHands = (persist.lifetimeHands||0) + 1;
   persist.lifetimeNet = (persist.lifetimeNet||0) + delta;
-  // NLH定番スタッツを通算保存(全体＋種目別)
-  accumStatCounters(persist, fl);
-  persist.bbSum = (persist.bbSum||0) + delta/bb;
   const pg = persist.byGame[gk] || (persist.byGame[gk] = {hands:0, net:0, bbSum:0});
   pg.hands++; pg.net += delta; pg.bbSum += delta / bb;
-  accumStatCounters(pg, fl);
   savePersistStats(persist);
 }
 
 // ===== 成績画面 =====
 let statsReturnScreen = 'lobby'; // 戻る先（ゲーム中に開いた場合はgame）
 function openStatsScreen(){
-  // 現在アクティブな画面を記録。成績画面上で再タップしても戻り先を壊さない
+  // 現在アクティブな画面を記録（ロビー or ゲーム）
   const active = document.querySelector('.screen.active');
-  const cur = active ? active.id.replace('screen-','') : 'lobby';
-  if(cur !== 'stats') statsReturnScreen = cur;
+  statsReturnScreen = (active && active.id==='screen-game') ? 'game' : 'lobby';
   renderStatsScreen();
   show('stats');
 }
-function closeStatsScreen(){
-  let dest = statsReturnScreen || 'lobby';
-  // 安全網: ロビーに戻ろうとしているのにゲーム/待機が進行中なら、そちらへ戻す
-  try{
-    const inHand = (typeof G!=='undefined' && G && G.hand)
-      || (typeof isMulti!=='undefined' && isMulti && !isHost && typeof ploPub!=='undefined' && ploPub && ploPub.players);
-    if(dest==='lobby' && inHand) dest = 'game';
-    else if(dest==='lobby' && typeof fbRoom!=='undefined' && fbRoom) dest = 'waiting';
-  }catch(e){}
-  show(dest);
-  if(dest==='game'){
-    // 表示を最新化（成績を見ている間に進んだ分を反映）
-    try{ if(typeof isMulti!=='undefined' && isMulti && !isHost){ renderGuest(); } else { render(); } }catch(e){}
-  }
-}
+function closeStatsScreen(){ show(statsReturnScreen); }
 
 function fmtSigned(n){ return n>0?'+'+n.toLocaleString():(n<0?n.toLocaleString():'±0'); }
 
-// 指標カウンタの共通加算(記録対象ハンド数 statHands も数える)
-function accumStatCounters(o, fl){
-  const inc=(k,n)=>{ o[k]=(o[k]||0)+(n||0); };
-  inc('statHands',1);
-  inc('vpipN',fl.v); inc('pfrN',fl.p);
-  inc('tbOppN',fl.tbo); inc('tbN',fl.tb);
-  inc('afAggN',fl.agg); inc('afCallN',fl.call);
-  inc('cbOppN',fl.cbo); inc('cbN',fl.cb);
-  inc('wwsfN',fl.sf); inc('wwsfWinN',fl.wwsfw);
-  inc('sdN',fl.sd); inc('sdWinN',fl.sdw);
-  inc('fcbOppN',fl.fcbo); inc('fcbN',fl.fcb);
-  inc('crOppN',fl.cro); inc('crN',fl.cr);
-  inc('donkOppN',fl.dko); inc('donkN',fl.dk);
-  inc('sdFlopN',fl.sdf);
-  inc('aiN',fl.ai); inc('aiEvDiff',fl.aiev);
-}
-
-// 成績画面の種目フィルタ('all' or ゲームキー)
-let statsFilter = 'all';
-function setStatsFilter(k){ statsFilter = k; renderStatsScreen(); }
-function renderStatsFilter(){
-  const el = g('stats-filter'); if(!el) return;
-  const mk = (k,label)=>`<button class="count-btn ${statsFilter===k?'selected':''}" style="width:auto;padding:0 10px;height:30px;font-size:0.74rem;" onclick="setStatsFilter('${k}')">${label}</button>`;
-  el.innerHTML = mk('all','全種目') + MIX_ORDER.map(k=>mk(k, MIX_GAMES[k].short)).join('');
-}
-
-// NLH定番スタッツの行HTML(セッション/通算 共用)
-function nlhStatRowHTML(src, opts){
-  opts = opts || {};
-  const H = (src.statHands!=null ? src.statHands : src.hands)||0;
-  if(H<=0) return '';
-  const pct = (n,d)=> d>0 ? (100*(n||0)/d).toFixed(0)+'%' : '—';
-  const agg=src.afAggN||0, call=src.afCallN||0;
-  const af = call>0 ? (agg/call).toFixed(1) : (agg>0 ? '∞' : '—');
-  const cell = (lbl,val)=>`<div><div class="muted" style="font-size:0.62rem;">${lbl}</div><div style="font-size:0.94rem; font-weight:700;">${val}</div></div>`;
-  const row = (title,cells)=>`<div style="margin-top:9px;"><div class="muted" style="font-size:0.6rem; letter-spacing:0.1em; margin-bottom:3px;">${title}</div><div style="display:flex; gap:10px 16px; flex-wrap:wrap;">${cells}</div></div>`;
-  const aiN = src.aiN||0, aiEv = src.aiEvDiff||0;
-  const aiCell = cell('運(AI-EV差)', aiN>0 ? `${fmtSigned(aiEv)}<span class="muted" style="font-size:0.58rem;"> /${aiN}回</span>` : '—');
-  let html = `<div style="font-family:'M PLUS 1 Code',monospace; text-align:left;">`;
-  html += row('プリフロップ',
-    cell('VPIP',pct(src.vpipN,H)) + cell('PFR',pct(src.pfrN,H)) + cell('3Bet',pct(src.tbN,src.tbOppN)));
-  html += row('ポストフロップ',
-    cell('CB',pct(src.cbN,src.cbOppN)) + cell('vs CB降り',pct(src.fcbN,src.fcbOppN)) +
-    cell('Cレイズ',pct(src.crN,src.crOppN)) + cell('ドンク',pct(src.donkN,src.donkOppN)) + cell('AF',af));
-  html += row('ショーダウン',
-    cell('WTSD',pct(src.sdFlopN,src.wwsfN)) + cell('W$SD',pct(src.sdWinN,src.sdN)) + cell('WWSF',pct(src.wwsfWinN,src.wwsfN)));
-  if(opts.money === 'ai'){
-    html += row('収支', aiCell);
-  } else if(opts.money !== false){
-    const mh = src.hands||0;
-    const bb100 = (mh>0 && src.bbSum!=null) ? (src.bbSum/mh*100) : null;
-    html += row('収支',
-      (src.net!=null ? cell('Net', fmtSigned(src.net)) : '') +
-      (bb100!=null ? cell('bb/100', (bb100>=0?'+':'')+bb100.toFixed(1)) : '') +
-      aiCell);
-  }
-  html += `</div>`;
-  return html;
-}
 function renderStatsScreen(){
-  renderStatsFilter();
-  const fk = statsFilter; // 'all' or ゲームキー
-  const fLabel = fk==='all' ? '' : `（${MIX_GAMES[fk]?MIX_GAMES[fk].label:fk}）`;
   // --- セッション ---
   const sBody = g('stats-session-body');
-  if(fk!=='all'){
-    const bg = sessionStats && sessionStats.byGame ? sessionStats.byGame[fk] : null;
-    if(bg && bg.hands>0){
-      const bb100 = bg.hands>0 ? (bg.bbSum/bg.hands*100) : 0;
-      const cls2 = bg.net>0?'pnl-plus':(bg.net<0?'pnl-minus':'pnl-zero');
-      sBody.innerHTML = `
-        <div class="muted small" style="margin-bottom:6px;">${fLabel}</div>
-        <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'M PLUS 1 Code',monospace;">
-          <div><div class="muted" style="font-size:0.66rem;">ハンド数</div><div style="font-size:1.1rem; font-weight:700;">${bg.hands}</div></div>
-          <div><div class="muted" style="font-size:0.66rem;">収支</div><div style="font-size:1.1rem; font-weight:700;"><span class="${cls2}" style="padding:1px 10px; border-radius:10px;">${fmtSigned(bg.net)}</span></div></div>
-          <div><div class="muted" style="font-size:0.66rem;">bb/100</div><div style="font-size:1.1rem; font-weight:700; color:${bb100>=0?'var(--green-dim)':'var(--red)'};">${bb100>=0?'+':''}${bb100.toFixed(1)}</div></div>
-        </div>
-        <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--surface2);">${nlhStatRowHTML(bg)}</div>`;
-    } else {
-      sBody.innerHTML = `この種目のセッション記録はまだありません${fLabel}`;
-    }
-  } else if(sessionStats && sessionStats.hands>0){
+  if(sessionStats && sessionStats.hands>0){
     const mins = Math.max(1, Math.round((Date.now()-sessionStats.startTs)/60000));
     const bbTotal = (sessionStats.net / (sessionStats.bb||20));
     const per100 = sessionStats.hands>0 ? (bbTotal/sessionStats.hands*100) : 0;
     const cls = sessionStats.net>0?'pnl-plus':(sessionStats.net<0?'pnl-minus':'pnl-zero');
     sBody.innerHTML = `
-      <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'M PLUS 1 Code',monospace;">
+      <div style="display:flex; justify-content:center; gap:18px; flex-wrap:wrap; font-family:'Share Tech Mono',monospace;">
         <div><div class="muted" style="font-size:0.66rem;">ハンド数</div><div style="font-size:1.1rem; font-weight:700;">${sessionStats.hands}</div></div>
         <div><div class="muted" style="font-size:0.66rem;">収支</div><div style="font-size:1.1rem; font-weight:700;" class="${sessionStats.net>0?'':''}"><span class="${cls}" style="padding:1px 10px; border-radius:10px;">${fmtSigned(sessionStats.net)}</span></div></div>
         <div><div class="muted" style="font-size:0.66rem;">bb/100</div><div style="font-size:1.1rem; font-weight:700; color:${per100>=0?'var(--green-dim)':'var(--red)'};">${per100>=0?'+':''}${per100.toFixed(1)}</div></div>
         <div><div class="muted" style="font-size:0.66rem;">経過</div><div style="font-size:1.1rem; font-weight:700;">${mins}分</div></div>
-      </div>
-      <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--surface2);">
-        ${nlhStatRowHTML(sessionStats, {money:'ai'})}
       </div>`;
   } else {
     sBody.innerHTML = 'まだプレイしていません';
-  }
-
-  // --- 通算スタッツ(NLH指標) ---
-  const ltEl = g('stats-lifetime-nlh');
-  if(ltEl){
-    const lt = loadPersistStats();
-    if(fk!=='all'){
-      const pg = lt && lt.byGame ? lt.byGame[fk] : null;
-      const denom = pg ? (pg.statHands||0) : 0;
-      if(pg && denom>0){
-        ltEl.innerHTML = `<div class="muted small" style="margin-bottom:6px;">${fLabel} 記録対象 ${denom}ハンド分</div>` + nlhStatRowHTML(pg);
-      } else if(pg && pg.hands>0){
-        ltEl.innerHTML = `<div class="muted small">${fLabel} 過去 ${pg.hands}ハンド分の収支はありますが、指標の記録はこれからのプレイ分から始まります</div>`;
-      } else {
-        ltEl.innerHTML = `この種目の記録はまだありません${fLabel}`;
-      }
-    } else if(lt && (lt.lifetimeHands||0) > 0){
-      const denom = lt.statHands!=null ? lt.statHands : (lt.lifetimeHands||0);
-      const bbSumAll = lt.bbSum!=null ? lt.bbSum : Object.values(lt.byGame||{}).reduce((a,g2)=>a+(g2.bbSum||0),0);
-      const src = Object.assign({}, lt, {hands: lt.lifetimeHands||0, statHands: denom, net: lt.lifetimeNet||0, bbSum: bbSumAll});
-      ltEl.innerHTML = `<div class="muted small" style="margin-bottom:6px;">記録対象 ${denom}ハンド分（全種目）</div>` + nlhStatRowHTML(src);
-    } else {
-      ltEl.textContent = 'まだ記録がありません';
-    }
   }
 
   // --- ゲーム別 bb/100（通算）---
@@ -2301,7 +2191,7 @@ function renderStatsChart(){
         <div style="position:relative; height:18px; background:var(--bg); border-radius:5px; overflow:hidden;">
           <div style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--surface3);"></div>
           <div style="position:absolute; top:0; bottom:0; ${isPos?'left:50%':'right:50%'}; width:${w}%; background:${barColor}; border-radius:3px;"></div>
-          <div style="position:absolute; ${isPos?'left:calc(50% + '+w+'% + 4px)':'right:calc(50% + '+w+'% + 4px)'}; top:0; bottom:0; display:flex; align-items:center; font-size:0.66rem; font-weight:700; font-family:'M PLUS 1 Code',monospace; color:${isPos?'var(--green-dim)':'var(--red)'}; white-space:nowrap;">
+          <div style="position:absolute; ${isPos?'left:calc(50% + '+w+'% + 4px)':'right:calc(50% + '+w+'% + 4px)'}; top:0; bottom:0; display:flex; align-items:center; font-size:0.66rem; font-weight:700; font-family:'Share Tech Mono',monospace; color:${isPos?'var(--green-dim)':'var(--red)'}; white-space:nowrap;">
             ${isPos?'+':''}${r.per100.toFixed(0)}
           </div>
         </div>
@@ -2315,84 +2205,17 @@ function renderStatsHistory(){
     cont.innerHTML = '<div class="center muted small">このセッションの履歴はまだありません</div>';
     return;
   }
-  const items = handHistory.map((hh,i)=>({hh,i}))
-    .filter(x=> statsFilter==='all' || x.hh.game===statsFilter)
-    .slice(0,60);
-  if(items.length===0){
-    cont.innerHTML = '<div class="center muted small">この種目のセッション履歴はまだありません</div>';
-    return;
-  }
-  cont.innerHTML = items.map(({hh,i})=>{
+  cont.innerHTML = handHistory.slice(0,60).map((hh,i)=>{
     const cls = hh.delta>0?'pnl-plus':(hh.delta<0?'pnl-minus':'pnl-zero');
     const cards = hh.myCards.join(' ');
     const board = hh.board.length ? ` ・ 場 ${hh.board.join(' ')}` : '';
     return `
-      <div onclick="openHandDetail(${i})" style="display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:1px solid var(--surface2); cursor:pointer;">
+      <div style="display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:1px solid var(--surface2);">
         <span style="font-size:0.6rem; background:var(--surface2); color:var(--muted); padding:1px 6px; border-radius:5px; font-weight:700; white-space:nowrap;">${hh.gameLabel.length>6?MIX_GAMES[hh.game].short:hh.gameLabel}</span>
         <span class="mono" style="flex:1; font-size:0.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cards}${board}</span>
-        <span class="${cls}" style="font-size:0.7rem; padding:1px 9px; border-radius:10px; font-family:'M PLUS 1 Code',monospace; white-space:nowrap;">${fmtSigned(hh.delta)}</span>
-        <span class="muted" style="font-size:0.72rem;">›</span>
+        <span class="${cls}" style="font-size:0.7rem; padding:1px 9px; border-radius:10px; font-family:'Share Tech Mono',monospace; white-space:nowrap;">${fmtSigned(hh.delta)}</span>
       </div>`;
   }).join('');
-}
-
-// ハンド詳細（リプレイ）モーダル
-function openHandDetail(i){
-  const hh = handHistory[i];
-  if(!hh) return;
-  const cardRow = (raw, strFallback) => raw && raw.length
-    ? `<div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">${raw.map(c=>cardHTML(c,{sm:true})).join('')}</div>`
-    : (strFallback ? `<div class="center mono">${strFallback}</div>` : '');
-  const resLines = (hh.results||[]).map(r=>`<div class="small">🏆 ${esc((r.names||[]).join('・'))} が ${r.amount} 獲得</div>`).join('');
-  const shownH = (hh.shown||[]).map(s=>`
-    <div style="margin-top:6px;">
-      <div class="small muted">${esc(s.name)}${s.hand?` — ${esc(s.hand)}`:''}</div>
-      <div style="display:flex; gap:3px; margin-top:2px;">${(s.cards||[]).map(c=>cardHTML(c,{xs:true})).join('')}</div>
-    </div>`).join('');
-  const logH = (hh.log||[]).map(l=>`<div style="padding:2px 0; border-bottom:1px dashed rgba(255,255,255,0.06);">${esc(l)}</div>`).join('') || '<div class="muted small">ログなし</div>';
-  const cls = hh.delta>0?'pnl-plus':(hh.delta<0?'pnl-minus':'pnl-zero');
-  const el = g('hand-detail-modal');
-  g('hand-detail-body').innerHTML = `
-    <div class="center" style="margin-bottom:4px;">
-      <span style="font-size:0.7rem; background:var(--surface2); color:var(--muted); padding:2px 8px; border-radius:6px; font-weight:700;">${esc(hh.gameLabel)} ・ #${hh.handNo}</span>
-      <span class="${cls}" style="font-size:0.78rem; padding:2px 10px; border-radius:10px; font-family:'M PLUS 1 Code',monospace; margin-left:6px;">${fmtSigned(hh.delta)}</span>
-    </div>
-    <div class="small muted center" style="margin:6px 0 3px;">あなたの手札${hh.myHandName?` — ${esc(hh.myHandName)}`:''}</div>
-    ${cardRow(hh.myCardsRaw, hh.myCards.join(' '))}
-    ${hh.boardRaw && hh.boardRaw.length ? `<div class="small muted center" style="margin:8px 0 3px;">ボード</div>${cardRow(hh.boardRaw, hh.board.join(' '))}` : ''}
-    ${shownH ? `<div class="small muted" style="margin-top:8px;">公開された手</div>${shownH}` : ''}
-    <div style="margin-top:8px;">${resLines}</div>
-    <div class="small muted" style="margin:10px 0 4px;">📜 アクションログ</div>
-    <div class="mono" style="font-size:0.7rem; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.25); border-radius:10px; padding:8px;">${logH}</div>`;
-  el.style.display = 'flex';
-}
-function closeHandDetail(){ g('hand-detail-modal').style.display='none'; }
-
-// 履歴CSVエクスポート（このセッションのhandHistory）
-function exportHistoryCSV(){
-  if(!handHistory || !handHistory.length){ alert('このセッションの履歴がまだありません'); return; }
-  const escCsv = v => { const t=String(v==null?'':v); return /[",\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t; };
-  const head = ['日時','種目','ハンド番号','収支','BB','自分の手札','ボード','役','結果','VPIP','PFR','3Bet機会','3Bet','CB機会','CB','vsCB機会','vsCB降り','CR機会','CR','ドンク機会','ドンク','ベット/レイズ数','コール数','フロップ見た','SD到達','SD勝ち','SDフロップ経由','AI回数','AI-EV差'];
-  const rows = handHistory.slice().reverse().map(hh=>{
-    const d = new Date(hh.ts);
-    const dt = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    const res = (hh.results||[]).map(r=>`${(r.names||[]).join('・')} +${r.amount}`).join(' / ');
-    const st = hh.st||{};
-    return [dt, hh.gameLabel, hh.handNo, hh.delta, hh.bb, hh.myCards.join(' '), hh.board.join(' '), hh.myHandName||'', res,
-            st.v||0, st.p||0, st.tbo||0, st.tb||0, st.cbo||0, st.cb||0,
-            st.fcbo||0, st.fcb||0, st.cro||0, st.cr||0, st.dko||0, st.dk||0,
-            st.agg||0, st.call||0, st.sf||0, st.sd||0, st.sdw||0, st.sdf||0, st.ai||0, st.aiev||0].map(escCsv).join(',');
-  });
-  const csv = '\uFEFF' + head.join(',') + '\n' + rows.join('\n'); // BOM付き(Excel対応)
-  try{
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    const d = new Date();
-    a.download = `mixpoker_history_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.csv`;
-    document.body.appendChild(a); a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 800);
-  }catch(e){ alert('CSVの保存に失敗しました: '+e); }
 }
 
 function clearAllStats(){
@@ -2413,42 +2236,12 @@ function maybeRecordGuestHand(pub){
   if(!me || me.startStack==null) return;
   guestLastRecordedHand = handNo;
   const delta = (me.stack||0) - (me.startStack||0);
-  if(delta > 0) notifyWin();
   const gk = pub.currentGame || 'holdem';
   const bb = pub.bbAmount || sessionStats.bb || 20;
   sessionStats.hands++;
   sessionStats.net += delta;
-  // 新指標(ゲスト): VPIP/PFRはguestActで記録したフラグ、SDはpubから判定
-  if(window._gVPIP) sessionStats.vpipN = (sessionStats.vpipN||0)+1;
-  if(window._gPFR)  sessionStats.pfrN  = (sessionStats.pfrN||0)+1;
-  const gWentSD = (pub.phase==='showdown' && !me.folded && pub.players.filter(p=>!p.folded).length>=2);
-  if(gWentSD){
-    sessionStats.sdN = (sessionStats.sdN||0)+1;
-    if(delta > 0) sessionStats.sdWinN = (sessionStats.sdWinN||0)+1;
-  }
-  if(window._g3bOpp){ sessionStats.tbOppN=(sessionStats.tbOppN||0)+1; if(window._g3b) sessionStats.tbN=(sessionStats.tbN||0)+1; }
-  sessionStats.afAggN=(sessionStats.afAggN||0)+(window._gAgg||0);
-  sessionStats.afCallN=(sessionStats.afCallN||0)+(window._gCall||0);
-  if(window._gCbOpp){ sessionStats.cbOppN=(sessionStats.cbOppN||0)+1; if(window._gCb) sessionStats.cbN=(sessionStats.cbN||0)+1; }
-  if(window._gSawFlop){ sessionStats.wwsfN=(sessionStats.wwsfN||0)+1; if(delta>0) sessionStats.wwsfWinN=(sessionStats.wwsfWinN||0)+1; }
-  const gPot = (pub.results||[]).reduce((a,r)=>a+(r.amount||0),0);
-  const gAiOn = (window._gAiEq!=null && !me.folded && gPot>0) ? 1 : 0;
-  const gAiEv = gAiOn ? Math.round((delta + (me.totalBet||0)) - (window._gAiEq/100)*gPot) : 0;
-  const gFlags = { v:window._gVPIP?1:0, p:window._gPFR?1:0, tbo:window._g3bOpp?1:0, tb:window._g3b?1:0,
-    cbo:window._gCbOpp?1:0, cb:window._gCb?1:0, agg:window._gAgg||0, call:window._gCall||0,
-    fcbo:window._gFcbOpp?1:0, fcb:window._gFcb?1:0, cro:window._gCrOpp?1:0, cr:window._gCr?1:0,
-    dko:window._gDkOpp?1:0, dk:window._gDk?1:0,
-    sf:window._gSawFlop?1:0, wwsfw:(window._gSawFlop&&delta>0)?1:0,
-    sd:gWentSD?1:0, sdw:(gWentSD&&delta>0)?1:0, sdf:(gWentSD&&window._gSawFlop)?1:0,
-    ai:gAiOn, aiev:gAiEv };
-  window._gVPIP=false; window._gPFR=false; window._g3bOpp=false; window._g3b=false;
-  window._gAgg=0; window._gCall=0; window._gCbOpp=false; window._gCb=false; window._gSawFlop=false;
-  window._gFcbOpp=false; window._gFcb=false; window._gCrOpp=false; window._gCr=false;
-  window._gDkOpp=false; window._gDk=false; window._gAiEq=null;
-  window._gChkKey=null; window._gCrDoneKey=null; window._gDkDoneKey=null;
-  const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0, vpipN:0,pfrN:0,tbN:0,tbOppN:0,afAggN:0,afCallN:0,cbN:0,cbOppN:0,wwsfN:0,wwsfWinN:0,sdN:0,sdWinN:0,statHands:0});
+  const bg = sessionStats.byGame[gk] || (sessionStats.byGame[gk] = {hands:0, net:0, bbSum:0});
   bg.hands++; bg.net += delta; bg.bbSum += delta/bb;
-  accumStatCounters(bg, gFlags);
   handHistory.unshift({
     ts: Date.now(), game: gk, gameLabel: MIX_GAMES[gk]?.label||gk, handNo,
     delta, bb,
@@ -2457,17 +2250,13 @@ function maybeRecordGuestHand(pub){
     myHandName: (pub.handNames && pub.handNames[me.id])||'',
     won: delta>0,
     results: (pub.results||[]).map(r=>({names:r.winnerNames, amount:r.amount})),
-    st: gFlags,
   });
   if(handHistory.length>200) handHistory.length=200;
   const persist = loadPersistStats() || {lifetimeHands:0, lifetimeNet:0, byGame:{}};
   persist.lifetimeHands=(persist.lifetimeHands||0)+1;
   persist.lifetimeNet=(persist.lifetimeNet||0)+delta;
-  accumStatCounters(persist, gFlags);
-  persist.bbSum = (persist.bbSum||0) + delta/bb;
   const pg = persist.byGame[gk] || (persist.byGame[gk]={hands:0,net:0,bbSum:0});
   pg.hands++; pg.net+=delta; pg.bbSum+=delta/bb;
-  accumStatCounters(pg, gFlags);
   savePersistStats(persist);
 }
 
@@ -2507,8 +2296,6 @@ function startSolo(){
 }
 
 function startNewHand(){
-  // リプレイ用: このハンドで追加されるログの開始位置を記録
-  if(G) G._handLogMark = (G.log||[]).length;
   // 途中参加者を取り込み（次ハンドから = ここ）。トーナメント中は観戦のみ
   if(isMulti && isHost && pendingJoins.length){
     if(G.tourney){
@@ -2627,9 +2414,7 @@ function startNewHand(){
     const suitOrder = {c:0,d:1,h:2,s:3};
     aliveIdxs.forEach(i=>{
       const up = players[i].hole[2];
-      // ラズはAが最小(=1)。Aが見えていてもブリングインにはならない
-      const rr = (isRazz && up.r === 14) ? 1 : up.r;
-      const val = rr * 4 + suitOrder[up.s];
+      const val = up.r * 4 + suitOrder[up.s];
       if(biBest===null){ biBest=val; biIdx=i; }
       else if(isRazz ? val>biBest : val<biBest){ biBest=val; biIdx=i; }
     });
@@ -2705,7 +2490,7 @@ function startNewHand(){
   scheduleNext();
 }
 
-function HND(){ return G ? G.hand : null; }
+function HND(){ return G.hand; }
 function activePlayers(){ return HND().players.filter(p=>!p.folded && !p.allIn); }
 function notFolded(){ return HND().players.filter(p=>!p.folded); }
 function roundBetTotal(){ return HND().players.reduce((s,p)=>s+p.roundBet,0); }
@@ -2741,70 +2526,6 @@ function applyAction(playerIdx, action){
   const p = h.players[playerIdx];
   if(p.folded || p.allIn) return;
   const toCall = h.highBet - p.roundBet;
-
-  // 成績指標: NLH定番スタッツの素材を記録
-  {
-    const selfIdStat = isMulti ? myId : 'human';
-    const gdS = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
-    const firstRound = gdS.type==='stud' ? (h.studStreet||3)===3
-                     : (h.phase==='preflop' && (h.drawDone||0)===0);
-    const stKey = `${h.phase}|${h.studStreet||0}|${h.drawDone||0}`;
-    if(p.id === selfIdStat){
-      if(firstRound){
-        // VPIP / PFR
-        if(action.type==='raise') { h._meVPIP = true; h._mePFR = true; }
-        else if(action.type==='call' && toCall > 0) { h._meVPIP = true; }
-        // 3Bet: BB/ブリングインでraiseCount=1のため、オープンレイズに直面=2で判定
-        if(toCall > 0 && (h.raiseCount||0) === 2){
-          h._me3bOpp = true;
-          if(action.type==='raise') h._me3b = true;
-        }
-      } else {
-        // AF(アグレッションファクター)素材: ポストフロップ相当のベット・レイズ/コール
-        if(action.type==='raise') h._meAgg = (h._meAgg||0)+1;
-        else if(action.type==='call') h._meCall = (h._meCall||0)+1;
-        // CBet: プリフロップ最終アグレッサーとして迎えたフロップの最初の行動で、
-        // まだ誰もベットしていなければ機会。そこでベットすればCB成立
-        if(gdS.type==='community' && h.phase==='flop' && h._pfAggr===p.id && !h._meCbDone){
-          h._meCbDone = true;
-          if(toCall === 0){
-            h._meCbOpp = true;
-            if(action.type==='raise') h._meCb = true;
-          }
-        }
-        // Fold to CBet: フロップでPFアグレッサーの最初のベット(raiseCount=1)に直面
-        if(gdS.type==='community' && h.phase==='flop' && !h._meFcbDone
-           && toCall > 0 && (h.raiseCount||0)===1
-           && h._pfAggr && h._stAggr===h._pfAggr && h._pfAggr!==p.id){
-          h._meFcbDone = true;
-          h._meFcbOpp = true;
-          if(action.type==='fold') h._meFcb = true;
-        }
-        // Check-Raise: 同じストリートで自分がチェック→後にベットに直面
-        if(action.type==='check'){ h._meChkKey = stKey; }
-        else if(toCall > 0 && h._meChkKey === stKey && h._meCrKeyDone !== stKey){
-          h._meCrKeyDone = stKey;
-          h._meCrOpp = true;
-          if(action.type==='raise') h._meCr = true;
-        }
-        // Donk Bet: 前ストリートのアグレッサー(未行動)より先に打つ機会
-        if(gdS.type==='community' && toCall===0 && h._prevStAggr && h._prevStAggr!==p.id
-           && h._meDkKeyDone !== stKey){
-          const pa = h.players.find(x=>x.id===h._prevStAggr);
-          if(pa && !pa.folded && !pa.acted){
-            h._meDkKeyDone = stKey;
-            h._meDkOpp = true;
-            if(action.type==='raise') h._meDk = true;
-          }
-        }
-      }
-    }
-    // 全員分: アグレッサー記録(プリフロップ=CBet用 / ストリート=FoldToCB・Donk用)
-    if(action.type==='raise'){
-      if(firstRound) h._pfAggr = p.id;
-      h._stAggr = p.id;
-    }
-  }
 
   if(action.type === 'fold'){
     p.folded = true; p.acted = true; p.lastAction = 'フォールド';
@@ -2916,7 +2637,6 @@ function advancePhase(){
   h.players.forEach(p=>{ p.roundBet=0; p.acted=false; p.lastAction=''; });
   h.highBet = 0; h.minRaise = h.bbAmount;
   h.raiseCount = 0; // FLのレイズ回数をリセット
-  h._prevStAggr = h._stAggr || null; h._stAggr = null; // ドンク/FoldToCB判定用
 
   const gd = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
 
@@ -2946,11 +2666,7 @@ function advancePhaseCommunity(h){
   // 山札からボードへ1枚（枯渇時はundefinedを積まず警告）。通常プレイでは枯渇しないため挙動は不変
   const dealBoard = ()=>{ const c=h.deck.pop(); if(c) h.board.push(c); else console.warn('advancePhaseCommunity: 山札不足'); };
   const targetBoard = (MIX_GAMES[G.currentGame]||MIX_GAMES.holdem).boardN || 5;
-  if(h.phase==='preflop'){ h.phase='flop'; dealBoard(); dealBoard(); dealBoard(); G.log.unshift('── フロップ ──');
-    const selfIdF = isMulti ? myId : 'human';
-    const meF = h.players.find(pp=>pp.id===selfIdF);
-    if(meF && !meF.folded) h._meSawFlop = true; // WWSF用: フロップを見た
-  }
+  if(h.phase==='preflop'){ h.phase='flop'; dealBoard(); dealBoard(); dealBoard(); G.log.unshift('── フロップ ──'); }
   else if(h.phase==='flop'){ h.phase='turn'; dealBoard(); G.log.unshift('── ターン ──'); }
   else if(h.phase==='turn'){ h.phase='river'; dealBoard(); G.log.unshift('── リバー ──'); }
   else if(h.phase==='river'){ if(targetBoard>=6){ h.phase='ocean'; dealBoard(); G.log.unshift('── オーシャン ──'); } else { h.phase='showdown'; } }
@@ -3417,7 +3133,6 @@ function showDrawUI(p, h, gd, callback){
   h._drawCallback = callback;
   h._drawPlayer = p;
   h._drawGd = gd;
-  notifyTurn(); // 交換の手番になったことを通知
   render(); // ボードと手札を表示
   const area = g('action-area');
   area.innerHTML = `
@@ -3753,23 +3468,6 @@ function scheduleNext(){
   // ラウンド完了チェック
   if(isRoundComplete()){
     const gd = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
-    if(turnTimer){ clearTimeout(turnTimer); turnTimer = null; }
-    h.turnDeadline = null;
-
-    // オールイン・ランアウト検出: これ以上ベットできる人が1人以下で、2人以上が残っている
-    // → 手札を公開し、残りのカードを開きながら勝率%を表示（TV中継風）
-    if(activePlayers().length <= 1 && notFolded().length >= 2 && !h.runout){
-      h.runout = true;
-    }
-    if(h.runout){
-      h.runoutEq = runoutEquities(h, gd); // ストリートごとに更新（配り切り後はnull）
-      // All-in EV: 最初のオールイン確定時点の自分の勝率を保存
-      const sidAi = isMulti ? myId : 'human';
-      if(h._aiEq==null && h.runoutEq && h.runoutEq[sidAi]!=null){
-        const meAi = h.players.find(pp=>pp.id===sidAi);
-        if(meAi && !meAi.folded){ h._aiEq = h.runoutEq[sidAi]; }
-      }
-    }
 
     if(isLastBettingRound(h, gd)){
       // 最後のベッティング → ショーダウン
@@ -3789,7 +3487,7 @@ function scheduleNext(){
           h.toActIdx = nextActor(G.buttonIdx);
           render();
           if(activePlayers().length <= 1 && notFolded().length >= 2){
-            aiTimer = setTimeout(()=>scheduleNext(), 1400);
+            aiTimer = setTimeout(()=>scheduleNext(), 1000);
           } else {
             aiTimer = setTimeout(()=>scheduleNext(), 600);
           }
@@ -3798,7 +3496,7 @@ function scheduleNext(){
       }
       render();
       if(activePlayers().length <= 1 && notFolded().length >= 2){
-        aiTimer = setTimeout(()=>scheduleNext(), 1400);
+        aiTimer = setTimeout(()=>scheduleNext(), 1000);
         return;
       }
       aiTimer = setTimeout(()=>scheduleNext(), 600);
@@ -3813,23 +3511,6 @@ function scheduleNext(){
 
   if(isMulti){
     // マルチ: CPUはいない。ホスト自身ならローカルUI、人間ゲストならアクション待ち
-    // 手番タイマー: 30秒で自動チェック（コール不要時）/フォールド。ホスト側で一元判定
-    h.turnDeadline = Date.now() + TURN_TIMEOUT_MS;
-    if(turnTimer) clearTimeout(turnTimer);
-    const tSnapshot = { handNo: G.handNo, idx };
-    turnTimer = setTimeout(()=>{
-      if(G.handNo !== tSnapshot.handNo) return;
-      if(h !== HND()) return;
-      if(h.toActIdx !== tSnapshot.idx) return;
-      if(h.phase === 'showdown') return;
-      const tp = h.players[tSnapshot.idx];
-      const lim = calcBetLimits(h, tp);
-      const auto = (lim.toCall===0) ? {type:'check'} : {type:'fold'};
-      G.log.unshift(`⏰ ${tp.name}: 時間切れ → ${auto.type==='check'?'チェック':'フォールド'}`);
-      applyAction(tSnapshot.idx, auto);
-      h.toActIdx = nextActor(tSnapshot.idx);
-      scheduleNext();
-    }, TURN_TIMEOUT_MS);
     render(); // 配信込み
     if(p.id === myId){
       // ホスト自身の番 → ローカルアクションUI（renderActionAreaで表示）
@@ -4443,62 +4124,6 @@ function simShare(players, simH, gd){
   }
 }
 
-// ===== オールイン・ランアウト勝率 =====
-// 全員の手札が既知の状態で、残りのボード（スタッドは各自の残り札）だけをサンプリングして勝率%を出す。
-// ドロー系は交換の意思決定が絡むため対象外（カード公開のみ）。
-function runoutEquities(h, gd){
-  if(gd.type==='draw') return null;
-  const aliveIdx = []; h.players.forEach((p,i)=>{ if(!p.folded) aliveIdx.push(i); });
-  if(aliveIdx.length < 2) return null;
-  // デッドカード: 生存者の全手札 + ボード + 降りた人の表札(スタッド)
-  const used = new Set();
-  aliveIdx.forEach(i=>h.players[i].hole.forEach(c=>used.add(c.r+c.s)));
-  (h.board||[]).forEach(c=>used.add(c.r+c.s));
-  if(gd.type==='stud'){
-    h.players.forEach(p=>{ if(p.folded&&p.faceUp) p.hole.forEach((c,k)=>{ if(p.faceUp[k]) used.add(c.r+c.s); }); });
-  }
-  const deckAll = makeDeck().filter(c=>!used.has(c.r+c.s));
-  const needBoard = gd.type==='community' ? (gd.boardN||5)-(h.board||[]).length : 0;
-  const needPer = gd.type==='stud' ? aliveIdx.map(i=>Math.max(0, 7-h.players[i].hole.length)) : [];
-  const totalNeed = gd.type==='community' ? needBoard : needPer.reduce((a,b)=>a+b,0);
-  if(totalNeed<=0) return null; // 配り切り済み → ショーダウンで確定
-  const shares = {}; aliveIdx.forEach(i=>shares[i]=0);
-  const ITER = 500, t0 = performance.now();
-  let done = 0;
-  const idxs = [...deckAll.keys()];
-  for(let it=0; it<ITER; it++){
-    // 部分Fisher-Yatesで totalNeed 枚引く
-    const drawn = [];
-    for(let k=0;k<totalNeed;k++){
-      const j = k + Math.floor(Math.random()*(idxs.length-k));
-      [idxs[k],idxs[j]]=[idxs[j],idxs[k]];
-      drawn.push(deckAll[idxs[k]]);
-    }
-    let simPlayers, simH;
-    if(gd.type==='community'){
-      simH = { board: [...(h.board||[]), ...drawn.slice(0,needBoard)] };
-      simPlayers = aliveIdx.map(i=>h.players[i]);
-    } else {
-      simH = { board: [] };
-      let di = 0;
-      simPlayers = aliveIdx.map((i,k)=>{
-        const p = h.players[i];
-        const add = drawn.slice(di, di+needPer[k]); di += needPer[k];
-        return { hole: [...p.hole, ...add] };
-      });
-    }
-    aliveIdx.forEach((pi,k)=>{
-      const rot = [simPlayers[k], ...simPlayers.filter((_,q)=>q!==k)];
-      shares[pi] += simShare(rot, simH, gd);
-    });
-    done++;
-    if((it&31)===31 && performance.now()-t0>110) break;
-  }
-  const out = {};
-  aliveIdx.forEach(i=>{ out[h.players[i].id] = Math.round(100*shares[i]/done); });
-  return out;
-}
-
 // GTO風意思決定 v2（MDF・ポジション・ベットサイズミックス・最終ストリートのブラフ均衡）
 // ===== GTOソルバー出力テーブル =====
 // プッシュ/フォールドはfictitious playで計算したナッシュ均衡（169ハンド×スタック4-20BB）
@@ -5017,8 +4642,6 @@ function buildOppSeatHTML(d){
         ${d.foldPill}
         ${d.drawPill}
         ${d.pnlPill}
-        ${d.eqPill||''}
-        ${d.discPill||''}
         ${d.roundBet>0 ? `<div class="opp-bet" style="left:50%; bottom:-18px; transform:translateX(-50%);">${d.roundBet}</div>` : ''}
       </div>`;
 }
@@ -5125,10 +4748,12 @@ function render(){
   setActReserve(G && G.currentGame);
 
   // フェーズ（種目タイプで表示を変える）
-  g('phase-label').textContent = phaseLabelFor(h, G.currentGame);
+  const phLabel = phaseLabelFor(h, G.currentGame);
+  g('phase-label').textContent = phLabel;
 
   // ポット
   g('pot-display').textContent = `POT: ${currentPot()}`;
+
 
   // ボード（コミュニティカード or 種目情報）
   const gdCur = MIX_GAMES[G.currentGame] || MIX_GAMES.holdem;
@@ -5164,6 +4789,22 @@ function render(){
   const selfId = isMulti ? myId : 'human';
   const me = h.players.find(p=>p.id===selfId);
   const myIdx = h.players.findIndex(p=>p.id===selfId);
+  // PLOリング風ヘッダー
+  {
+    const gdH = MIX_GAMES[G.currentGame] || {};
+    const actH = h.players[h.toActIdx];
+    const mineH = (h.toActIdx===myIdx && h.phase!=='showdown');
+    plHeader({
+      room: isMulti ? ('#'+(roomCode||'')) : '練習',
+      game: gdH.short || gdH.label || G.currentGame,
+      blind: (G.sb!=null&&G.bb!=null) ? (G.sb+'/'+G.bb) : '',
+      canChange: !!(isHost || !isMulti),
+      street: phLabel,
+      turn: h.phase==='showdown' ? 'ショーダウン'
+        : (mineH ? '▶ あなたのアクション' : (actH ? `▶ ${actH.name} のアクション` : '')),
+      myTurn: mineH
+    });
+  }
   const n = h.players.length;
   // 相手のインデックス（自分の次から時計回り）
   const oppOrder = [];
@@ -5194,12 +4835,16 @@ function render(){
     // 全員フォールド勝ち(uncontested)かどうか
     const isUncontested = isMulti && h.results && h.results.length && h.results[0].uncontested;
     const showCards = isSolo
-      ? (h.phase==='showdown' || humanFoldedSolo || h.runout)   // ソロ: ショウダウン/ランアウトで全員公開
+      ? (h.phase==='showdown' || humanFoldedSolo)   // ソロ: ショウダウンで全員公開
       : isUncontested
         ? (winTheShow && !p.folded)                 // マルチ全員フォールド: WIN THE SHOWがONの時だけ勝者公開
-        : ((h.phase==='showdown' || h.runout) && !p.folded);      // マルチ通常ショウダウン/ランアウト: 降りていない人を公開
+        : (h.phase==='showdown' && !p.folded);      // マルチ通常ショウダウン: 降りていない人を公開
     const isStud = (MIX_GAMES[G.currentGame]||{}).type === 'stud';
-    if(p.hole.length){
+    // スタッド系: 降りた人の表向き札は場から引き上げられるので表示しない
+    const studFolded = isStud && p.folded;
+    if(studFolded){
+      cardsH = '';
+    } else if(p.hole.length){
       const studHidden = isStud && !showCards && p.faceUp;
       if(studHidden){
         // スタッド: 裏向き札を先にまとめ、表向き札(ドアカード)は重ねず横並びで全部見せる
@@ -5250,18 +4895,11 @@ function render(){
       const pc = d>0?'pnl-plus':(d<0?'pnl-minus':'pnl-zero');
       pnlPill = `<div class="pnl-pill ${pc}">${d>0?'+'+d:(d<0?d:'±0')}</div>`;
     }
-    // ランアウト中の勝率%（ショーダウン前のみ）
-    let eqPill = '';
-    if(h.runout && h.phase!=='showdown' && !p.folded && h.runoutEq && h.runoutEq[p.id]!=null){
-      eqPill = `<div class="eq-pill">${h.runoutEq[p.id]}%</div>`;
-    }
-    // 切断中バッジ
-    const discPill = (isMulti && discIds.has(p.id)) ? `<div class="disc-pill">📡 切断</div>` : '';
 
     oppH += buildOppSeatHTML({
       cls, pos, cardsH, holeLen: p.hole.length, isDealer,
       name: p.name, allinBadge, posH, stack: p.stack, actBar,
-      showPill, handName, foldPill, drawPill, pnlPill, eqPill, discPill, roundBet: p.roundBet
+      showPill, handName, foldPill, drawPill, pnlPill, roundBet: p.roundBet
     });
   });
   g('opponents').innerHTML = oppH;
@@ -5304,9 +4942,6 @@ function render(){
     const pc = d>0?'pnl-plus':(d<0?'pnl-minus':'pnl-zero');
     myPnl = `<span class="pnl-pill ${pc}" style="margin-top:0;">${d>0?'+'+d:(d<0?d:'±0')}</span>`;
   }
-  if(h.runout && h.phase!=='showdown' && !me.folded && h.runoutEq && h.runoutEq[me.id]!=null){
-    myPnl += `<span class="eq-pill" style="margin-top:0;">${h.runoutEq[me.id]}%</span>`;
-  }
   g('my-seat').innerHTML = buildMySeatHTML({
     myCls, isDealer: meDealer, name: me.name, posH: myPosH,
     allIn: me.allIn, folded: me.folded, stack: me.stack,
@@ -5321,82 +4956,14 @@ function render(){
   g('log').innerHTML = G.log.slice(0,12).map(l=>`<div>${esc(l)}</div>`).join('');
 }
 
-// 手番でない間、アクションエリアの空きスペースに直近のアクションを流すミニログ
-function miniLogHTML(lines){
-  const pick = (lines||[]).slice(0,4);
-  if(!pick.length) return '';
-  // 新しいものが下（読み順）。古い行ほど薄く。
-  const rows = pick.slice().reverse().map((l,i,arr)=>{
-    const op = 0.45 + 0.55*((i+1)/arr.length);
-    return `<div style="opacity:${op.toFixed(2)};">${esc(l)}</div>`;
-  }).join('');
-  return `<div class="mini-log">${rows}</div>`;
-}
-// ===== 手番通知（音・バイブ） =====
-let soundOn = (function(){ try{ return (localStorage.getItem('mixpoker_sound')||'on')==='on'; }catch(e){ return true; } })();
-let _ac = null;
-function _ensureAudio(){
-  if(!_ac){ try{ _ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-  if(_ac && _ac.state==='suspended'){ _ac.resume().catch(()=>{}); }
-  return _ac;
-}
-// iOSの音声解放: 最初のタップでAudioContextを起こす
-document.addEventListener('pointerdown', ()=>{ _ensureAudio(); }, {once:true, capture:true});
-function beep(freq, dur, vol, when){
-  const ac = _ensureAudio(); if(!ac || !soundOn) return;
-  try{
-    const o = ac.createOscillator(), gn = ac.createGain();
-    o.type = 'sine'; o.frequency.value = freq;
-    const t = ac.currentTime + (when||0);
-    gn.gain.setValueAtTime(0.0001, t);
-    gn.gain.exponentialRampToValueAtTime(vol||0.16, t+0.012);
-    gn.gain.exponentialRampToValueAtTime(0.0001, t+(dur||0.15));
-    o.connect(gn); gn.connect(ac.destination);
-    o.start(t); o.stop(t+(dur||0.15)+0.03);
-  }catch(e){}
-}
-function notifyTurn(){
-  beep(880, 0.12, 0.15);
-  try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){}
-}
-function notifyWin(){
-  beep(659, 0.11, 0.13); beep(880, 0.11, 0.13, 0.11); beep(1319, 0.22, 0.13, 0.22);
-}
-function setSound(on){
-  soundOn = !!on;
-  try{ localStorage.setItem('mixpoker_sound', soundOn?'on':'off'); }catch(e){}
-  document.querySelectorAll('#sound-select .count-btn').forEach(b=>b.classList.toggle('selected', (b.dataset.snd==='on')===soundOn));
-  if(soundOn) beep(880, 0.1, 0.12); // 動作確認音
-}
-// 保存済み設定をUIに反映（音は鳴らさない）
-document.querySelectorAll('#sound-select .count-btn').forEach(b=>b.classList.toggle('selected', (b.dataset.snd==='on')===soundOn));
-// 手番タイマーのカウントダウン表示（マルチのみ・500ms間隔でテキストだけ更新）
-setInterval(()=>{
-  const el = document.getElementById('turn-timer');
-  if(!el) return;
-  let dl = null;
-  if(isMulti){
-    if(isHost){ const h=(typeof HND==='function')&&HND(); dl = h && h.phase!=='showdown' ? h.turnDeadline : null; }
-    else { dl = (typeof ploPub!=='undefined' && ploPub && ploPub.phase!=='showdown') ? ploPub.turnDeadline : null; }
-  }
-  if(!dl){ el.style.display='none'; return; }
-  const remain = Math.ceil((dl - Date.now())/1000);
-  if(remain <= 0 || remain > 60){ el.style.display='none'; return; }
-  el.style.display = '';
-  el.textContent = `⏱ ${remain}`;
-  el.style.color = remain <= 10 ? 'var(--red)' : 'var(--gold)';
-}, 500);
 function renderActionArea(){
   const h = HND();
   const area = g('action-area');
   const selfId = isMulti ? myId : 'human';
   if(h.phase==='showdown' || h.toActIdx<0 || h.players[h.toActIdx].id!==selfId){
-    window._wasMyTurn = false;
-    area.innerHTML = miniLogHTML((G&&G.log)||[]);
+    area.innerHTML = '';
     return;
   }
-  if(!window._wasMyTurn){ notifyTurn(); }
-  window._wasMyTurn = true;
   const me = h.players[h.toActIdx];
   const limits = calcBetLimits(h, me);
   limits.stack = me.stack; limits.roundBet = me.roundBet;
@@ -5466,23 +5033,8 @@ function fbListen(){
   fbListener = setInterval(fbPoll, 1000);
   fbPoll();
 }
-// ===== 切断検知（ハートビート方式） =====
-// RESTポーリングのためFirebase SDKのonDisconnectは使えない。
-// 代わりに全員が3秒ごとに presence/{自分} へ現在時刻を書き、
-// ホストが10秒以上更新のない人を「切断」と判定する。
-// タブを閉じた時は pagehide で presence に 0 を書いて即時通知（keepalive fetch）。
-let presCounter = 0;
-let discIds = new Set();     // ホストが検知した切断中プレイヤーID
-let hostStale = false;       // ゲストが検知した「ホスト切断」状態
-const PRES_STALE_MS = 10000;
 async function fbPoll(){
   if(!fbRoom) return;
-  // ハートビート: 3秒ごとに自分の生存時刻を書く（ホストは固定キー'host'）
-  presCounter++;
-  if(isMulti && presCounter % 3 === 0){
-    fbPut(`presence/${isHost ? 'host' : myId}`, Date.now());
-    if(isHost) checkPresence(); else checkHostPresence();
-  }
   const b = await fbGet('broadcast') || {};
   Object.entries(b).forEach(([k,v])=>{ if(!v||fbLastSeen[k]) return; fbLastSeen[k]=true; onMsg(v, v.sender); });
   const p = await fbGet(`private/${myId}`) || {};
@@ -5495,67 +5047,7 @@ async function fbPoll(){
 function fbClose(){
   if(fbListener) clearInterval(fbListener);
   fbListener = null; fbRoom = ''; fbLastSeen = {};
-  discIds = new Set(); hostStale = false; presCounter = 0;
 }
-
-// ホスト: 全ゲストのハートビートを確認し、切断/再接続を検知する
-async function checkPresence(){
-  if(!isHost || !isMulti || typeof G==='undefined' || !G || !G.ids) return;
-  const pres = await fbGet('presence') || {};
-  const now = Date.now();
-  let changed = false;
-  G.ids.forEach(id=>{
-    if(id === myId) return;
-    const t = pres[id];
-    let stale;
-    if(t===undefined || t===null) stale = false;      // まだ一度も書いていない（起動直後）→ 誤検知しない
-    else if(t===0) stale = true;                       // 明示的な退出（タブを閉じた）
-    else stale = (now - t) > PRES_STALE_MS;            // 10秒以上更新なし
-    if(stale && !discIds.has(id)){
-      discIds.add(id); changed = true;
-      G.log.unshift(`📡 ${G.names[id]||id} の接続が切れました`);
-      autoActIfDisconnected(id);
-    } else if(!stale && discIds.has(id)){
-      discIds.delete(id); changed = true;
-      G.log.unshift(`📡 ${G.names[id]||id} が再接続しました`);
-    }
-  });
-  if(changed) render();
-}
-// 切断されたプレイヤーの手番なら、待たずに自動チェック/フォールド
-function autoActIfDisconnected(id){
-  const h = HND();
-  if(!h || h.phase==='showdown') return;
-  const idx = h.toActIdx;
-  if(idx==null || idx<0 || !h.players[idx] || h.players[idx].id!==id) return;
-  const p = h.players[idx];
-  const lim = calcBetLimits(h, p);
-  const auto = (lim.toCall===0) ? {type:'check'} : {type:'fold'};
-  G.log.unshift(`📡 切断のため自動${auto.type==='check'?'チェック':'フォールド'}: ${p.name}`);
-  applyAction(idx, auto);
-  h.toActIdx = nextActor(idx);
-  scheduleNext();
-}
-// ゲスト: ホストのハートビートを確認し、途切れたらバナー表示
-async function checkHostPresence(){
-  const t = await fbGet('presence/host');
-  if(t===undefined || t===null) return; // まだ書かれていない
-  const stale = (t===0) || (Date.now() - t) > (PRES_STALE_MS + 5000); // ホスト側は少し余裕を持つ
-  if(stale !== hostStale){
-    hostStale = stale;
-    const el = g('host-stale-banner');
-    if(el) el.style.display = stale ? '' : 'none';
-  }
-}
-// タブを閉じる/離れる時に presence へ 0 を書いて即時通知（ベストエフォート）
-window.addEventListener('pagehide', ()=>{
-  if(fbRoom && isMulti){
-    try {
-      fetch(`${FB_URL}/rooms/${fbRoom}/presence/${isHost ? 'host' : myId}.json`,
-            {method:'PUT', body:'0', keepalive:true});
-    } catch(e){}
-  }
-});
 
 function ploSetErr(m){ const el=g('lobby-error'); if(el) el.textContent=m||''; }
 function ploSetSt(m){ const el=g('lobby-status'); if(el) el.textContent=m||''; }
@@ -5565,7 +5057,6 @@ async function ploCreateRoom(){
   const nm = g('my-name').value.trim();
   if(!nm){ ploSetErr('ニックネームを入力してください'); return; }
   myName = nm;
-  try { localStorage.setItem('ccc_player_name', nm); } catch(e){}
   myId = 'host_' + Math.floor(Math.random()*100000);
   isHost = true; isMulti = true;
   roomCode = String(Math.floor(1000 + Math.random()*9000));
@@ -5591,7 +5082,6 @@ async function ploJoinRoom(){
   const code = g('join-code').value.trim();
   if(code.length !== 4){ ploSetErr('部屋コードは4桁です'); return; }
   myName = nm;
-  try { localStorage.setItem('ccc_player_name', nm); } catch(e){}
   myId = 'guest_' + Math.floor(Math.random()*100000);
   isHost = false; isMulti = true;
   roomCode = code;
@@ -5749,12 +5239,6 @@ function ploPub_build(){
     currentGame: G.currentGame,
     rotation: G.rotation ? { every: G.rotation.every, idx: G.rotation.idx, seq: G.rotation.seq, handNo: G.handNo } : null,
     drawDone: h.drawDone, studStreet: h.studStreet, studVisible: h.studVisible,
-    runout: !!h.runout, runoutEq: h.runoutEq || null,
-    turnDeadline: h.turnDeadline || null,
-    log: (G.log||[]).slice(0,5),
-    disc: Array.from(discIds||[]),
-    raiseCount: h.raiseCount||0, pfAggr: h._pfAggr||null,
-    stAggr: h._stAggr||null, prevStAggr: h._prevStAggr||null,
     raiseCount: h.raiseCount || 0, minRaise: h.minRaise,
     sbId: (h.sbIdx>=0 && h.players[h.sbIdx]) ? h.players[h.sbIdx].id : null,
     bbId: (h.bbIdx>=0 && h.players[h.bbIdx]) ? h.players[h.bbIdx].id : null,
@@ -5786,9 +5270,9 @@ function ploPub_build(){
       //  - ソロで人間が降りた → 相手を公開
       const showHole = isUncontested
         ? revealWin
-        : ((h.phase==='showdown' && !p.folded) || (humanFolded && p.id!==myId) || (h.runout && !p.folded));
+        : ((h.phase==='showdown' && !p.folded) || (humanFolded && p.id!==myId));
       return {
-        id:p.id, name:p.name, stack:p.stack, roundBet:p.roundBet, totalBet:p.totalBet||0, aggCnt:p.aggCnt||0, folded:p.folded, allIn:p.allIn, acted:!!p.acted, lastAction:p.lastAction,
+        id:p.id, name:p.name, stack:p.stack, roundBet:p.roundBet, totalBet:p.totalBet||0, aggCnt:p.aggCnt||0, folded:p.folded, allIn:p.allIn, lastAction:p.lastAction,
         hole: showHole ? p.hole : null,
         holeCount: p.hole.length,
         upCards, // スタッドの表札（nullの要素は伏札）
@@ -5830,18 +5314,6 @@ function onGuestStateUpdate(){
 function renderGuest(){
   const pub = ploPub;
   if(!pub || !pub.players) return;
-  // WWSF用: フロップを見たか(ハンドごとに1回)
-  try{
-    if(pub.phase==='flop' && window._gSfHand!==pub.handNo){
-      const meSf = pub.players.find(p=>p.id===myId);
-      if(meSf && !meSf.folded){ window._gSfHand = pub.handNo; window._gSawFlop = true; }
-    }
-    // All-in EV: ランアウト開始時の自分の勝率を保存
-    if(pub.runout && pub.runoutEq && pub.runoutEq[myId]!=null && window._gAiHand!==pub.handNo){
-      const meAi = pub.players.find(p=>p.id===myId);
-      if(meAi && !meAi.folded){ window._gAiHand = pub.handNo; window._gAiEq = pub.runoutEq[myId]; }
-    }
-  }catch(e){}
   // Firebaseは空配列を削除するため、boardがundefinedの場合は空配列に正規化
   if(!Array.isArray(pub.board)) pub.board = [];
   pub.players.forEach(p=>{ if(p.hole && !Array.isArray(p.hole)) p.hole=null; });
@@ -5849,8 +5321,24 @@ function renderGuest(){
   try { maybeRecordGuestHand(pub); } catch(e){ console.warn('maybeRecordGuestHand失敗', e); }
   updateGameTypeBar();
   setActReserve(pub.currentGame);
-  g('phase-label').textContent = phaseLabelFor({phase:pub.phase, drawDone:pub.drawDone, studStreet:pub.studStreet, results:pub.results}, pub.currentGame);
+  const phLabelG = phaseLabelFor({phase:pub.phase, drawDone:pub.drawDone, studStreet:pub.studStreet, results:pub.results}, pub.currentGame);
+  g('phase-label').textContent = phLabelG;
   g('pot-display').textContent = `POT: ${pub.pot + pub.roundBetTotal}`;
+  {
+    const gdG = MIX_GAMES[pub.currentGame] || {};
+    const actG = pub.players ? pub.players[pub.toActIdx] : null;
+    const mineG = !!(actG && actG.id===myId && pub.phase!=='showdown');
+    plHeader({
+      room: '#'+(roomCode||''),
+      game: gdG.short || gdG.label || pub.currentGame,
+      blind: (pub.sb!=null&&pub.bb!=null) ? (pub.sb+'/'+pub.bb) : '',
+      canChange: false,
+      street: phLabelG,
+      turn: pub.phase==='showdown' ? 'ショーダウン'
+        : (mineG ? '▶ あなたのアクション' : (actG ? `▶ ${actG.name} のアクション` : '')),
+      myTurn: mineG
+    });
+  }
   const winCards = new Set();
   if(pub.phase==='showdown' && pub.results){
     const firstWinId = pub.results[0]?.winnerIds[0];
@@ -5868,7 +5356,7 @@ function renderGuest(){
     g('board-area').classList.toggle('six', slots>=6);
     g('board-area').innerHTML = boardH;
   } else {
-    g('board-area').innerHTML = `<div style="font-family:'M PLUS 1 Code',monospace; color:rgba(232,200,74,0.5); font-size:0.7rem; letter-spacing:0.3em; text-transform:uppercase; text-align:center;">${gdG.short}</div>`;
+    g('board-area').innerHTML = `<div style="font-family:'Share Tech Mono',monospace; color:rgba(232,200,74,0.5); font-size:0.7rem; letter-spacing:0.3em; text-transform:uppercase; text-align:center;">${gdG.short}</div>`;
   }
   const meIdx = pub.players.findIndex(p=>p.id===myId);
   const n = pub.players.length;
@@ -5883,7 +5371,11 @@ function renderGuest(){
     const pos=positions[slot];
     let cls='opp'; if(oppOrder.length>=7)cls+=' compact xcompact xxcompact'; else if(oppOrder.length>=4)cls+=' compact xcompact'; if(isActive)cls+=' active'; if(p.folded)cls+=' folded';
     let cardsH='';
-    if(p.hole){ p.hole.forEach(c=> cardsH+=cardHTML(c,{xs:true,muck:p.folded})); }
+    const isStudG = (MIX_GAMES[pub.currentGame]||{}).type === 'stud';
+    if(isStudG && p.folded){
+      cardsH = '';   // スタッド系: 降りた人のカードは表示しない
+    }
+    else if(p.hole){ p.hole.forEach(c=> cardsH+=cardHTML(c,{xs:true,muck:p.folded})); }
     else if(p.upCards){ // スタッド: 表札は見える、伏札は裏。裏は先にまとめ、表は重ねず横並び
       const downs=[], ups=[];
       p.upCards.forEach(c=>{ if(c) ups.push(cardHTML(c,{xs:true, up:true})); else downs.push('<div class="card xs back"></div>'); });
@@ -5906,16 +5398,11 @@ function renderGuest(){
       pnlPill = `<div class="pnl-pill ${pc}">${d>0?'+'+d:(d<0?d:'±0')}</div>`;
     }
     const showPill = p.revealWin ? `<div class="show-pill">🏆 WIN THE SHOW</div>` : '';
-    let eqPill = '';
-    if(pub.runout && pub.phase!=='showdown' && !p.folded && pub.runoutEq && pub.runoutEq[p.id]!=null){
-      eqPill = `<div class="eq-pill">${pub.runoutEq[p.id]}%</div>`;
-    }
-    const discPill = (pub.disc||[]).includes(p.id) ? `<div class="disc-pill">📡 切断</div>` : '';
     const gHoleLen = ((p.hole&&p.hole.length)||(p.upCards&&p.upCards.length)||p.holeCount||0);
     oppH += buildOppSeatHTML({
       cls, pos, cardsH, holeLen: gHoleLen, isDealer,
       name: p.name, allinBadge: allinB, posH, stack: p.stack, actBar,
-      showPill, handName, foldPill, drawPill, pnlPill, eqPill, discPill, roundBet: p.roundBet
+      showPill, handName, foldPill, drawPill, pnlPill, roundBet: p.roundBet
     });
   });
   g('opponents').innerHTML = oppH;
@@ -5959,9 +5446,6 @@ function renderGuest(){
     const d = me.stack - me.startStack;
     const pc = d>0?'pnl-plus':(d<0?'pnl-minus':'pnl-zero');
     myPnlG = `<span class="pnl-pill ${pc}" style="margin-top:0;">${d>0?'+'+d:(d<0?d:'±0')}</span>`;
-  }
-  if(pub.runout && pub.phase!=='showdown' && me && !me.folded && pub.runoutEq && pub.runoutEq[me.id]!=null){
-    myPnlG += `<span class="eq-pill" style="margin-top:0;">${pub.runoutEq[me.id]}%</span>`;
   }
   g('my-seat').innerHTML = buildMySeatHTML({
     myCls, isDealer: meDealer, name: me?me.name:'', posH: myPosH,
@@ -6087,11 +5571,9 @@ function updateCpuHintGuest(mode){
 function renderGuestActionArea(){
   const pub = ploPub;
   const area = g('action-area');
-  if(pub.phase==='showdown' || pub.toActId !== myId){ window._wasMyTurn=false; area.innerHTML = miniLogHTML(pub.log||[]); return; }
+  if(pub.phase==='showdown' || pub.toActId !== myId){ area.innerHTML=''; return; }
   const me = pub.players.find(p=>p.id===myId);
-  if(!me){ window._wasMyTurn=false; area.innerHTML = miniLogHTML(pub.log||[]); return; }
-  if(!window._wasMyTurn){ notifyTurn(); }
-  window._wasMyTurn = true;
+  if(!me){ area.innerHTML=''; return; }
   const limits = calcBetLimitsGuest(pub, me);
   limits.stack = me.stack; limits.roundBet = me.roundBet;
   const ctx = {
@@ -6107,59 +5589,7 @@ function renderGuestActionArea(){
   updateCpuHintGuest('bet');
 }
 function confirmRaiseGuest(){ guestAct({type:'raise', amount:parseInt(g('bet-slider').value)}); }
-function guestAct(action){
-  // 成績指標: 最初のベットラウンドでの自発参加/レイズを記録
-  try{
-    const pub = ploPub;
-    const gdS = MIX_GAMES[(pub&&pub.currentGame)||'holdem'] || MIX_GAMES.holdem;
-    const firstRound = gdS.type==='stud' ? (pub.studStreet||3)===3
-                     : (pub.phase==='preflop' && (pub.drawDone||0)===0);
-    const me = pub.players.find(p=>p.id===myId);
-    const toCall = me ? (pub.highBet - (me.roundBet||0)) : 0;
-    const stKey = `${pub.handNo}|${pub.phase}|${pub.studStreet||0}|${pub.drawDone||0}`;
-    if(firstRound){
-      if(action.type==='raise'){ window._gVPIP=true; window._gPFR=true; }
-      else if(action.type==='call' && toCall>0){ window._gVPIP=true; }
-      if(toCall>0 && (pub.raiseCount||0)===2){
-        window._g3bOpp=true;
-        if(action.type==='raise') window._g3b=true;
-      }
-    } else {
-      if(action.type==='raise') window._gAgg=(window._gAgg||0)+1;
-      else if(action.type==='call') window._gCall=(window._gCall||0)+1;
-      if(gdS.type==='community' && pub.phase==='flop' && pub.pfAggr===myId && window._gCbHand!==pub.handNo){
-        window._gCbHand = pub.handNo;
-        if(toCall===0){ window._gCbOpp=true; if(action.type==='raise') window._gCb=true; }
-      }
-      // Fold to CBet
-      if(gdS.type==='community' && pub.phase==='flop' && window._gFcbHand!==pub.handNo
-         && toCall>0 && (pub.raiseCount||0)===1
-         && pub.pfAggr && pub.stAggr===pub.pfAggr && pub.pfAggr!==myId){
-        window._gFcbHand = pub.handNo;
-        window._gFcbOpp = true;
-        if(action.type==='fold') window._gFcb = true;
-      }
-      // Check-Raise
-      if(action.type==='check'){ window._gChkKey = stKey; }
-      else if(toCall>0 && window._gChkKey===stKey && window._gCrDoneKey!==stKey){
-        window._gCrDoneKey = stKey;
-        window._gCrOpp = true;
-        if(action.type==='raise') window._gCr = true;
-      }
-      // Donk Bet
-      if(gdS.type==='community' && toCall===0 && pub.prevStAggr && pub.prevStAggr!==myId
-         && window._gDkDoneKey!==stKey){
-        const pa = pub.players.find(x=>x.id===pub.prevStAggr);
-        if(pa && !pa.folded && !pa.acted){
-          window._gDkDoneKey = stKey;
-          window._gDkOpp = true;
-          if(action.type==='raise') window._gDk = true;
-        }
-      }
-    }
-  }catch(e){}
-  g('action-area').innerHTML=''; fbSendToHost({type:'action', action});
-}
+function guestAct(action){ g('action-area').innerHTML=''; fbSendToHost({type:'action', action}); }
 function showGuestRebuyPrompt(){
   const area=g('action-area');
   if(area.querySelector('.rebuy-prompt')) return;
@@ -6218,7 +5648,6 @@ function guestStandPat(){
 }
 
 // ===== セッション（再接続） =====
-// localStorageに保存: タブを閉じてもブラウザを終了しても3時間は復帰できる
 const PG_SESSION_KEY_plo = 'pgSession_plo';
 function ploSaveSession(){
   try { localStorage.setItem(PG_SESSION_KEY_plo, JSON.stringify({myId,myName,roomCode,fbRoom,isHost,ts:Date.now()})); } catch(e){}
@@ -6226,7 +5655,7 @@ function ploSaveSession(){
 function ploClearSession(){ try { localStorage.removeItem(PG_SESSION_KEY_plo); } catch(e){} }
 function ploLoadSession(){
   try {
-    const raw = localStorage.getItem(PG_SESSION_KEY_plo) || sessionStorage.getItem(PG_SESSION_KEY_plo);
+    const raw = localStorage.getItem(PG_SESSION_KEY_plo);
     if(!raw) return null;
     const s = JSON.parse(raw);
     if(Date.now()-s.ts > 3*60*60*1000){ ploClearSession(); return null; }
@@ -6370,12 +5799,6 @@ window.addEventListener('DOMContentLoaded', ()=>{
   setPlayerCount(3);
   setStack(1000);
   try { ploShowReconnectOption(); } catch(e){ console.warn('ploShowReconnectOption失敗', e); }
-  // 名前の自動入力（CCC共通キー。他のCCCゲームで入力した名前も引き継ぐ）
-  try {
-    const nm = localStorage.getItem('ccc_player_name');
-    const inp = document.getElementById('my-name');
-    if(nm && inp && !inp.value) inp.value = nm;
-  } catch(e){}
 });
 
 // テスト用に主要な純粋関数を公開（本番のゲーム動作には一切影響しない）
@@ -6396,22 +5819,205 @@ if (typeof window !== 'undefined') {
 
 </script>
 
+
 <script>
-// Capacitorアプリ内でのAndroid戻るボタン対応（Webブラウザでは何もしない）
-document.addEventListener('DOMContentLoaded', ()=>{
+/* ================================================================
+   PG共通アドオン v1（2026-07 追加）
+   ゲーム本体のコードには手を入れず、後付けで動く独立モジュール。
+   ① 切断検知: 15秒ごとに presence へ生存報告、40秒途絶で画面上部に表示
+   ② 名前保存: 全ゲーム共通キー pgPlayerName で名前を自動入力
+   ③ ルーム掃除: 24時間更新のないルームを削除（端末ごと6時間に1回）
+   ④ 遊び方: ルール未搭載ゲームにモーダルを追加
+   ================================================================ */
+(function(){
+'use strict';
+var HB_MS=15000, WATCH_MS=10000, STALE_MS=40000;
+var ROOM_TTL=24*60*60*1000, CLEAN_EVERY=6*60*60*1000;
+var NAME_KEY='pgPlayerName';
+
+function db(){
+  try{ if(typeof FB_URL==='string' && FB_URL.indexOf('https://')===0) return FB_URL; }catch(e){}
+  try{ if(typeof fbUrl==='string' && fbUrl.indexOf('https://')===0) return fbUrl; }catch(e){}
+  return 'https://playgame-3e7ba-default-rtdb.firebaseio.com';
+}
+function room(){ try{ return (typeof fbRoom==='string') ? fbRoom : ''; }catch(e){ return ''; } }
+function me(){ var id='',nm='';
+  try{ if(typeof myId==='string') id=myId; }catch(e){}
+  try{ if(typeof myName==='string') nm=myName; }catch(e){}
+  return {id:id, name:nm};
+}
+function put(url,body){ try{ return fetch(url,{method:'PUT',body:JSON.stringify(body),keepalive:true}); }catch(e){ return null; } }
+
+/* ========== 名前の共通保存・自動入力 ========== */
+function initName(){
+  var saved='';
+  try{ saved = localStorage.getItem(NAME_KEY) || localStorage.getItem('spName') || ''; }catch(e){}
+  ['in-name','my-name'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    if(saved && !el.value) el.value=saved;
+    function save(){ var v=(el.value||'').trim(); if(v){ try{ localStorage.setItem(NAME_KEY,v); }catch(e){} } }
+    el.addEventListener('change',save);
+    el.addEventListener('blur',save);
+  });
+}
+
+/* ========== 切断検知（ハートビート） ========== */
+var lastRoom='';
+function syncRoom(){
+  var r=room(), m=me();
+  if(r!==lastRoom){
+    if(lastRoom && m.id){
+      try{ fetch(db()+'/rooms/'+lastRoom+'/presence/'+m.id+'.json',{method:'DELETE',keepalive:true}); }catch(e){}
+    }
+    lastRoom=r;
+  }
+}
+function beat(){
+  syncRoom();
+  var r=room(), m=me(); if(!r||!m.id) return;
+  put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?'});
+}
+function markLeft(){
+  syncRoom();
+  var r=room(), m=me(); if(!r||!m.id) return;
+  put(db()+'/rooms/'+r+'/presence/'+m.id+'.json',{t:Date.now(),n:m.name||'?',left:1});
+}
+var hideUntil=0;
+function banner(txt){
+  var b=document.getElementById('pga-banner');
+  if(!txt || Date.now()<hideUntil){ if(b) b.style.display='none'; return; }
+  if(!b){
+    b=document.createElement('div'); b.id='pga-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99990;background:rgba(178,34,34,.93);color:#fff;font-size:12px;line-height:1.4;padding:5px 30px 5px 10px;text-align:center;font-family:sans-serif;';
+    var t=document.createElement('span'); t.id='pga-banner-text'; b.appendChild(t);
+    var x=document.createElement('span'); x.textContent='\u2715';
+    x.style.cssText='position:absolute;right:8px;top:4px;cursor:pointer;padding:0 4px;';
+    x.onclick=function(){ hideUntil=Date.now()+60000; b.style.display='none'; };
+    b.appendChild(x);
+    document.body.appendChild(b);
+  }
+  document.getElementById('pga-banner-text').textContent=txt;
+  b.style.display='block';
+}
+function watch(){
+  syncRoom();
+  var r=room(), m=me();
+  if(!r){ banner(''); return; }
+  fetch(db()+'/rooms/'+r+'/presence.json').then(function(res){ return res.json(); }).then(function(d){
+    if(room()!==r) return;
+    if(!d){ banner(''); return; }
+    var now=Date.now(), gone=[];
+    Object.keys(d).forEach(function(pid){
+      if(pid===m.id) return;
+      var p=d[pid]||{};
+      if(p.left || (p.t && now-p.t>STALE_MS)) gone.push(p.n||'?');
+    });
+    banner(gone.length ? ('\u26A0\uFE0F \u901A\u4FE1\u304C\u9014\u5207\u308C\u3066\u3044\u307E\u3059: '+gone.join('\u3001')) : '');
+  }).catch(function(){});
+}
+setInterval(beat,HB_MS); setTimeout(beat,1500);
+setInterval(watch,WATCH_MS); setTimeout(watch,4000);
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'){ beat(); watch(); }
+});
+window.addEventListener('pagehide',markLeft);
+
+/* ========== 古いルームの自動削除 ========== */
+function tsOf(k,sub){
+  return fetch(db()+'/rooms/'+k+'/'+sub+'.json').then(function(r){ return r.json(); }).catch(function(){ return null; });
+}
+async function cleanup(){
   try{
-    const C = window.Capacitor;
-    if(C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.App){
-      C.Plugins.App.addListener('backButton', ()=>{
-        const inGame = document.getElementById('screen-game') && document.getElementById('screen-game').classList.contains('active');
-        if(!inGame){
-          try{ C.Plugins.App.minimizeApp(); }catch(e){}
-        }
-        // ゲーム画面中は誤タップでアプリが閉じないよう何もしない
-      });
+    var last=0; try{ last=+(localStorage.getItem('pgLastCleanup')||0); }catch(e){}
+    if(Date.now()-last < CLEAN_EVERY) return;
+    try{ localStorage.setItem('pgLastCleanup', String(Date.now())); }catch(e){}
+    var res=await fetch(db()+'/rooms.json?shallow=true');
+    var keys=await res.json(); if(!keys) return;
+    var list=Object.keys(keys).filter(function(k){ return /^[A-Za-z0-9_]{1,6}-/.test(k) && k!==room(); });
+    list.sort(function(){ return Math.random()-0.5; });
+    var checked=0, deleted=0;
+    for(var i=0;i<list.length;i++){
+      if(checked>=80 || deleted>=25) break;
+      var k=list[i]; checked++;
+      var ts=0, v;
+      v=await tsOf(k,'meta/ts');      if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'broadcast/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'hostState/ts'); if(typeof v==='number') ts=Math.max(ts,v);
+      v=await tsOf(k,'presence');
+      if(v){ Object.keys(v).forEach(function(pid){ var t=v[pid]&&v[pid].t; if(typeof t==='number') ts=Math.max(ts,t); }); }
+      if(!ts) continue; /* 時刻が取れないルームには触らない */
+      if(Date.now()-ts > ROOM_TTL){
+        try{ await fetch(db()+'/rooms/'+k+'.json',{method:'DELETE'}); deleted++; }catch(e){}
+      }
     }
   }catch(e){}
-});
+}
+setTimeout(cleanup,5000);
+
+/* ========== 遊び方モーダル ========== */
+var RULES=null;
+function openRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='flex'; }
+function closeRulesPga(){ var m=document.getElementById('pga-rules'); if(m) m.style.display='none'; }
+
+/* ゲーム中でもルールを開けるボタン（ロビー/待機以外の画面で表示） */
+function initFloatRules(){
+  // 共通ルール文が無いゲームでは、そのゲーム自身のルール画面を開く
+  var opener = RULES ? openRulesPga
+    : (typeof window.openRules === 'function' ? window.openRules : null);
+  if(!opener) return;
+  var b = document.createElement('button');
+  b.id = 'pga-rules-fab';
+  b.type = 'button';
+  b.textContent = '\uD83D\uDCD6';
+  b.setAttribute('aria-label','ルール');
+  b.style.cssText = 'position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:99989;width:40px;height:40px;'
+    + 'border-radius:19px;border:1px solid rgba(255,255,255,.22);background:rgba(10,12,18,.78);'
+    + 'color:#e8e8e8;font-size:17px;line-height:1;cursor:pointer;display:none;'
+    + 'align-items:center;justify-content:center;padding:0;-webkit-tap-highlight-color:transparent;';
+  b.onclick = opener;
+  document.body.appendChild(b);
+  // ロビー・待機・結果以外の画面にいるときだけ出す
+  function upd(){
+    try{
+      // ロビー側の「遊び方」ボタンが見えているなら重複するので出さない
+      var dup = false;
+      var all = document.querySelectorAll('button');
+      for(var i=0;i<all.length;i++){
+        var el = all[i];
+        if(el === b) continue;
+        if(!/遊び方/.test(el.textContent||'')) continue;
+        if(el.offsetParent !== null) { dup = true; break; }
+      }
+      var modalOpen = !!document.querySelector('#pga-rules[style*="flex"]');
+      b.style.display = (dup || modalOpen) ? 'none' : 'inline-flex';
+    }catch(e){}
+  }
+  setInterval(upd, 700);
+  setTimeout(upd, 400);
+}
+function initRules(){
+  if(!RULES) return;
+  var m=document.createElement('div'); m.id='pga-rules';
+  m.style.cssText='display:none;position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:14px;';
+  m.innerHTML='<div style="background:#1d222b;color:#e8e8e8;max-width:520px;width:100%;max-height:82vh;overflow-y:auto;border-radius:12px;padding:18px 16px;font-size:13.5px;line-height:1.75;font-family:sans-serif;-webkit-overflow-scrolling:touch;">'+RULES+'<button id="pga-rules-close" style="display:block;width:100%;margin-top:14px;padding:11px;border:none;border-radius:8px;background:#3a4557;color:#fff;font-size:14px;cursor:pointer;">\u9589\u3058\u308B</button></div>';
+  m.addEventListener('click',function(ev){ if(ev.target===m) closeRulesPga(); });
+  document.body.appendChild(m);
+  document.getElementById('pga-rules-close').onclick=closeRulesPga;
+  ['screen-lobby','screen-waiting'].forEach(function(id){
+    var sc=document.getElementById(id); if(!sc) return;
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.textContent='\uD83D\uDCD6 \u904A\u3073\u65B9';
+    btn.style.cssText='display:block;width:100%;margin:10px 0 0;padding:11px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:rgba(255,255,255,.06);color:inherit;font-size:14px;cursor:pointer;';
+    btn.onclick=openRulesPga;
+    sc.appendChild(btn);
+  });
+}
+
+initName();
+initRules();
+initFloatRules();
+})();
 </script>
 </body>
 </html>
