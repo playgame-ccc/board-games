@@ -598,6 +598,7 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="splendor"]   { --tab-color:#ffd84d; }
 .game-tab[data-game="mixpoker"]   { --tab-color:#2fd4b2; }
 .game-tab[data-game="ashrunner"]  { --tab-color:#ffd23f; }
+.game-tab[data-game="gtolab"]     { --tab-color:#8b9cff; }
 
 .game-tab.active {
   border-color: var(--tab-color);
@@ -621,8 +622,25 @@ h3 { font-size: 1rem; font-weight: 600; }
 .game-tab[data-game="splendor"].active   { background:rgba(255,216,77,0.12); }
 .game-tab[data-game="mixpoker"].active   { background:rgba(47,212,178,0.12); }
 .game-tab[data-game="ashrunner"].active  { background:rgba(255,210,63,0.12); }
+.game-tab[data-game="gtolab"].active     { background:rgba(139,156,255,0.12); }
 .game-tab.active .game-tab-name { color:var(--text); }
 .game-tab.active .game-tab-icon { filter:drop-shadow(0 0 6px var(--tab-color)); }
+
+/* ── GTO POKER LAB：タブを指定して開くボタン ── */
+.gt-jump-label { font-size:0.72rem; color:var(--muted); text-align:center; letter-spacing:0.04em; }
+.gt-jump { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.gt-jump a {
+  display:flex; align-items:center; justify-content:center;
+  min-height:40px; padding:6px 4px; border-radius:8px;
+  background:var(--surface); border:1px solid rgba(139,156,255,0.3);
+  color:#8b9cff; font-size:0.8rem; font-weight:700; text-decoration:none; text-align:center;
+  letter-spacing:0.02em; -webkit-tap-highlight-color:transparent;
+  transition:background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.gt-jump a:hover { background:rgba(139,156,255,0.1); border-color:rgba(139,156,255,0.6); }
+.gt-jump a:active { transform:scale(0.97); }
+.gt-jump a:focus-visible { outline:2px solid #8b9cff; outline-offset:2px; }
+@media (max-width: 359px) { .gt-jump a { font-size:0.72rem; padding:6px 2px; letter-spacing:0; } }
 
 
 /* ── Avalon variables ── */
@@ -971,6 +989,10 @@ h3 { font-size: 1rem; font-weight: 600; }
       <button class="game-tab" id="tab-pl" data-game="ploring" onclick="selectLobbyGame('ploring')">
         <span class="game-tab-icon">♠</span>
         <span class="game-tab-name">PLO<br>リング</span>
+      </button>
+      <button class="game-tab" id="tab-gt" data-game="gtolab" onclick="selectLobbyGame('gtolab')">
+        <span class="game-tab-icon">📊</span>
+        <span class="game-tab-name">GTO<br>ラボ</span>
       </button>
     </div>
 
@@ -1466,6 +1488,34 @@ h3 { font-size: 1rem; font-weight: 600; }
       </div>
     </div>
 
+    <!-- GTO POKER LAB section（別ページ誘導） -->
+    <div id="lobby-gt" style="display:none;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; padding:14px; background:rgba(139,156,255,0.06); border:1px solid rgba(139,156,255,0.35); border-radius:10px;">
+          <div style="font-size:2.5rem; margin-bottom:6px;">📊</div>
+          <div style="font-family:var(--mono); color:#8b9cff; font-size:0.9rem; letter-spacing:2px; margin-bottom:4px;">GTOポーカーラボ</div>
+          <div style="color:var(--muted); font-size:0.72rem;">GTO POKER LAB · ホールデム / PLO の学習ツール</div>
+        </div>
+        <a href="gto-poker-lab.html?from=hub" style="text-decoration:none;">
+          <button class="btn" style="width:100%; background:rgba(139,156,255,0.12); color:#8b9cff; border:1px solid rgba(139,156,255,0.5);">
+            📊 GTOポーカーラボのページへ移動する
+          </button>
+        </a>
+        <div class="gt-jump-label">タブを選んで直接開く</div>
+        <nav class="gt-jump" aria-label="GTOポーカーラボのタブを指定して開く">
+          <a href="gto-poker-lab.html?from=hub#preflop">プリフロップ</a>
+          <a href="gto-poker-lab.html?from=hub#postflop">ポストフロップ</a>
+          <a href="gto-poker-lab.html?from=hub#plo">PLOリバー</a>
+          <a href="gto-poker-lab.html?from=hub#calc">計算機</a>
+          <a href="gto-poker-lab.html?from=hub#drill">練習</a>
+          <a href="gto-poker-lab.html?from=hub#check">検証</a>
+        </nav>
+        <div style="font-size:0.72rem; color:var(--muted); text-align:center; line-height:1.6;">
+          ※ 専用のページで動作します<br>1人用の学習ツール（オンライン接続は不要）
+        </div>
+      </div>
+    </div>
+
     <div id="lobby-status" class="status-txt"></div>
     <div id="lobby-error" class="error"></div>
     <button id="btn-reconnect" class="btn btn-ghost" onclick="reconnectToRoom()" style="display:none; border-color:var(--amber); color:var(--amber);">🔄 前のルームに戻る</button>
@@ -1609,7 +1659,8 @@ h3 { font-size: 1rem; font-weight: 600; }
         👑公爵＝3コイン／🗡️暗殺者＝3コインで1枚奪う／⚓船長＝2コイン強奪／🎭大使＝カード交換／🛡️夫人＝暗殺をブロック。<br>
         キャラの行動は<strong style="color:#e0645f;">持っていなくても宣言できる</strong>。怪しければ誰でも「ダウト」。<br>
         嘘がバレた側、または外したダウトをした側がカードを1枚失う。<br>
-        💡 7コインでクーデター（阻止不可）、10コイン以上なら強制。
+        💡 7コインでクーデター（阻止不可）、10コイン以上なら強制。<br>
+        🎴 <strong style="color:#e0645f;">通常版</strong>と<strong style="color:#e0645f;">拡張版（宗教改革）</strong>を選べます。拡張版では陣営が加わり、同じ陣営は攻撃できず、「改宗」「横領」の2アクションが増えます。
       </p>
       <p id="rules-sl" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
         2〜6人。カードは <strong style="color:#e0708c;">1・2・3・4・6・7・8・9 が各10枚</strong>（5はなし）。<br>
@@ -1637,8 +1688,18 @@ h3 { font-size: 1rem; font-weight: 600; }
         手札は<strong style="color:#4fd18a;">4枚</strong>。役を作るときは<strong style="color:#4fd18a;">手札から必ず2枚、ボードから必ず3枚</strong>を使います。<br>
         ベット・レイズの上限は<strong style="color:#4fd18a;">コール後のポット全額</strong>。ボタンで最小・½ポット・ポットを選べます。<br>
         <strong style="color:#4fd18a;">PLO8</strong>を選ぶと、8以下5枚（ペアなし）のローが成立していればポットをハイとローで山分けします。<br>
-        💡 オールインのサイドポットも自動で精算します。<br>
-        🎴 <strong style="color:#e0645f;">通常版</strong>と<strong style="color:#e0645f;">拡張版（宗教改革）</strong>を選べます。拡張版では陣営が加わり、同じ陣営は攻撃できず、「改宗」「横領」の2アクションが増えます。
+        💡 オールインのサイドポットも自動で精算します。
+      </p>
+      <p id="rules-gt" style="font-size:0.85rem; color:var(--muted); line-height:1.7; display:none;">
+        1人で使う<strong style="color:#8b9cff;">ポーカーの学習ツール</strong>です。タブは6つあります。<br>
+        <strong style="color:#8b9cff;">プリフロップ</strong>：人数・スタック・席を選ぶと、オープン・コール・3bet・4betの均衡戦略を13×13の表で表示。<br>
+        <strong style="color:#8b9cff;">ポストフロップ</strong>：ボード・ポット・レンジを入れると、2人の対戦でフロップ〜リバーの戦略を計算。<br>
+        <strong style="color:#8b9cff;">PLOリバー</strong>：オマハのリバー1回分の戦略を計算（ベットはポットリミットまで）。<br>
+        <strong style="color:#8b9cff;">計算機</strong>：必要勝率・コールやブラフの損益・レイズ額・PLOの最大ベット・ICMを計算。<br>
+        <strong style="color:#8b9cff;">練習</strong>：GTOどおりに動く相手と対戦し、判断ごとに「正解／小さなミス／大きなミス」で採点。<br>
+        <strong style="color:#8b9cff;">検証</strong>：自分のハンドをスートまで選んでアクションを進め、GTOとのずれ（EVの損失）を確認。<br>
+        💡 トーナメントのICM・バウンティ（PKO）にも対応。プリフロップ・ポストフロップ・PLOリバーで調べた場面は「記録」に保存できます（このブラウザ内）。<br>
+        ⚠️ オンラインポーカーのプレイ中に使うと、多くのサイトでRTA（リアルタイム補助）として禁止されています。学習と振り返りに使ってください。
       </p>
     </div>
   </div>
@@ -4120,13 +4181,13 @@ function oldScheduleAI() {
 // LOBBY GAME SELECTOR
 // ============================================================
 function selectLobbyGame(game) {
-  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn','np','cp','sl','sd','fe','pl'].forEach(t=>{
-    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana',np:'napoleon',cp:'coup',sl:'shadylady',sd:'splendorduel',fe:'fastescape',pl:'ploring'};
+  ['tb','otb','av','sr','kk','gh','gs','it','hn','sk','sh','nm','dc','ct','st','sp','mx','ar','ns','nn','np','cp','sl','sd','fe','pl','gt'].forEach(t=>{
+    const map={tb:'timebomb',otb:'timebomb_old',av:'avalon',sr:'shirobara',kk:'kuku',gh:'ghost',gs:'geschenkt',it:'ito',hn:'hanabi',sk:'skullking',sh:'shadowhunters',nm:'nimmt',dc:'decrypto',ct:'catan',st:'stichlen',sp:'splendor',mx:'mixpoker',ar:'ashrunner',ns:'nosetelo',nn:'nana',np:'napoleon',cp:'coup',sl:'shadylady',sd:'splendorduel',fe:'fastescape',pl:'ploring',gt:'gtolab'};
     const btn=g('tab-'+t); if(btn) btn.classList.toggle('active',game===map[t]);
     const lel=g('lobby-'+t); if(lel) lel.style.display='none';
     const rel=g('rules-'+t); if(rel) rel.style.display='none';
   });
-  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn',napoleon:'np',coup:'cp',shadylady:'sl',splendorduel:'sd',fastescape:'fe',ploring:'pl'}[game];
+  const gameKey={timebomb:'tb',timebomb_old:'otb',avalon:'av',shirobara:'sr',kuku:'kk',ghost:'gh',geschenkt:'gs',ito:'it',hanabi:'hn',skullking:'sk',shadowhunters:'sh',nimmt:'nm',decrypto:'dc',catan:'ct',stichlen:'st',splendor:'sp',mixpoker:'mx',ashrunner:'ar',nosetelo:'ns',nana:'nn',napoleon:'np',coup:'cp',shadylady:'sl',splendorduel:'sd',fastescape:'fe',ploring:'pl',gtolab:'gt'}[game];
   if(!gameKey) return;
   const lel=g('lobby-'+gameKey); if(lel) lel.style.display='';
   const rel=g('rules-'+gameKey); if(rel) rel.style.display='';
